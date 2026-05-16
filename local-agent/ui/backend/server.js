@@ -25,13 +25,14 @@ function resolveProjectRoot() {
 export const PROJECT_ROOT = resolveProjectRoot();
 
 // ── Import routes ─────────────────────────────────────────────────────────────
-import projectRouter  from './routes/project.js';
-import patchesRouter  from './routes/patches.js';
-import qaRouter       from './routes/qa.js';
-import reportsRouter  from './routes/reports.js';
-import policyRouter   from './routes/policy.js';
-import memoryRouter   from './routes/memory.js';
-import agentRouter    from './routes/agent.js';
+import projectRouter   from './routes/project.js';
+import patchesRouter   from './routes/patches.js';
+import qaRouter        from './routes/qa.js';
+import reportsRouter   from './routes/reports.js';
+import policyRouter    from './routes/policy.js';
+import memoryRouter    from './routes/memory.js';
+import agentRouter     from './routes/agent.js';
+import projectsRouter  from './routes/projects.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -120,6 +121,7 @@ app.use('/', reportsRouter);
 app.use('/', policyRouter);
 app.use('/', memoryRouter);
 app.use('/', agentRouter);
+app.use('/', projectsRouter);
 
 // ── Serve frontend dist (if built) ────────────────────────────────────────────
 const frontendDist = resolve(__dirname, '../frontend/dist');

@@ -22,13 +22,21 @@ function CheckItem({ check }) {
   );
 }
 
+function statusBadgeClass(status) {
+  if (status === 'healthy') return 'badge badge-pass';
+  if (status === 'warning') return 'badge badge-warn';
+  if (status === 'fail')    return 'badge badge-fail';
+  return 'badge';
+}
+
 export default function Dashboard() {
-  const [projectStatus, setProjectStatus] = useState(null);
-  const [policyStatus,  setPolicyStatus]  = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [scanning,      setScanning]      = useState(false);
-  const [runningQA,     setRunningQA]     = useState(false);
-  const [error,         setError]         = useState(null);
+  const [projectStatus,      setProjectStatus]      = useState(null);
+  const [policyStatus,       setPolicyStatus]        = useState(null);
+  const [registeredProjects, setRegisteredProjects]  = useState(null);
+  const [loading,            setLoading]             = useState(true);
+  const [scanning,           setScanning]            = useState(false);
+  const [runningQA,          setRunningQA]           = useState(false);
+  const [error,              setError]               = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -44,6 +52,13 @@ export default function Dashboard() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+    // Load registered projects separately — endpoint may not exist yet
+    try {
+      const reg = await api.get('/projects');
+      if (reg.success) setRegisteredProjects(reg.data);
+    } catch {
+      setRegisteredProjects([]);
     }
   }, []);
 
@@ -158,6 +173,84 @@ export default function Dashboard() {
             </ul>
           ) : <div className="loading-row"><div className="spinner" />Loading policy...</div>}
         </div>
+      </div>
+
+      {/* ── Registered Projects ─────────────────────────────────────────────── */}
+      <div style={{ marginTop: 32 }}>
+        <div className="page-header" style={{ marginBottom: 12 }}>
+          <h2 className="page-title" style={{ fontSize: 18 }}>
+            Registered Projects
+            <span style={{ fontSize: 12, fontWeight: 'normal', marginLeft: 10, opacity: 0.6 }}>
+              (managed via CLI)
+            </span>
+          </h2>
+        </div>
+
+        {registeredProjects === null ? (
+          <div className="loading-row"><div className="spinner" />Loading projects...</div>
+        ) : registeredProjects.length === 0 ? (
+          <div className="card">
+            <div className="empty-state">
+              <div>No other projects registered.</div>
+              <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 12, opacity: 0.7 }}>
+                Use: local-agent projects add &lt;path&gt;
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="card-grid">
+            {registeredProjects.map((proj) => (
+              <div key={proj.projectId} className="card">
+                <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {proj.name}
+                  </span>
+                  <span className={statusBadgeClass(proj.status)} style={{ marginLeft: 8, flexShrink: 0 }}>
+                    {proj.status ?? 'unknown'}
+                  </span>
+                </div>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  <li className="stat-row">
+                    <span className="stat-label">Root</span>
+                    <span className="stat-value" style={{ fontSize: 11, wordBreak: 'break-all' }}>{proj.root}</span>
+                  </li>
+                  {proj.framework && (
+                    <li className="stat-row">
+                      <span className="stat-label">Framework</span>
+                      <span className="stat-value">{proj.framework}</span>
+                    </li>
+                  )}
+                  {proj.language && (
+                    <li className="stat-row">
+                      <span className="stat-label">Language</span>
+                      <span className="stat-value">{proj.language}</span>
+                    </li>
+                  )}
+                  <li className="stat-row">
+                    <span className="stat-label">Last scan</span>
+                    <span className="stat-value" style={{ fontSize: 11 }}>
+                      {proj.lastScan ? new Date(proj.lastScan).toLocaleString() : 'Never'}
+                    </span>
+                  </li>
+                  <li className="stat-row">
+                    <span className="stat-label">Last QA</span>
+                    <span className="stat-value" style={{ fontSize: 11 }}>
+                      {proj.lastQA ? new Date(proj.lastQA).toLocaleString() : 'Never'}
+                    </span>
+                  </li>
+                  {proj.lastScore > 0 && (
+                    <li className="stat-row">
+                      <span className="stat-label">Score</span>
+                      <span className="stat-value" style={{ color: proj.lastScore >= 80 ? 'var(--green)' : proj.lastScore >= 60 ? 'var(--yellow)' : 'var(--red)' }}>
+                        {proj.lastScore}/100
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  const { program } = await import('commander');
+  const { program, Command } = await import('commander');
   const chalk = (await import('chalk')).default;
   const ora   = (await import('ora')).default;
 
@@ -783,6 +783,438 @@ async function main() {
 
       server.on('error', (err) => die('Failed to start UI server: ' + err.message));
     });
+
+  // ── memory (Phase 6) ─────────────────────────────────────────────────────
+  const memoryCmd = new Command('memory').description('Manage local project memory and learning history');
+
+  memoryCmd
+    .command('status [path]')
+    .description('Show memory status and statistics')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const mem = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      const status = mem.getStatus(targetDir);
+      console.log(chalk.bold('Memory Status:'));
+      console.log(`  ${chalk.gray('Initialized:')}      ${status.initialized ? chalk.green('yes') : chalk.red('no')}`);
+      console.log(`  ${chalk.gray('Profile:')}          ${status.profileExists ? chalk.green('exists') : chalk.yellow('none')}`);
+      console.log(`  ${chalk.gray('Known issues:')}     ${status.knownIssues}`);
+      console.log(`  ${chalk.gray('Successful fixes:')} ${status.successfulFixes}`);
+      console.log(`  ${chalk.gray('Failed fixes:')}     ${status.failedFixes}`);
+      console.log(`  ${chalk.gray('Approvals:')}        ${status.approvals}`);
+      console.log(`  ${chalk.gray('QA history:')}       ${status.qaHistory}`);
+      if (status.lastScan) console.log(`  ${chalk.gray('Last scan:')}        ${formatDate(status.lastScan)}`);
+      if (status.lastQA)   console.log(`  ${chalk.gray('Last QA:')}          ${formatDate(status.lastQA)}`);
+      console.log();
+    });
+
+  memoryCmd
+    .command('show [path]')
+    .description('Show stored memory contents')
+    .option('--project <path>', 'Path to target project')
+    .option('--section <name>', 'Section to show: profile|issues|fixes|approvals|qa')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const mem                        = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      const { getSuccessfulFixes,
+              getFailedFixes }          = await import('../local-agent/memory/FixHistoryStore.js');
+      const { getKnownPatterns }        = await import('../local-agent/memory/FailurePatternStore.js');
+      const { getHistory: getApprovals,
+              getApprovalRate }         = await import('../local-agent/memory/ApprovalHistoryStore.js');
+      const section = opts.section ?? 'all';
+
+      if (section === 'all' || section === 'profile') {
+        const profile = mem.loadProjectProfile(targetDir);
+        console.log(chalk.bold('Project Profile:'));
+        if (!Object.keys(profile).length) {
+          console.log(chalk.gray('  No profile yet. Run: local-agent scan\n'));
+        } else {
+          Object.entries(profile).forEach(([k, v]) => {
+            if (v != null && k !== 'updatedAt')
+              console.log(`  ${chalk.gray(k.padEnd(22))} ${typeof v === 'object' ? JSON.stringify(v) : v}`);
+          });
+          console.log();
+        }
+      }
+
+      if (section === 'all' || section === 'issues') {
+        const patterns = getKnownPatterns(targetDir);
+        console.log(chalk.bold(`Known Issues (${patterns.length}):`));
+        if (!patterns.length) { console.log(chalk.gray('  None yet.\n')); }
+        else {
+          patterns.slice(0, 10).forEach((p) =>
+            console.log(`  ${chalk.cyan(p.errorType.padEnd(20))} ${chalk.gray((p.errorText ?? '').slice(0, 60))}  ` +
+                        `(${chalk.green(p.successCount + '✓')} ${chalk.red(p.failureCount + '✗')})`)
+          );
+          if (patterns.length > 10) console.log(chalk.gray(`  ... and ${patterns.length - 10} more`));
+          console.log();
+        }
+      }
+
+      if (section === 'all' || section === 'fixes') {
+        const successes = getSuccessfulFixes(targetDir);
+        const failures  = getFailedFixes(targetDir);
+        console.log(chalk.bold(`Fix History: ${chalk.green(successes.length + ' success')} / ${chalk.red(failures.length + ' failed')}`));
+        successes.slice(0, 5).forEach((f) =>
+          console.log(`  ${chalk.green('✓')} ${(f.task ?? '—').slice(0, 55)}  ${chalk.gray(formatDate(f.createdAt))}`)
+        );
+        failures.slice(0, 5).forEach((f) =>
+          console.log(`  ${chalk.red('✗')} ${(f.task ?? '—').slice(0, 55)}  ${chalk.gray((f.reason ?? '').slice(0, 40))}`)
+        );
+        if (!successes.length && !failures.length) console.log(chalk.gray('  No fix attempts yet.'));
+        console.log();
+      }
+
+      if (section === 'all' || section === 'approvals') {
+        const rate = getApprovalRate(targetDir);
+        console.log(chalk.bold(`Approval History: ${chalk.green(rate.approved + ' approved')} / ${chalk.red(rate.rejected + ' rejected')} (${Math.round(rate.rate * 100)}% rate)`));
+        const history = getApprovals(targetDir);
+        history.slice(0, 5).forEach((h) =>
+          console.log(`  ${h.decision === 'approved' ? chalk.green('✓') : chalk.red('✗')} ${(h.task ?? '—').slice(0, 55)}  ${chalk.gray('risk:' + h.riskLevel)}`)
+        );
+        console.log();
+      }
+    });
+
+  memoryCmd
+    .command('clear [path]')
+    .description('Clear all stored memory for a project')
+    .option('--project <path>', 'Path to target project')
+    .option('--yes', 'Skip confirmation prompt')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!opts.yes) {
+        console.log(chalk.yellow(`⚠  This will delete all memory for: ${targetDir}`));
+        console.log(chalk.gray('   Pass --yes to confirm.\n'));
+        return;
+      }
+      const mem = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      mem.clearAll(targetDir);
+      console.log(chalk.green('✓ Memory cleared.\n'));
+    });
+
+  memoryCmd
+    .command('export [path]')
+    .description('Export sanitized memory to a JSON file')
+    .option('--project <path>', 'Path to target project')
+    .option('--output <file>',  'Output file path', 'memory-export.json')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir  = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const outputPath = resolve(opts.output);
+      const mem = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      mem.exportMemory(targetDir, outputPath);
+      console.log(chalk.green(`✓ Memory exported to: ${outputPath}\n`));
+    });
+
+  memoryCmd
+    .command('import <file> [path]')
+    .description('Import memory from an exported JSON file')
+    .option('--project <path>', 'Path to target project')
+    .action(async (file, pathArg, opts) => {
+      printBanner();
+      const targetDir  = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const importPath = resolve(file);
+      if (!existsSync(importPath)) die(`Import file not found: ${importPath}`);
+      const mem = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      mem.importMemory(targetDir, importPath);
+      console.log(chalk.green(`✓ Memory imported from: ${importPath}\n`));
+    });
+
+  memoryCmd
+    .command('sanitize [path]')
+    .description('Scan and remove any secrets from stored memory')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const spinner = ora('Sanitizing memory...').start();
+      const mem = (await import('../local-agent/memory/ProjectMemoryManager.js')).default;
+      mem.sanitizeMemory(targetDir);
+      spinner.succeed(chalk.green('Memory sanitized — all secret patterns removed from stored memory.'));
+      console.log();
+    });
+
+  program.addCommand(memoryCmd);
+
+  // ── security (Phase 7) ───────────────────────────────────────────────────
+  const securityCmd = new Command('security').description('Security hardening and offline verification tools');
+
+  securityCmd
+    .command('check [path]')
+    .description('Run all security checks and generate a security report')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const config = loadConfig(targetDir);
+      const spinner = ora('Running security checks...').start();
+      try {
+        const { generateOfflineStatus }    = await import('../local-agent/security/OfflineGuard.js');
+        const { scanDirectory }             = await import('../local-agent/security/SecretScanner.js');
+        const { getRecentEvents }           = await import('../local-agent/security/AuditLogger.js');
+        const { generateReport }            = await import('../local-agent/security/SecurityReporter.js');
+        const offlineStatus  = generateOfflineStatus(targetDir, config);
+        const secretScan     = scanDirectory(targetDir);
+        const auditEvents    = getRecentEvents(targetDir, 100);
+        const policyReport   = runPolicyChecks(targetDir, config);
+        spinner.stop();
+
+        const findings = {
+          offlineStatus,
+          secretFindings:    secretScan.findings,
+          auditEvents,
+          policyChecks:      policyReport.checks,
+          sandboxViolations: auditEvents.filter((e) => e.level === 'VIOLATION'),
+        };
+        const { mdPath, jsonPath, summary } = generateReport(targetDir, findings);
+
+        console.log(chalk.bold('Security Check:'));
+        console.log(`  ${chalk.gray('Offline:')}     ${offlineStatus.offline ? chalk.green('yes') : chalk.red('NO — VIOLATION')}`);
+        console.log(`  ${chalk.gray('LLM local:')}   ${offlineStatus.llmLocal ? chalk.green('yes') : chalk.red('NO')}`);
+        console.log(`  ${chalk.gray('Telemetry:')}   ${offlineStatus.telemetryDisabled ? chalk.green('off') : chalk.red('ON — VIOLATION')}`);
+        console.log(`  ${chalk.gray('Secrets:')}     ${secretScan.findings.length > 0 ? chalk.red(secretScan.findings.length + ' found') : chalk.green('none')}`);
+        console.log(`  ${chalk.gray('Violations:')}  ${findings.sandboxViolations.length > 0 ? chalk.red(findings.sandboxViolations.length) : chalk.green('none')}`);
+        console.log(`  ${chalk.gray('Policy:')}      ${policyReport.result === 'PASS' ? chalk.green('PASS') : policyReport.result === 'WARNING' ? chalk.yellow('WARNING') : chalk.red('FAIL')}`);
+        const rc = summary.result;
+        const rcCol = rc === 'PASS' ? 'green' : rc === 'WARNING' ? 'yellow' : 'red';
+        console.log(`\n  ${chalk[rcCol].bold(`Overall: ${rc}`)}`);
+        console.log(`  ${chalk.gray('Report:')} ${mdPath}`);
+        console.log(`  ${chalk.gray('JSON:')}   ${jsonPath}\n`);
+      } catch (err) {
+        spinner.fail(chalk.red('Security check failed'));
+        die(err.message);
+      }
+    });
+
+  securityCmd
+    .command('scan-secrets [path]')
+    .description('Scan project files for hardcoded secrets')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const spinner = ora('Scanning for secrets...').start();
+      const { scanDirectory } = await import('../local-agent/security/SecretScanner.js');
+      const result = scanDirectory(targetDir);
+      spinner.stop();
+      console.log(chalk.bold(`Secret Scan: ${result.filesScanned} files scanned\n`));
+      if (result.findings.length === 0) {
+        console.log(chalk.green('  ✓ No secrets detected.\n'));
+      } else {
+        console.log(chalk.red(`  ⚠  ${result.findings.length} potential secret(s) detected:\n`));
+        result.findings.forEach((f) => {
+          const col = f.severity === 'HIGH' ? 'red' : 'yellow';
+          console.log(`  ${chalk[col]('›')} ${chalk.bold(f.name)}  ${chalk.gray((f.label ?? '') + ':' + (f.line ?? '?'))}`);
+        });
+        console.log();
+      }
+    });
+
+  securityCmd
+    .command('audit [path]')
+    .description('Show recent security audit log events')
+    .option('--project <path>', 'Path to target project')
+    .option('--count <n>', 'Number of events to show', '50')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { getRecentEvents } = await import('../local-agent/security/AuditLogger.js');
+      const events = getRecentEvents(targetDir, parseInt(opts.count, 10) || 50);
+      console.log(chalk.bold(`Security Audit Log (${events.length} events):\n`));
+      if (!events.length) {
+        console.log(chalk.gray('  No audit events recorded.\n'));
+      } else {
+        events.forEach((e) => {
+          const col = e.level === 'VIOLATION' ? 'red' : e.level === 'BLOCKED' ? 'yellow' : 'gray';
+          const detail = typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail);
+          console.log(`  ${chalk[col](e.level.padEnd(10))} ${chalk.gray(new Date(e.ts).toLocaleTimeString())}  ${e.event}  ${detail}`);
+        });
+        console.log();
+      }
+    });
+
+  securityCmd
+    .command('network-test')
+    .description('Verify external network access is blocked per offline policy')
+    .action(async () => {
+      printBanner();
+      const { isLocalUrl } = await import('../local-agent/security/OfflineGuard.js');
+      const tests = [
+        { url: 'http://localhost:11434',       expectAllowed: true  },
+        { url: 'http://127.0.0.1:4001',        expectAllowed: true  },
+        { url: 'http://0.0.0.0:8080',          expectAllowed: true  },
+        { url: 'https://api.openai.com',        expectAllowed: false },
+        { url: 'https://api.anthropic.com',     expectAllowed: false },
+        { url: 'https://github.com',            expectAllowed: false },
+        { url: 'https://registry.npmjs.org',    expectAllowed: false },
+        { url: 'https://googleapis.com',        expectAllowed: false },
+      ];
+      console.log(chalk.bold('Network Policy Test:\n'));
+      let allPass = true;
+      for (const { url, expectAllowed } of tests) {
+        const isLocal = isLocalUrl(url);
+        const correct = isLocal === expectAllowed;
+        if (!correct) allPass = false;
+        const status = correct
+          ? (isLocal ? chalk.green('✓ ALLOWED') : chalk.green('✓ BLOCKED'))
+          : chalk.red('✗ POLICY MISMATCH');
+        console.log(`  ${status}  ${url}`);
+      }
+      console.log();
+      if (allPass) {
+        console.log(chalk.green('✓ All network policy checks passed.\n'));
+      } else {
+        console.log(chalk.red('✗ Network policy violations detected.\n'));
+        process.exit(1);
+      }
+    });
+
+  program.addCommand(securityCmd);
+
+  // ── projects (Phase 8) ───────────────────────────────────────────────────
+  const projectsCmd = new Command('projects').description('Manage multiple local projects in the global registry');
+
+  projectsCmd
+    .command('add <path>')
+    .description('Register a project directory in the local registry')
+    .option('--name <name>', 'Project display name (defaults to directory name)')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const projectRoot = resolve(pathArg);
+      if (!existsSync(projectRoot)) die(`Directory does not exist: ${projectRoot}`);
+      const { addProject } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      try {
+        const profile = addProject(projectRoot, opts.name);
+        console.log(chalk.green(`✓ Project registered: ${profile.name}`));
+        console.log(`  ${chalk.gray('ID:')}   ${profile.projectId}`);
+        console.log(`  ${chalk.gray('Root:')} ${profile.root}\n`);
+      } catch (err) {
+        die(err.message);
+      }
+    });
+
+  projectsCmd
+    .command('list')
+    .description('List all registered projects')
+    .action(async () => {
+      printBanner();
+      const { listProjects } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { getSelected }  = await import('../local-agent/orchestrator/ProjectSelector.js');
+      const projects = listProjects();
+      const selected = getSelected();
+      if (!projects.length) {
+        console.log(chalk.yellow('No projects registered. Run: local-agent projects add <path>\n'));
+        return;
+      }
+      console.log(chalk.bold(`Registered Projects (${projects.length}):\n`));
+      for (const p of projects) {
+        const isSel    = selected?.projectId === p.projectId;
+        const scol     = p.status === 'healthy' ? 'green' : p.status === 'warning' ? 'yellow' : p.status === 'fail' ? 'red' : 'gray';
+        const marker   = isSel ? chalk.cyan(' ◀ active') : '';
+        console.log(`  ${chalk.bold(p.name)}${marker}  ${chalk[scol]('[' + p.status + ']')}`);
+        console.log(`    ${chalk.gray('ID:')}        ${p.projectId}`);
+        console.log(`    ${chalk.gray('Root:')}      ${p.root}`);
+        console.log(`    ${chalk.gray('Framework:')} ${p.framework ?? '—'}   ${chalk.gray('Score:')} ${p.lastScore ?? '—'}`);
+        console.log(`    ${chalk.gray('Last scan:')} ${formatDate(p.lastScan)}   ${chalk.gray('Last QA:')} ${formatDate(p.lastQA)}`);
+        console.log();
+      }
+    });
+
+  projectsCmd
+    .command('select <project-id>')
+    .description('Set the active project for subsequent agent commands')
+    .action(async (projectId) => {
+      printBanner();
+      const { getProject }    = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { selectProject } = await import('../local-agent/orchestrator/ProjectSelector.js');
+      const project = getProject(projectId);
+      if (!project) die(`Project not found: ${projectId}`);
+      selectProject(projectId);
+      console.log(chalk.green(`✓ Active project set: ${project.name}`));
+      console.log(`  ${chalk.gray('Root:')} ${project.root}\n`);
+    });
+
+  projectsCmd
+    .command('remove <project-id>')
+    .description('Remove a project from the registry (does not delete project files)')
+    .option('--yes', 'Skip confirmation prompt')
+    .action(async (projectId, opts) => {
+      printBanner();
+      const { getProject, removeProject } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const project = getProject(projectId);
+      if (!project) die(`Project not found: ${projectId}`);
+      if (!opts.yes) {
+        console.log(chalk.yellow(`⚠  Remove "${project.name}" from registry? (pass --yes to confirm)\n`));
+        return;
+      }
+      removeProject(projectId);
+      console.log(chalk.green(`✓ Project removed: ${project.name}\n`));
+    });
+
+  projectsCmd
+    .command('scan-all')
+    .description('Refresh scan data for all registered projects')
+    .action(async () => {
+      printBanner();
+      const { listProjects }       = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { scanAll,
+              getAggregatedStats } = await import('../local-agent/orchestrator/MultiProjectScanner.js');
+      const projects = listProjects();
+      if (!projects.length) { console.log(chalk.yellow('No projects registered.\n')); return; }
+      const spinner = ora(`Scanning ${projects.length} project(s)...`).start();
+      const results = await scanAll(projects);
+      spinner.stop();
+      const stats = getAggregatedStats(results);
+      console.log(chalk.bold(`Scan-all complete (${projects.length} projects):\n`));
+      results.forEach((r) => {
+        const icon = r.error ? chalk.red('✗') : chalk.green('✓');
+        console.log(`  ${icon} ${chalk.bold(r.name ?? r.projectId)}  ${chalk.gray(r.root)}`);
+        if (r.error) console.log(`    ${chalk.red(r.error)}`);
+      });
+      console.log(`\n  ${chalk.gray('Total files:')}   ${stats.totalFiles}`);
+      console.log(`  ${chalk.gray('Total secrets:')} ${stats.totalSecrets > 0 ? chalk.red(stats.totalSecrets) : chalk.green(stats.totalSecrets)}`);
+      console.log(`  ${chalk.gray('Total TODOs:')}   ${stats.totalTodos}\n`);
+    });
+
+  projectsCmd
+    .command('health')
+    .description('Show health status for all registered projects')
+    .action(async () => {
+      printBanner();
+      const { listProjects }                    = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { checkHealthAll, generateHealthSummary } = await import('../local-agent/orchestrator/ProjectHealthMonitor.js');
+      const projects = listProjects();
+      if (!projects.length) { console.log(chalk.yellow('No projects registered.\n')); return; }
+      const withHealth = checkHealthAll(projects);
+      const summary    = generateHealthSummary(withHealth);
+      console.log(chalk.bold(`Project Health (${projects.length} total):\n`));
+      withHealth.forEach((r) => {
+        const col = r.healthStatus === 'healthy' ? 'green' : r.healthStatus === 'warning' ? 'yellow' :
+                    r.healthStatus === 'fail' ? 'red' : 'gray';
+        console.log(`  ${chalk[col]('●')} ${chalk.bold(r.name.padEnd(30))} ${chalk[col](r.healthStatus.toUpperCase())}`);
+        if (r.healthDetails?.qaGrade) console.log(`    ${chalk.gray('QA:')} ${r.healthDetails.qaGrade}  ${chalk.gray('Score:')} ${r.healthDetails.qaScore ?? '—'}`);
+        if (r.healthDetails?.secretCount > 0) console.log(`    ${chalk.red('⚠ Secrets detected: ' + r.healthDetails.secretCount)}`);
+      });
+      console.log(`\n  ${chalk.green(summary.healthy + ' healthy')}  ` +
+                  `${chalk.yellow(summary.warning + ' warning')}  ` +
+                  `${chalk.red(summary.fail + ' fail')}  ` +
+                  `${chalk.gray(summary.unknown + ' unknown')}\n`);
+    });
+
+  program.addCommand(projectsCmd);
 
   program.parse(process.argv);
 
