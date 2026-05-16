@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "description": "Default QA scoring rules for local-agent",
+  "weights": {
+    "stability":         0.25,
+    "coreFunctionality": 0.20,
+    "buildTest":         0.20,
+    "security":          0.10,
+    "performance":       0.10,
+    "codeQuality":       0.10,
+    "documentation":     0.05
+  },
+  "thresholds": {
+    "PASS":    90,
+    "WARNING": 70,
+    "FAIL":     0
+  },
+  "retryConfig": {
+    "maxRetryLoops":              3,
+    "maxFilesChangedPerLoop":    10,
+    "maxPatchRisk":            0.75,
+    "requireApprovalForHighRisk": true
+  },
+  "autoFixBlocklist": [
+    "AUTH_ERROR",
+    "DATABASE_ERROR",
+    "DEPLOYMENT_ERROR"
+  ],
+  "secretPatterns": [
+    "api[_-]?key",
+    "secret[_-]?key",
+    "password",
+    "Bearer ",
+    "sk-",
+    "AKIA",
+    "ghp_",
+    "BEGIN.*PRIVATE KEY",
+    "mongodb://.*:.*@",
+    "postgres://.*:.*@"
+  ],
+  "largeFileThresholdBytes": 524288,
+  "performance": {
+    "buildWarnMs":  30000,
+    "buildFailMs": 120000,
+    "testWarnMs":   60000,
+    "testFailMs":  120000
+  }
+}

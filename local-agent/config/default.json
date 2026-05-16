@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "offline": true,
+  "telemetry": false,
+  "cloudSync": false,
+  "llm": {
+    "provider": "ollama",
+    "baseUrl": "http://localhost:11434",
+    "model": "qwen2.5-coder:7b",
+    "offlineOnly": true,
+    "streamingEnabled": true,
+    "maxTokens": 4096,
+    "contextWindow": 8192,
+    "retryAttempts": 3,
+    "retryDelayMs": 1000,
+    "fallbackModel": "codellama:7b"
+  },
+  "scanner": {
+    "maxFileSizeBytes": 1048576,
+    "maxDepth": 20,
+    "followSymlinks": false,
+    "ignore": [
+      "node_modules",
+      "dist",
+      "build",
+      ".git",
+      ".svn",
+      "__pycache__",
+      "*.pyc",
+      ".DS_Store",
+      "coverage",
+      ".nyc_output",
+      "*.log",
+      "*.lock"
+    ]
+  },
+  "sandbox": {
+    "allowedCommands": [
+      "npm",
+      "npx",
+      "yarn",
+      "pnpm",
+      "node",
+      "python",
+      "python3",
+      "pip",
+      "pip3",
+      "pytest",
+      "jest",
+      "mocha",
+      "vitest",
+      "tsc",
+      "eslint",
+      "prettier"
+    ],
+    "blockedCommands": [
+      "curl",
+      "wget",
+      "fetch",
+      "ssh",
+      "scp",
+      "rsync",
+      "ftp",
+      "sftp",
+      "nc",
+      "netcat",
+      "telnet",
+      "nmap",
+      "ping",
+      "traceroute",
+      "dig",
+      "nslookup",
+      "sudo",
+      "su",
+      "chmod",
+      "chown",
+      "rm -rf /",
+      "mkfs",
+      "dd"
+    ],
+    "timeoutMs": 60000,
+    "maxOutputBytes": 1048576
+  },
+  "memory": {
+    "maxEntries": 10000,
+    "retentionDays": 90
+  },
+  "qa": {
+    "autoReport": true,
+    "reportFormat": "markdown"
+  }
+}

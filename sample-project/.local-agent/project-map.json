@@ -1,0 +1,249 @@
+{
+  "scannedAt": "2026-05-16T13:55:34.014Z",
+  "rootDir": "/home/user/agent-coding/sample-project",
+  "projectTypes": [
+    "nodejs"
+  ],
+  "frameworks": [
+    "Vite",
+    "React"
+  ],
+  "languages": [
+    "JavaScript"
+  ],
+  "packageManager": null,
+  "configFiles": {
+    "package.json": {
+      "name": "sample-react-app",
+      "version": "1.0.0",
+      "description": "Sample project for local-agent testing",
+      "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "test": "vitest run",
+        "lint": "eslint src --ext .js,.jsx",
+        "typecheck": "tsc --noEmit",
+        "preview": "vite preview"
+      },
+      "dependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^6.20.0",
+        "axios": "^1.6.0"
+      },
+      "devDependencies": {
+        "@vitejs/plugin-react": "^4.2.0",
+        "eslint": "^8.54.0",
+        "typescript": "^5.2.0",
+        "vite": "^5.0.0",
+        "vitest": "^1.0.0"
+      }
+    },
+    "vite.config.js": "/home/user/agent-coding/sample-project/vite.config.js",
+    ".env.example": "/home/user/agent-coding/sample-project/.env.example"
+  },
+  "commands": {
+    "build": "npm run build",
+    "test": "npm run test",
+    "lint": "npm run lint",
+    "all": [
+      "npm run dev",
+      "npm run build",
+      "npm run test",
+      "npm run lint",
+      "npm run typecheck",
+      "npm run preview"
+    ]
+  },
+  "buildCommands": [
+    "npm run dev",
+    "npm run build",
+    "npm run test",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run preview"
+  ],
+  "files": [
+    {
+      "path": ".env.example",
+      "size": 95,
+      "type": "example",
+      "lastModified": "2026-05-16T13:17:54.472Z"
+    },
+    {
+      "path": "README.md",
+      "size": 236,
+      "type": "md",
+      "lastModified": "2026-05-16T13:18:00.592Z"
+    },
+    {
+      "path": "package.json",
+      "size": 608,
+      "type": "json",
+      "lastModified": "2026-05-16T13:17:49.736Z"
+    },
+    {
+      "path": "vite.config.js",
+      "size": 162,
+      "type": "js",
+      "lastModified": "2026-05-16T13:17:52.156Z"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "size": 133,
+      "type": "sh",
+      "lastModified": "2026-05-16T13:18:27.152Z"
+    },
+    {
+      "path": "tests/auth.test.js",
+      "size": 268,
+      "type": "js",
+      "lastModified": "2026-05-16T13:18:23.276Z"
+    },
+    {
+      "path": "src/api/users.js",
+      "size": 499,
+      "type": "js",
+      "lastModified": "2026-05-16T13:18:16.028Z"
+    },
+    {
+      "path": "src/components/Button.jsx",
+      "size": 212,
+      "type": "jsx",
+      "lastModified": "2026-05-16T13:18:12.240Z"
+    },
+    {
+      "path": "src/components/Header.jsx",
+      "size": 173,
+      "type": "jsx",
+      "lastModified": "2026-05-16T13:18:10.008Z"
+    },
+    {
+      "path": "src/pages/Dashboard.jsx",
+      "size": 501,
+      "type": "jsx",
+      "lastModified": "2026-05-16T13:18:07.472Z"
+    },
+    {
+      "path": "src/pages/Home.jsx",
+      "size": 269,
+      "type": "jsx",
+      "lastModified": "2026-05-16T13:18:03.492Z"
+    },
+    {
+      "path": "src/utils/auth.js",
+      "size": 347,
+      "type": "js",
+      "lastModified": "2026-05-16T13:18:19.564Z"
+    }
+  ],
+  "routes": [
+    "src/pages/Dashboard.jsx",
+    "src/pages/Home.jsx"
+  ],
+  "components": [
+    "src/components/Button.jsx",
+    "src/components/Header.jsx"
+  ],
+  "endpoints": [
+    {
+      "file": "src/api/users.js",
+      "line": 6,
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "src/api/users.js",
+      "line": 13,
+      "method": "POST",
+      "path": "/"
+    }
+  ],
+  "todos": [
+    {
+      "file": "tests/auth.test.js",
+      "line": 8,
+      "type": "TODO",
+      "text": "Add more test cases"
+    },
+    {
+      "file": "src/api/users.js",
+      "line": 7,
+      "type": "TODO",
+      "text": "Add pagination"
+    },
+    {
+      "file": "src/api/users.js",
+      "line": 14,
+      "type": "FIXME",
+      "text": "No input validation here"
+    },
+    {
+      "file": "src/components/Header.jsx",
+      "line": 3,
+      "type": "NOTE",
+      "text": "Shared header component used across all pages"
+    },
+    {
+      "file": "src/pages/Dashboard.jsx",
+      "line": 3,
+      "type": "FIXME",
+      "text": "Hardcoded API key — must move to env var before release"
+    },
+    {
+      "file": "src/pages/Dashboard.jsx",
+      "line": 10,
+      "type": "TODO",
+      "text": "Replace with real API call"
+    },
+    {
+      "file": "src/pages/Home.jsx",
+      "line": 4,
+      "type": "TODO",
+      "text": "Add authentication check before rendering"
+    },
+    {
+      "file": "src/utils/auth.js",
+      "line": 1,
+      "type": "HACK",
+      "text": "Temporary auth bypass for dev — remove before prod"
+    },
+    {
+      "file": "src/utils/auth.js",
+      "line": 8,
+      "type": "TODO",
+      "text": "Replace with bcrypt"
+    }
+  ],
+  "docs": [
+    "README.md"
+  ],
+  "envFiles": [
+    ".env.example"
+  ],
+  "risks": {
+    "hardcodedSecrets": [
+      {
+        "file": "src/pages/Dashboard.jsx",
+        "line": 4,
+        "type": "Generic API Key",
+        "snippet": "const API_KEY = 'sk-hardcoded-secret-key-1234567890abcdef';"
+      }
+    ],
+    "largeFiles": [],
+    "suspiciousFiles": [],
+    "missingEnvExample": false
+  },
+  "stats": {
+    "totalFiles": 12,
+    "totalSize": 3503,
+    "byType": {
+      ".example": 1,
+      ".md": 1,
+      ".json": 1,
+      ".js": 4,
+      ".sh": 1,
+      ".jsx": 4
+    }
+  }
+}

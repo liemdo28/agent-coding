@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-05-16T13:55:34.015Z",
+  "projectName": "sample-react-app",
+  "projectRoot": "/home/user/agent-coding/sample-project",
+  "frameworks": [
+    "Vite",
+    "React"
+  ],
+  "languages": [
+    "JavaScript"
+  ],
+  "packageManager": null,
+  "commands": {
+    "build": "npm run build",
+    "test": "npm run test",
+    "lint": "npm run lint"
+  },
+  "filesScanned": 12,
+  "filesIgnored": 0,
+  "risks": {
+    "hardcodedSecrets": [
+      {
+        "file": "src/pages/Dashboard.jsx",
+        "line": 4,
+        "type": "Generic API Key",
+        "snippet": "const API_KEY = 'sk-hardcoded-secret-key-1234567890abcdef';"
+      }
+    ],
+    "largeFiles": [],
+    "suspiciousFiles": [],
+    "missingEnvExample": false,
+    "todos": 9
+  },
+  "warnings": [],
+  "failures": [
+    "1 possible hardcoded secret(s) detected"
+  ],
+  "qaScore": 71,
+  "result": "FAIL"
+}
