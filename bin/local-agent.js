@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // bin/local-agent.js - CLI entrypoint for the local/offline AI Coding Agent
 
-import { resolve, dirname } from 'path';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync } from 'fs';
 
@@ -47,6 +47,12 @@ async function main() {
   function formatDate(isoStr) {
     if (!isoStr) return 'never';
     return new Date(isoStr).toLocaleString();
+  }
+
+  function formatMs(ms) {
+    if (!ms) return '—';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
   }
 
   function checkIcon(passed) {
@@ -338,22 +344,239 @@ async function main() {
       console.log(chalk.yellow('⚠  Coming in Phase 3: Rollback / backup system.\n'));
     });
 
-  // ── qa (Phase 4) ─────────────────────────────────────────────────────────
+  // ── qa ────────────────────────────────────────────────────────────────────
   program
     .command('qa [path]')
-    .description('Run automated QA checks (Phase 4)')
-    .action(() => {
+    .description('Run automated QA: build, test, score, regression check, report')
+    .option('--project <path>', 'Path to target project')
+    .option('--deep',     'Also run lint and typecheck')
+    .option('--auto-fix', 'Engage LLM auto-debug loop on failures')
+    .action(async (pathArg, opts) => {
       printBanner();
-      console.log(chalk.yellow('⚠  Coming in Phase 4: Automated QA and build/test loop.\n'));
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!isWorkspaceInitialized(targetDir)) die('Workspace not initialized. Run: local-agent init');
+
+      const { runQA } = await import('../local-agent/qa/QAEngine.js');
+      const spinner = ora('Starting QA engine...').start();
+
+      try {
+        const result = await runQA(targetDir, {
+          deep:     opts.deep    ?? false,
+          autoFix:  opts.autoFix ?? false,
+          onProgress: ({ phase, message }) => {
+            spinner.text = chalk.gray(`[${phase}] ${message}`);
+          },
+        });
+
+        spinner.stop();
+
+        const { qaScore, buildResult, testResult, staticResults, regression, reportPaths } = result;
+        const gradeColor = qaScore.grade === 'PASS' ? 'green' : qaScore.grade === 'WARNING' ? 'yellow' : 'red';
+
+        console.log('\n' + chalk.bold('QA Results:'));
+        console.log(`  ${chalk.gray('Build:')}     ${buildResult.success ? chalk.green('PASS') : chalk.red('FAIL')}  (${formatMs(buildResult.durationMs)})`);
+        console.log(`  ${chalk.gray('Tests:')}     ${testResult.success  ? chalk.green('PASS') : chalk.red('FAIL')}  (${formatMs(testResult.durationMs)})`);
+        if (testResult.summary) {
+          console.log(`  ${chalk.gray('Test count:')} ${testResult.summary.passed} passed, ${testResult.summary.failed} failed, ${testResult.summary.total} total`);
+        }
+        if (opts.deep) {
+          staticResults.forEach((r) => {
+            console.log(`  ${chalk.gray(r.phase + ':')}${' '.repeat(Math.max(1, 8-r.phase.length))}${r.success ? chalk.green('PASS') : chalk.red('FAIL')}`);
+          });
+        }
+
+        const totalErrors = (buildResult.errors?.length ?? 0) + (testResult.errors?.length ?? 0);
+        if (totalErrors > 0) {
+          console.log('\n' + chalk.bold('Errors detected:'));
+          [...(buildResult.errors ?? []), ...(testResult.errors ?? [])].slice(0, 8).forEach((e) => {
+            console.log(`  ${chalk.red('›')} [${e.errorType}] ${e.message?.slice(0, 80)}`);
+            if (e.file) console.log(`    ${chalk.gray(`→ ${e.file}:${e.line ?? '?'}`)}`);
+          });
+        }
+
+        if (regression.regressions.length > 0) {
+          console.log('\n' + chalk.bold.yellow('⚠  Regressions vs previous run:'));
+          regression.regressions.forEach((r) => {
+            console.log(`  ${chalk.yellow('›')} ${r.message}`);
+          });
+        }
+
+        console.log('\n' + chalk.bold('QA Score:'));
+        qaScore.breakdown.forEach((d) => {
+          const bar = '█'.repeat(Math.round(d.score / 10)) + chalk.gray('░'.repeat(10 - Math.round(d.score / 10)));
+          console.log(`  ${d.dimension.padEnd(20)} ${String(d.score).padStart(3)}  ${bar}`);
+        });
+        console.log(`\n  ${chalk[gradeColor].bold(`Total: ${qaScore.total}/100  —  ${qaScore.grade}`)}`);
+
+        if (result.debugResult) {
+          console.log(chalk.gray(`\n  Debug loops: ${result.debugResult.loopCount}, patches applied: ${result.debugResult.patchesApplied.length}`));
+        }
+
+        console.log(`\n  ${chalk.gray('Report:')} ${reportPaths.md}`);
+        console.log(`  ${chalk.gray('JSON:')}   ${reportPaths.json}\n`);
+
+        if (qaScore.grade === 'FAIL') process.exit(1);
+      } catch (err) {
+        spinner.fail(chalk.red('QA failed'));
+        die(err.message);
+      }
+    });
+
+  // ── build ─────────────────────────────────────────────────────────────────
+  program
+    .command('build [path]')
+    .description('Run the project build command and report errors')
+    .option('--project <path>', 'Path to target project')
+    .option('--command <cmd>', 'Override build command')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!isWorkspaceInitialized(targetDir)) die('Workspace not initialized. Run: local-agent init');
+
+      const { runBuild }  = await import('../local-agent/qa/BuildRunner.js');
+      const { loadConfig } = await import('../local-agent/core/config.js');
+      const config = loadConfig(targetDir);
+
+      const spinner = ora('Running build...').start();
+      const result  = await runBuild(targetDir, config, { command: opts.command });
+      spinner[result.success ? 'succeed' : 'fail'](
+        result.success ? chalk.green(`Build passed (${formatMs(result.durationMs)})`)
+                       : chalk.red(`Build failed (${formatMs(result.durationMs)})`)
+      );
+      console.log(chalk.gray(`  Command: ${result.command}`));
+
+      if (!result.success && result.errors.length) {
+        console.log('\n' + chalk.bold('Errors:'));
+        result.errors.forEach((e) => {
+          console.log(`  ${chalk.red('›')} [${e.errorType}] ${e.message}`);
+          if (e.file) console.log(`    ${chalk.gray(`${e.file}:${e.line ?? '?'}`)}`);
+        });
+      }
+      if (result.stdout) console.log('\n' + chalk.gray(result.stdout.slice(0, 500)));
+      if (!result.success) process.exit(1);
+    });
+
+  // ── test ──────────────────────────────────────────────────────────────────
+  program
+    .command('test [path]')
+    .description('Run the project test suite and report results')
+    .option('--project <path>', 'Path to target project')
+    .option('--command <cmd>', 'Override test command')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!isWorkspaceInitialized(targetDir)) die('Workspace not initialized. Run: local-agent init');
+
+      const { runTests }  = await import('../local-agent/qa/TestRunner.js');
+      const { loadConfig } = await import('../local-agent/core/config.js');
+      const config = loadConfig(targetDir);
+
+      const spinner = ora('Running tests...').start();
+      const result  = await runTests(targetDir, config, { command: opts.command });
+      spinner[result.success ? 'succeed' : 'fail'](
+        result.success ? chalk.green(`Tests passed (${formatMs(result.durationMs)})`)
+                       : chalk.red(`Tests failed (${formatMs(result.durationMs)})`)
+      );
+
+      if (result.summary) {
+        console.log(`  ${chalk.gray('Passed:')} ${chalk.green(result.summary.passed)}  ` +
+                    `${chalk.gray('Failed:')} ${chalk.red(result.summary.failed)}  ` +
+                    `${chalk.gray('Total:')} ${result.summary.total}`);
+      }
+      if (!result.success && result.errors.length) {
+        console.log('\n' + chalk.bold('Failures:'));
+        result.errors.forEach((e) => {
+          console.log(`  ${chalk.red('›')} ${e.testName ?? e.message}`);
+        });
+      }
+      if (!result.success) process.exit(1);
+    });
+
+  // ── diagnose ──────────────────────────────────────────────────────────────
+  program
+    .command('diagnose <logfile>')
+    .description('Parse and diagnose a local build/test log file')
+    .action(async (logfile) => {
+      printBanner();
+      const logPath = resolve(logfile);
+      if (!existsSync(logPath)) die(`Log file not found: ${logPath}`);
+
+      const { parseLogFile }         = await import('../local-agent/qa/ErrorParser.js');
+      const { classifyFailures }     = await import('../local-agent/qa/FailureClassifier.js');
+      const { readFileSync }         = await import('fs');
+
+      const content = readFileSync(logPath, 'utf8');
+      const errors  = parseLogFile(content, logPath);
+      const classification = classifyFailures(errors);
+
+      console.log(chalk.bold(`Diagnosing: ${logPath}`));
+      console.log(chalk.gray(`  ${content.split('\n').length} lines, ${errors.length} error(s) parsed\n`));
+
+      if (!classification.hasFailures) {
+        console.log(chalk.green('✓ No errors detected in log file.\n'));
+        return;
+      }
+
+      console.log(chalk.bold('Error Summary:'));
+      classification.summary.forEach((s) => {
+        const riskColor = s.risk > 0.6 ? 'red' : s.risk > 0.3 ? 'yellow' : 'gray';
+        console.log(`\n  ${chalk.bold(s.type)} (${s.count} occurrence${s.count > 1 ? 's' : ''})`);
+        console.log(`    ${chalk.gray('Risk:')}   ${chalk[riskColor](s.risk.toFixed(2))}`);
+        console.log(`    ${chalk.gray('Cause:')}  ${s.probableCause}`);
+        if (s.files.length) console.log(`    ${chalk.gray('Files:')}  ${s.files.join(', ')}`);
+        s.examples.forEach((ex) => {
+          console.log(`    ${chalk.red('›')} ${ex.slice(0, 100)}`);
+        });
+      });
+
+      console.log(`\n  ${chalk.bold('Dominant failure:')} ${classification.dominant}`);
+      console.log(`  ${chalk.bold('Overall risk:')}     ${classification.riskScore.toFixed(2)}`);
+      const safeToFix = classification.riskScore <= 0.75 &&
+        !['AUTH_ERROR','DATABASE_ERROR','DEPLOYMENT_ERROR'].some((t) => classification.groups[t]?.length);
+      console.log(`  ${chalk.bold('Safe to auto-fix:')} ${safeToFix ? chalk.green('yes') : chalk.red('no')}\n`);
     });
 
   // ── report (Phase 5) ─────────────────────────────────────────────────────
   program
     .command('report [path]')
-    .description('Generate a project health report (Phase 5)')
-    .action(() => {
+    .description('Show last QA report for a project')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
       printBanner();
-      console.log(chalk.yellow('⚠  Coming in Phase 5: Reporting and dashboard.\n'));
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const reportsDir = join(targetDir, '.local-agent', 'reports');
+
+      if (!existsSync(reportsDir)) {
+        console.log(chalk.yellow('No reports yet. Run: local-agent qa\n'));
+        return;
+      }
+
+      const { readdirSync, readFileSync } = await import('fs');
+      const reports = readdirSync(reportsDir)
+        .filter((f) => f.startsWith('qa-report-') && f.endsWith('.json'))
+        .sort().reverse();
+
+      if (!reports.length) {
+        console.log(chalk.yellow('No QA reports yet. Run: local-agent qa\n'));
+        return;
+      }
+
+      const latest = JSON.parse(readFileSync(join(reportsDir, reports[0]), 'utf8'));
+      const gradeColor = latest.qaScore?.grade === 'PASS' ? 'green' :
+                         latest.qaScore?.grade === 'WARNING' ? 'yellow' : 'red';
+
+      console.log(chalk.bold('Latest QA Report:'));
+      console.log(`  ${chalk.gray('Project:')}  ${latest.projectName}`);
+      console.log(`  ${chalk.gray('Generated:')} ${formatDate(latest.generatedAt)}`);
+      console.log(`  ${chalk.gray('Build:')}    ${latest.buildSuccess ? chalk.green('PASS') : chalk.red('FAIL')}`);
+      console.log(`  ${chalk.gray('Tests:')}    ${latest.testSuccess  ? chalk.green('PASS') : chalk.red('FAIL')}`);
+      console.log(`  ${chalk.gray('Errors:')}   ${latest.totalErrors}`);
+      console.log(`  ${chalk.gray('Patches:')}  ${latest.patchesApplied}`);
+      console.log(`  ${chalk[gradeColor].bold(`  Score: ${latest.qaScore?.total}/100  —  ${latest.qaScore?.grade}`)}`);
+      console.log(`\n  ${chalk.gray('All reports:')} ${reportsDir}\n`);
     });
 
   program.parse(process.argv);

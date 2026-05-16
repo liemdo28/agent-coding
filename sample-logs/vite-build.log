@@ -1,0 +1,18 @@
+vite v5.0.0 building for production...
+
+transforming...
+
+✓ 42 modules transformed.
+
+[ERROR] Transform failed with 2 errors:
+  src/pages/Dashboard.jsx:18:4: ERROR: Expected ";" but found ")"
+  src/utils/auth.js:12:0: ERROR: Expected identifier but found end of file
+
+error during build:
+Error: Build failed with 2 errors:
+src/pages/Dashboard.jsx:18:4: ERROR: Expected ";" but found ")"
+src/utils/auth.js:12:0: ERROR: Expected identifier but found end of file
+
+    at failureErrorWithLog (/node_modules/vite/dist/node/chunks/dep-stQc5rCc.js:65296:18)
+    at Object.build (/node_modules/vite/dist/node/chunks/dep-stQc5rCc.js:65548:11)
+    at async CAC.<anonymous> (/node_modules/vite/dist/node/cli.js:1:809)

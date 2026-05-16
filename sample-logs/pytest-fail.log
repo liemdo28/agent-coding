@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.4, pytest-7.4.0
+collected 8 items
+
+tests/test_auth.py::test_login_success PASSED
+tests/test_auth.py::test_login_invalid PASSED
+tests/test_api.py::test_get_users FAILED
+tests/test_api.py::test_create_user FAILED
+tests/test_db.py::test_connection PASSED
+tests/test_db.py::test_query PASSED
+tests/test_utils.py::test_hash PASSED
+tests/test_utils.py::test_validate PASSED
+
+=================================== FAILURES ===================================
+_______________________ test_get_users ________________________
+
+    def test_get_users():
+>       response = client.get("/api/users")
+        assert response.status_code == 200
+
+E       AssertionError: assert 500 == 200
+E        +  where 500 = <Response [500]>.status_code
+
+tests/test_api.py:14: AssertionError
+
+FAILED tests/test_api.py::test_get_users - AssertionError: assert 500 == 200
+FAILED tests/test_api.py::test_create_user - AssertionError: assert 422 == 201
+
+========================= 2 failed, 6 passed in 1.23s ==========================

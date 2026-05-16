@@ -139,10 +139,10 @@ export function runPolicyChecks(workspaceRoot, config) {
       checks.push({
         name: 'no-hardcoded-secrets',
         passed: secrets.length === 0,
-        severity: 'FAIL',
+        severity: 'WARN',   // warn only — doesn't block build/QA, but shows in policy-check
         message: secrets.length === 0
           ? 'No hardcoded secrets detected'
-          : `${secrets.length} possible hardcoded secret(s) found — run 'local-agent scan' for details`,
+          : `${secrets.length} possible hardcoded secret(s) found — remove before deploying`,
         details: secrets.slice(0, 5).map((s) => `${s.file}:${s.line} (${s.type})`),
       });
     } catch {

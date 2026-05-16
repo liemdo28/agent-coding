@@ -8,4 +8,5 @@ node_modules/
 .local-agent/index.sqlite
 .local-agent/memory/
 *.log
+!sample-logs/*.log
 .DS_Store

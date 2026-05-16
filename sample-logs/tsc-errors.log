@@ -1,0 +1,12 @@
+src/components/Button.tsx(8,5): error TS2322: Type 'string' is not assignable to type 'number'.
+src/pages/Home.tsx(14,16): error TS2339: Property 'username' does not exist on type 'User'.
+src/utils/auth.ts(23,3): error TS7006: Parameter 'token' implicitly has an 'any' type.
+src/api/users.ts(45,12): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'string'.
+
+Found 4 errors in 4 files.
+
+Errors  Files
+     1  src/components/Button.tsx:8
+     1  src/pages/Home.tsx:14
+     1  src/utils/auth.ts:23
+     1  src/api/users.ts:45
