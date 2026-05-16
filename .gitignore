@@ -1,0 +1,9 @@
+node_modules/
+.local-agent/logs/
+.local-agent/backups/
+.local-agent/patches/
+.local-agent/reports/
+.local-agent/index.sqlite
+.local-agent/memory/
+*.log
+.DS_Store
