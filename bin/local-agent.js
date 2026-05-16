@@ -315,33 +315,197 @@ async function main() {
       }
     });
 
-  // ── fix (Phase 3) ────────────────────────────────────────────────────────
+  // ── fix ───────────────────────────────────────────────────────────────────
   program
-    .command('fix <issue> [path]')
-    .description('Auto-fix a detected issue (Phase 3)')
-    .action((issue) => {
+    .command('fix <task> [path]')
+    .description('Generate a patch proposal for a task via local LLM (does NOT auto-apply)')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, pathArg, opts) => {
       printBanner();
-      console.log(chalk.yellow('⚠  Coming in Phase 3: Autonomous code editing.'));
-      console.log(chalk.gray(`   Issue: "${issue}"\n`));
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!isWorkspaceInitialized(targetDir)) die('Workspace not initialized. Run: local-agent init');
+
+      const { loadConfig }           = await import('../local-agent/core/config.js');
+      const { generatePatchesViaLLM } = await import('../local-agent/patch/DiffGenerator.js');
+      const { createPatch }           = await import('../local-agent/patch/PatchManager.js');
+      const config = loadConfig(targetDir);
+
+      console.log(chalk.bold(`Generating patch for: "${task}"\n`));
+      const llmSpinner = ora('Querying local LLM for patch proposal...').start();
+
+      try {
+        const { patches, llmOutput, cannotPatch } = await generatePatchesViaLLM(task, targetDir, config);
+        llmSpinner.stop();
+
+        if (cannotPatch) {
+          console.log(chalk.yellow(`⚠  LLM cannot patch this task: ${cannotPatch}\n`));
+          return;
+        }
+        if (!patches.length) {
+          console.log(chalk.yellow('⚠  No diff blocks extracted from LLM output.'));
+          console.log(chalk.gray('   LLM said:\n') + chalk.gray(llmOutput.slice(0, 500)));
+          return;
+        }
+
+        const patch = createPatch({
+          task,
+          workspaceRoot: targetDir,
+          diffs: patches,
+          model: config.llm.model,
+        });
+
+        console.log(chalk.green(`✓ Patch ${patch.patchId} created (status: proposed, NOT applied)\n`));
+        console.log(chalk.bold('Details:'));
+        console.log(`  ${chalk.gray('Patch ID:')}   ${patch.patchId}`);
+        console.log(`  ${chalk.gray('Risk:')}       ${patch.riskLevel}`);
+        console.log(`  ${chalk.gray('Files:')}      ${patch.filesChanged.join(', ')}`);
+        console.log('\n' + chalk.bold('Next steps:'));
+        console.log(`  ${chalk.cyan('local-agent show-patch')} ${patch.patchId} --project ${opts.project ?? '.'}`);
+        console.log(`  ${chalk.cyan('local-agent apply')} ${patch.patchId} --project ${opts.project ?? '.'}`);
+        console.log(`  ${chalk.cyan('local-agent patches')} --project ${opts.project ?? '.'}\n`);
+      } catch (err) {
+        llmSpinner.fail(chalk.red('Fix generation failed'));
+        die(err.message);
+      }
     });
 
-  // ── apply (Phase 3) ──────────────────────────────────────────────────────
+  // ── patches ───────────────────────────────────────────────────────────────
   program
-    .command('apply <patch> [path]')
-    .description('Apply a patch file (Phase 3)')
-    .action((patch) => {
+    .command('patches [path]')
+    .description('List all patch proposals for a project')
+    .option('--project <path>', 'Path to target project')
+    .option('--status <status>', 'Filter by status (proposed|applied|rejected|rolled_back)')
+    .action(async (pathArg, opts) => {
       printBanner();
-      console.log(chalk.yellow('⚠  Coming in Phase 3: Patch application system.'));
-      console.log(chalk.gray(`   Patch: "${patch}"\n`));
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+
+      const { listPatches } = await import('../local-agent/patch/PatchManager.js');
+      let patches = listPatches(targetDir);
+
+      if (opts.status) {
+        patches = patches.filter((p) => p.status === opts.status);
+      }
+
+      if (!patches.length) {
+        console.log(chalk.yellow('No patches found. Run: local-agent fix "<task>"\n'));
+        return;
+      }
+
+      console.log(chalk.bold(`Patches (${patches.length} total):\n`));
+      for (const p of patches) {
+        const statusColor = p.status === 'applied' ? 'green' : p.status === 'proposed' ? 'blue' :
+                            p.status === 'rolled_back' ? 'yellow' : p.status === 'failed' ? 'red' : 'gray';
+        const riskColor   = p.riskLevel === 'high' ? 'red' : p.riskLevel === 'medium' ? 'yellow' : 'gray';
+        console.log(
+          `  ${chalk.bold(p.patchId)}  ${chalk[statusColor](`[${p.status}]`)}  ` +
+          `${chalk[riskColor](`risk:${p.riskLevel}`)}  ${chalk.gray(p.task.slice(0, 60))}`
+        );
+        console.log(`         ${chalk.gray(p.filesChanged.join(', ').slice(0, 80))}  ` +
+                    chalk.gray(new Date(p.createdAt).toLocaleString()));
+      }
+      console.log();
     });
 
-  // ── rollback (Phase 3) ───────────────────────────────────────────────────
+  // ── show-patch ────────────────────────────────────────────────────────────
   program
-    .command('rollback [path]')
-    .description('Roll back the last applied change (Phase 3)')
-    .action(() => {
+    .command('show-patch <patch-id> [path]')
+    .description('Show details and diff for a patch proposal')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
       printBanner();
-      console.log(chalk.yellow('⚠  Coming in Phase 3: Rollback / backup system.\n'));
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getPatch } = await import('../local-agent/patch/PatchManager.js');
+      const patch = getPatch(patchId, targetDir);
+      if (!patch) die(`Patch not found: ${patchId}`);
+
+      const statusColor = patch.status === 'applied' ? 'green' : patch.status === 'proposed' ? 'blue' :
+                          patch.status === 'rolled_back' ? 'yellow' : 'red';
+
+      console.log(chalk.bold(`Patch: ${patch.patchId}`));
+      console.log(`  ${chalk.gray('Task:')}     ${patch.task}`);
+      console.log(`  ${chalk.gray('Status:')}   ${chalk[statusColor](patch.status)}`);
+      console.log(`  ${chalk.gray('Risk:')}     ${patch.riskLevel}`);
+      console.log(`  ${chalk.gray('Created:')}  ${new Date(patch.createdAt).toLocaleString()}`);
+      console.log(`  ${chalk.gray('Files:')}    ${patch.filesChanged.join(', ')}`);
+      if (patch.model) console.log(`  ${chalk.gray('Model:')}    ${patch.model}`);
+      if (patch.error) console.log(`  ${chalk.red('Error:')}    ${patch.error}`);
+      if (patch.backupPath) console.log(`  ${chalk.gray('Backup:')}   ${patch.backupPath}`);
+
+      if (patch.rollbackCommands?.length) {
+        console.log('\n' + chalk.bold('Rollback commands:'));
+        patch.rollbackCommands.forEach((c) => console.log(`  ${chalk.gray(c)}`));
+      }
+
+      console.log('\n' + chalk.bold('Diff:'));
+      for (const diff of patch.diffs) {
+        console.log(chalk.cyan(`\n  File: ${diff.filePath}`));
+        console.log(chalk.gray(diff.patchText.split('\n').map((l) => '  ' + l).join('\n')));
+      }
+      console.log();
+    });
+
+  // ── apply ─────────────────────────────────────────────────────────────────
+  program
+    .command('apply <patch-id> [path]')
+    .description('Apply a patch proposal (creates backup first)')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+
+      const { getPatch, applyPatchById } = await import('../local-agent/patch/PatchManager.js');
+      const patch = getPatch(patchId, targetDir);
+      if (!patch) die(`Patch not found: ${patchId}`);
+      if (patch.status !== 'proposed') die(`Patch ${patchId} is ${patch.status} — can only apply proposed patches`);
+
+      if (patch.riskLevel === 'high') {
+        console.log(chalk.red.bold(`⚠  HIGH RISK PATCH — requires confirmation`));
+        console.log(chalk.gray(`   Files: ${patch.filesChanged.join(', ')}`));
+        console.log(chalk.gray(`   Task: ${patch.task}\n`));
+      }
+
+      const spinner = ora(`Applying ${patchId}...`).start();
+      const result  = applyPatchById(patchId, targetDir);
+
+      if (result.success) {
+        spinner.succeed(chalk.green(`${patchId} applied — backup at: ${result.backupPath}`));
+        result.applied.forEach((f) => console.log(`  ${chalk.green('✓')} ${f}`));
+        console.log(`\n  ${chalk.gray('Rollback:')} local-agent rollback ${patchId} --project ${opts.project ?? '.'}\n`);
+      } else {
+        spinner.fail(chalk.red(`Apply failed: ${result.errors.join('; ')}`));
+        process.exit(1);
+      }
+    });
+
+  // ── rollback ──────────────────────────────────────────────────────────────
+  program
+    .command('rollback <patch-id> [path]')
+    .description('Roll back an applied patch from its backup')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+
+      const { getPatch, rollbackPatchById } = await import('../local-agent/patch/PatchManager.js');
+      const patch = getPatch(patchId, targetDir);
+      if (!patch) die(`Patch not found: ${patchId}`);
+      if (patch.status !== 'applied') die(`Patch ${patchId} is ${patch.status} — can only rollback applied patches`);
+
+      const spinner = ora(`Rolling back ${patchId}...`).start();
+      const result  = rollbackPatchById(patchId, targetDir);
+
+      if (result.success) {
+        spinner.succeed(chalk.green(`${patchId} rolled back — ${result.restored.length} file(s) restored`));
+        result.restored.forEach((f) => console.log(`  ${chalk.green('✓')} ${f}`));
+        console.log();
+      } else {
+        spinner.fail(chalk.red('Rollback errors: ' + result.errors.join('; ')));
+        process.exit(1);
+      }
     });
 
   // ── qa ────────────────────────────────────────────────────────────────────
@@ -577,6 +741,47 @@ async function main() {
       console.log(`  ${chalk.gray('Patches:')}  ${latest.patchesApplied}`);
       console.log(`  ${chalk[gradeColor].bold(`  Score: ${latest.qaScore?.total}/100  —  ${latest.qaScore?.grade}`)}`);
       console.log(`\n  ${chalk.gray('All reports:')} ${reportsDir}\n`);
+    });
+
+  // ── ui ────────────────────────────────────────────────────────────────────
+  program
+    .command('ui [path]')
+    .description('Start the local dashboard UI at http://127.0.0.1:4001')
+    .option('--project <path>', 'Path to target project')
+    .option('--port <number>',  'Backend port (default: 4001)', '4001')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const port      = parseInt(opts.port, 10) || 4001;
+
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+
+      const serverPath = join(__dirname, '../local-agent/ui/backend/server.js');
+      if (!existsSync(serverPath)) {
+        console.log(chalk.yellow('⚠  UI backend not found at local-agent/ui/backend/server.js'));
+        console.log(chalk.gray('   Run the Phase 5 setup to install the UI.\n'));
+        return;
+      }
+
+      // Set env vars and spawn backend
+      const { spawn } = await import('child_process');
+      const server = spawn(process.execPath, [serverPath], {
+        env: {
+          ...process.env,
+          LOCAL_AGENT_PROJECT: targetDir,
+          LOCAL_AGENT_PORT: String(port),
+        },
+        stdio: 'inherit',
+      });
+
+      const url = `http://127.0.0.1:${port}`;
+      console.log(chalk.bold.green(`\n  ✓ Local Agent UI starting...`));
+      console.log(`  ${chalk.gray('URL:')}     ${chalk.cyan(url)}`);
+      console.log(`  ${chalk.gray('Project:')} ${targetDir}`);
+      console.log(`  ${chalk.gray('API:')}     ${url}/health`);
+      console.log(chalk.gray('\n  Press Ctrl+C to stop.\n'));
+
+      server.on('error', (err) => die('Failed to start UI server: ' + err.message));
     });
 
   program.parse(process.argv);
