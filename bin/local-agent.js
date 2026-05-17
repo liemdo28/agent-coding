@@ -3649,19 +3649,235 @@ async function main() {
       console.log(`  Architecture docs → .local-agent/engineering-log/architecture/\n`);
     });
 
+  logsCmd
+    .command('file-purpose [path]')
+    .description('Show or search the file purpose index (log-first policy)')
+    .option('--project <path>', 'Path to target project')
+    .option('--search <query>', 'Search file purpose index by keyword')
+    .option('--rebuild', 'Rebuild the index from source')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { loadFilePurposeIndex, buildFilePurposeIndex, searchFilePurpose } = await import('../local-agent/eng-log/FilePurposeIndexer.js');
+      const { initLogStructure } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+
+      if (opts.rebuild) {
+        const spinner = ora('Rebuilding file purpose index...').start();
+        buildFilePurposeIndex(targetDir);
+        spinner.succeed('File purpose index rebuilt');
+      }
+
+      if (opts.search) {
+        const results = searchFilePurpose(targetDir, opts.search, { limit: 15 });
+        if (!results.length) {
+          console.log(chalk.yellow(`No files found matching: "${opts.search}"\n`));
+          return;
+        }
+        console.log(chalk.bold(`File Purpose Search: "${opts.search}" (${results.length} results)\n`));
+        results.forEach((r) => {
+          console.log(`  ${chalk.cyan(r.file)}`);
+          console.log(`    → ${chalk.gray(r.purpose)}`);
+          console.log(`    Category: ${r.category} | Phase: ${r.phase} | Score: ${r.score}`);
+          console.log();
+        });
+        return;
+      }
+
+      const index = loadFilePurposeIndex(targetDir);
+      const entries = Object.entries(index);
+      console.log(chalk.bold(`File Purpose Index (${entries.length} files)\n`));
+      console.log(chalk.gray('  Use --search <keyword> to filter. Example: --search "QA"\n'));
+
+      const byCategory = {};
+      for (const [file, info] of entries) {
+        const cat = info.category ?? 'other';
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push({ file, ...info });
+      }
+
+      for (const [cat, files] of Object.entries(byCategory).sort()) {
+        console.log(chalk.bold.yellow(`\n  [${cat}]`));
+        files.forEach((f) => {
+          console.log(`    ${chalk.cyan(f.file)}`);
+          console.log(`      → ${chalk.gray(f.purpose)}`);
+        });
+      }
+      console.log();
+    });
+
+  logsCmd
+    .command('current-state [path]')
+    .description('Compact current engineering state snapshot')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { loadProgress }                           = await import('../local-agent/eng-log/ProgressTracker.js');
+      const { listKnownIssues, listBlockers, listRisks } = await import('../local-agent/eng-log/EngineeringStateTracker.js');
+      const { listCheckpoints }                        = await import('../local-agent/eng-log/CheckpointWriter.js');
+      const { listIncidents }                          = await import('../local-agent/eng-log/IncidentRecorder.js');
+      const { getContextPriority }                     = await import('../local-agent/eng-log/ContextPriorityManager.js');
+
+      const progress    = loadProgress(targetDir);
+      const issues      = listKnownIssues(targetDir);
+      const blockers    = listBlockers(targetDir);
+      const risks       = listRisks(targetDir).filter((r) => r.status !== 'mitigated');
+      const checkpoints = listCheckpoints(targetDir, { limit: 3 });
+      const incidents   = listIncidents(targetDir).filter((i) => i.status === 'open');
+      const ctxPriority = getContextPriority(targetDir);
+
+      console.log(chalk.bold.cyan('Current Engineering State\n'));
+      console.log(`  ${chalk.bold('Phase:')}       ${progress.currentPhase ?? 'not set'}`);
+      console.log(`  ${chalk.bold('In Progress:')} ${progress.inProgress.length ? progress.inProgress.join(', ') : 'none'}`);
+      console.log(`  ${chalk.bold('Priorities:')}  ${progress.priorities.length ? progress.priorities[0] : 'none set'}`);
+      console.log();
+
+      console.log(chalk.bold('Status:'));
+      console.log(`  Known Issues:     ${issues.length ? chalk.yellow(issues.length) : chalk.green('0')}`);
+      console.log(`  Active Blockers:  ${blockers.length ? chalk.red(blockers.length) : chalk.green('0')}`);
+      console.log(`  Open Risks:       ${risks.length ? chalk.yellow(risks.length) : chalk.green('0')}`);
+      console.log(`  Active Incidents: ${incidents.length ? chalk.red(incidents.length) : chalk.green('0')}`);
+      console.log(`  Checkpoints:      ${chalk.cyan(checkpoints.length)}`);
+      console.log();
+
+      if (blockers.length) {
+        console.log(chalk.bold.red('Blockers:'));
+        blockers.forEach((b) => console.log(`  ${chalk.red('!')} [${b.severity}] ${b.system}: ${b.reason}`));
+        console.log();
+      }
+
+      if (issues.length) {
+        console.log(chalk.bold.yellow('Known Issues:'));
+        issues.forEach((i) => console.log(`  ${chalk.yellow('•')} ${i.id} ${i.title}`));
+        console.log();
+      }
+
+      console.log(chalk.bold('Context Priority (log-first policy):'));
+      ctxPriority.slice(0, 4).forEach((p) =>
+        console.log(`  ${chalk.cyan(String(p.order) + '.')} ${p.source.padEnd(22)} ${chalk.gray(p.description.slice(0, 55))}`)
+      );
+      console.log(`  ${chalk.gray('...')} read source files ONLY if log context is insufficient`);
+      console.log();
+    });
+
+  logsCmd
+    .command('search <query> [path]')
+    .description('Search across all engineering log documents')
+    .option('--project <path>', 'Path to target project')
+    .option('--limit <n>', 'Max results per source', '5')
+    .action(async (query, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const limit = parseInt(opts.limit) || 5;
+
+      const { searchFilePurpose }  = await import('../local-agent/eng-log/FilePurposeIndexer.js');
+      const { selectFilesForTask } = await import('../local-agent/eng-log/SmartFileSelector.js');
+      const { listDecisions }      = await import('../local-agent/eng-log/DecisionTracker.js');
+      const { listIncidents }      = await import('../local-agent/eng-log/IncidentRecorder.js');
+      const { listKnownIssues }    = await import('../local-agent/eng-log/EngineeringStateTracker.js');
+      const { readLatest }         = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      const { readFileSync, existsSync: _ex } = await import('fs');
+      const { join: _j } = await import('path');
+
+      console.log(chalk.bold(`Engineering Log Search: "${query}"\n`));
+
+      // 1 — Search latest.md
+      const latest = readLatest(targetDir);
+      if (latest) {
+        const lines  = latest.split('\n');
+        const q      = query.toLowerCase();
+        const hits   = lines.filter((l) => l.toLowerCase().includes(q)).slice(0, limit);
+        if (hits.length) {
+          console.log(chalk.bold.yellow('In latest.md:'));
+          hits.forEach((l) => console.log(`  ${chalk.gray('│')} ${l.trim()}`));
+          console.log();
+        }
+      }
+
+      // 2 — Search file purpose index
+      const fileResults = searchFilePurpose(targetDir, query, { limit });
+      if (fileResults.length) {
+        console.log(chalk.bold.yellow('In file purpose index:'));
+        fileResults.forEach((r) => {
+          console.log(`  ${chalk.cyan(r.file)}`);
+          console.log(`    → ${chalk.gray(r.purpose)}`);
+        });
+        console.log();
+      }
+
+      // 3 — Smart file selector
+      const taskFiles = selectFilesForTask(targetDir, query, { limit });
+      if (taskFiles.length) {
+        console.log(chalk.bold.yellow('Recommended source files:'));
+        taskFiles.forEach((r) => console.log(`  ${chalk.cyan(r.file.padEnd(55))} ${chalk.gray('score: ' + r.score)}`));
+        console.log();
+      }
+
+      // 4 — Search decisions
+      const decisions = listDecisions(targetDir);
+      const decHits   = decisions.filter((d) => {
+        const text = `${d.title} ${d.reason ?? ''} ${d.impact ?? ''}`.toLowerCase();
+        return text.includes(query.toLowerCase());
+      }).slice(0, limit);
+      if (decHits.length) {
+        console.log(chalk.bold.yellow('In decisions:'));
+        decHits.forEach((d) => console.log(`  ${chalk.cyan(d.decisionId)} ${d.title}`));
+        console.log();
+      }
+
+      // 5 — Search known issues
+      const issues = listKnownIssues(targetDir);
+      const issHits = issues.filter((i) => {
+        const text = `${i.title} ${i.rootCause ?? ''} ${i.workaround ?? ''}`.toLowerCase();
+        return text.includes(query.toLowerCase());
+      }).slice(0, limit);
+      if (issHits.length) {
+        console.log(chalk.bold.yellow('In known issues:'));
+        issHits.forEach((i) => console.log(`  ${chalk.yellow(i.id)} ${i.title}`));
+        console.log();
+      }
+
+      // 6 — Search architecture docs
+      const archDir = _j(targetDir, '.local-agent', 'engineering-log', 'architecture');
+      const archFiles = ['system-architecture.md', 'implementation-map.md', 'module-map.md', 'runtime-flow.md'];
+      for (const af of archFiles) {
+        const fp = _j(archDir, af);
+        if (!_ex(fp)) continue;
+        const lines = readFileSync(fp, 'utf8').split('\n');
+        const q     = query.toLowerCase();
+        const hits  = lines.filter((l) => l.toLowerCase().includes(q)).slice(0, limit);
+        if (hits.length) {
+          console.log(chalk.bold.yellow(`In architecture/${af}:`));
+          hits.forEach((l) => console.log(`  ${chalk.gray('│')} ${l.trim()}`));
+          console.log();
+        }
+      }
+
+      const totalSources = [fileResults.length, decHits.length, issHits.length].reduce((a, b) => a + b, 0);
+      if (!totalSources && !latest?.toLowerCase().includes(query.toLowerCase())) {
+        console.log(chalk.gray(`No results found for "${query}" in engineering log.\n`));
+        console.log(chalk.gray('Tip: rebuild index with: local-agent logs file-purpose --rebuild\n'));
+      }
+    });
+
   logsCmd.action(async (pathArg, opts) => {
     printBanner();
     console.log(chalk.bold('Engineering Build Log — commands:\n'));
+    console.log(chalk.bold.yellow('  Log-First Policy: Read logs BEFORE reading source code.\n'));
     [
       ['latest',        'Show current project state (single source of truth)'],
+      ['update',        'Regenerate latest.md with current state'],
+      ['file-purpose',  'File purpose index — find files without reading source'],
+      ['search',        'Search across all engineering log documents'],
+      ['current-state', 'Compact current engineering state snapshot'],
       ['checkpoints',   'List recent checkpoints'],
       ['checkpoint',    'Write a new checkpoint'],
       ['summary',       'Generate a build/QA summary'],
       ['incidents',     'List engineering log incidents'],
       ['architecture',  'Show architecture documentation'],
       ['decision',      'Record an engineering decision'],
-      ['update',        'Regenerate latest.md with current state'],
-    ].forEach(([cmd, desc]) => console.log(`  ${chalk.cyan('local-agent logs ' + cmd.padEnd(16))} ${chalk.gray(desc)}`));
+    ].forEach(([cmd, desc]) => console.log(`  ${chalk.cyan('local-agent logs ' + cmd.padEnd(18))} ${chalk.gray(desc)}`));
     console.log();
   });
 
