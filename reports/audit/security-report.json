@@ -1,0 +1,38 @@
+{
+  "ok": false,
+  "violations": [
+    {
+      "file": "marketing-db/audit/AuditEngine.js",
+      "issues": [
+        "fetch() call",
+        "OpenAI SDK",
+        "Anthropic SDK",
+        "Google APIs",
+        "Firebase"
+      ]
+    },
+    {
+      "file": "marketing-db/core/OfflineGuard.js",
+      "issues": [
+        "OpenAI SDK",
+        "Anthropic SDK",
+        "Google APIs",
+        "Firebase"
+      ]
+    },
+    {
+      "file": "marketing-db/local-seo/GeoKeywordEngine.js",
+      "issues": [
+        "OpenAI SDK"
+      ]
+    },
+    {
+      "file": "bin/local-agent.js",
+      "issues": [
+        "OpenAI SDK",
+        "Anthropic SDK",
+        "Google APIs"
+      ]
+    }
+  ]
+}

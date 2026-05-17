@@ -1,0 +1,6 @@
+{
+  "ok": false,
+  "missing": [
+    "bin/marketing-db.js"
+  ]
+}
