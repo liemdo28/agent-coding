@@ -14,3 +14,7 @@ node_modules/
 *.log
 !sample-logs/*.log
 .DS_Store
+accounting-engine/node_modules/
+accounting-engine/ledgers/*.db
+accounting-engine/ledgers/*.db-wal
+accounting-engine/ledgers/*.db-shm
