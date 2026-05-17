@@ -60,11 +60,7 @@ export function extractImports(filePath, content) {
 function resolveFile(basePath) {
   // Try as-is first
   if (existsSync(basePath) && !basePath.endsWith('/')) {
-    // Check it's actually a file (not directory)
-    try {
-      const { statSync } = await import('fs').catch(() => ({ statSync: null }));
-    } catch { /* ignore */ }
-    if (existsSync(basePath)) return basePath;
+    return basePath;
   }
 
   // Try with extensions

@@ -1,5 +1,5 @@
 // testing/RegressionDetector.js - Detects regressions by comparing test results
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 function getBaselineDir(workspaceRoot) {
@@ -56,7 +56,6 @@ export function getBaselineSummary(workspaceRoot) {
   const dir = getBaselineDir(workspaceRoot);
   if (!existsSync(dir)) return [];
   try {
-    const { readdirSync } = await import('fs');
     return readdirSync(dir)
       .filter((f) => f.startsWith('baseline-') && f.endsWith('.json'))
       .map((f) => {
