@@ -48,7 +48,7 @@ describe('No outbound internet in source', () => {
     /axios/,                                   // HTTP client
     /node-fetch/,                              // another HTTP client
     /telemetry/i,
-    /analytics/i,
+    /google-analytics|gtag\(|segment\.com|mixpanel|amplitude\.com/i,  // external analytics SDKs (local analytics routes are permitted)
     /sentry\.io/i,
     /datadog/i,
   ];

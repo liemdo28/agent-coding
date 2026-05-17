@@ -2,9 +2,13 @@
 import express         from 'express';
 import cors            from 'cors';
 import { openDatabase } from '../core/DatabaseManager.js';
-import { statsRouter }  from './routes/stats.js';
-import { qaRouter }     from './routes/qa.js';
-import { patchesRouter } from './routes/patches.js';
+import { statsRouter }     from './routes/stats.js';
+import { qaRouter }        from './routes/qa.js';
+import { patchesRouter }   from './routes/patches.js';
+import { sessionsRouter }  from './routes/sessions.js';
+import { costsRouter }     from './routes/costs.js';
+import { risksRouter }     from './routes/risks.js';
+import { analyticsRouter } from './routes/analytics.js';
 
 const HOST = '127.0.0.1';   // POLICY: local-only, never 0.0.0.0
 const PORT = 8844;
@@ -26,9 +30,13 @@ export function createApp(db) {
 
   app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-  app.use('/stats',   statsRouter(db));
-  app.use('/qa',      qaRouter(db));
-  app.use('/patches', patchesRouter(db));
+  app.use('/stats',     statsRouter(db));
+  app.use('/qa',        qaRouter(db));
+  app.use('/patches',   patchesRouter(db));
+  app.use('/sessions',  sessionsRouter(db));
+  app.use('/costs',     costsRouter(db));
+  app.use('/risks',     risksRouter(db));
+  app.use('/analytics', analyticsRouter(db));
 
   // 404 handler
   app.use((_req, res) => res.status(404).json({ error: 'not found' }));
