@@ -1,25 +1,213 @@
 {
   "meta": {
-    "commit": "247cc588721530b48dcc2be813380b7eb64bfafa",
+    "commit": "4d6750a8d63aa7d7fa253bb0198b8b025ddc066b",
     "branch": "claude/local-offline-ai-agent-PQx1C",
-    "node": "v22.22.2",
-    "os": "linux",
-    "started_at": "2026-05-17T04:28:08.975Z",
-    "completed_at": "2026-05-17T04:30:20.025Z",
-    "duration_min": "2.00"
+    "node": "v25.8.0",
+    "os": "darwin",
+    "started_at": "2026-05-17T05:51:51.631Z",
+    "completed_at": "2026-05-17T06:22:02.712Z",
+    "duration_min": "30.00"
   },
-  "verdict": "CERTIFIED ✅",
-  "checks": 12,
-  "violations": [],
+  "verdict": "FAILED ❌",
+  "checks": 60,
+  "violations": [
+    {
+      "check": 10,
+      "elapsed_min": "5.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -11.51,
+      "avgCpu": 0.12,
+      "ledgerRows": 9,
+      "p95_ms": 12,
+      "flushed": 61,
+      "errors": 0
+    },
+    {
+      "check": 11,
+      "elapsed_min": "5.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -10.92,
+      "avgCpu": 0.11,
+      "ledgerRows": 10,
+      "p95_ms": 12,
+      "flushed": 67,
+      "errors": 0
+    },
+    {
+      "check": 12,
+      "elapsed_min": "6.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -11.09,
+      "avgCpu": 0.11,
+      "ledgerRows": 11,
+      "p95_ms": 12,
+      "flushed": 73,
+      "errors": 0
+    },
+    {
+      "check": 19,
+      "elapsed_min": "9.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.79,
+      "avgCpu": 0.1,
+      "ledgerRows": 18,
+      "p95_ms": 12,
+      "flushed": 115,
+      "errors": 0
+    },
+    {
+      "check": 20,
+      "elapsed_min": "10.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.56,
+      "avgCpu": 0.1,
+      "ledgerRows": 19,
+      "p95_ms": 12,
+      "flushed": 121,
+      "errors": 0
+    },
+    {
+      "check": 38,
+      "elapsed_min": "19.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.65,
+      "avgCpu": 0.09,
+      "ledgerRows": 37,
+      "p95_ms": 11,
+      "flushed": 229,
+      "errors": 0
+    },
+    {
+      "check": 39,
+      "elapsed_min": "19.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.67,
+      "avgCpu": 0.09,
+      "ledgerRows": 38,
+      "p95_ms": 11,
+      "flushed": 235,
+      "errors": 0
+    },
+    {
+      "check": 45,
+      "elapsed_min": "22.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.77,
+      "avgCpu": 0.08,
+      "ledgerRows": 44,
+      "p95_ms": 11,
+      "flushed": 271,
+      "errors": 0
+    },
+    {
+      "check": 51,
+      "elapsed_min": "25.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.83,
+      "avgCpu": 0.08,
+      "ledgerRows": 50,
+      "p95_ms": 11,
+      "flushed": 307,
+      "errors": 0
+    },
+    {
+      "check": 55,
+      "elapsed_min": "27.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.67,
+      "avgCpu": 0.08,
+      "ledgerRows": 54,
+      "p95_ms": 11,
+      "flushed": 331,
+      "errors": 0
+    },
+    {
+      "check": 56,
+      "elapsed_min": "28.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.06,
+      "avgCpu": 0.08,
+      "ledgerRows": 55,
+      "p95_ms": 11,
+      "flushed": 337,
+      "errors": 0
+    }
+  ],
   "results": {
-    "memory_delta_pct": 16.34,
-    "avg_cpu_pct": 0.26,
-    "api_p95_ms": 22,
+    "memory_delta_pct": 1.94,
+    "avg_cpu_pct": 0.08,
+    "api_p95_ms": 11,
     "ledger_valid": true,
-    "ledger_rows": 1031,
+    "ledger_rows": 60,
     "gpu_available": false,
-    "power_wh": 1.089,
-    "power_cost_usd": 0.0001
+    "power_wh": 15.113,
+    "power_cost_usd": 0.0018
   },
   "limits": {
     "memDeltaPct": 8,
@@ -28,40 +216,6 @@
   "check_log": [
     {
       "check": 1,
-      "elapsed_min": "0.17",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": -0.68,
-      "avgCpu": 0.03,
-      "ledgerRows": 1019,
-      "p95_ms": 27,
-      "flushed": 5,
-      "errors": 0
-    },
-    {
-      "check": 2,
-      "elapsed_min": "0.33",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 14.04,
-      "avgCpu": 0.59,
-      "ledgerRows": 1020,
-      "p95_ms": 27,
-      "flushed": 8,
-      "errors": 0
-    },
-    {
-      "check": 3,
       "elapsed_min": "0.50",
       "pass": {
         "memory": true,
@@ -70,49 +224,15 @@
         "api_p95": true,
         "queue": true
       },
-      "memDeltaPct": 14.97,
-      "avgCpu": 0.47,
-      "ledgerRows": 1021,
-      "p95_ms": 27,
-      "flushed": 11,
+      "memDeltaPct": -16.25,
+      "avgCpu": 0.02,
+      "ledgerRows": 0,
+      "p95_ms": 11,
+      "flushed": 7,
       "errors": 0
     },
     {
-      "check": 4,
-      "elapsed_min": "0.67",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.41,
-      "avgCpu": 0.44,
-      "ledgerRows": 1022,
-      "p95_ms": 27,
-      "flushed": 14,
-      "errors": 0
-    },
-    {
-      "check": 5,
-      "elapsed_min": "0.83",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.41,
-      "avgCpu": 0.39,
-      "ledgerRows": 1023,
-      "p95_ms": 26,
-      "flushed": 17,
-      "errors": 0
-    },
-    {
-      "check": 6,
+      "check": 2,
       "elapsed_min": "1.00",
       "pass": {
         "memory": true,
@@ -121,49 +241,15 @@
         "api_p95": true,
         "queue": true
       },
-      "memDeltaPct": 15.59,
-      "avgCpu": 0.35,
-      "ledgerRows": 1024,
-      "p95_ms": 26,
-      "flushed": 20,
+      "memDeltaPct": -5.21,
+      "avgCpu": 0.14,
+      "ledgerRows": 1,
+      "p95_ms": 11,
+      "flushed": 13,
       "errors": 0
     },
     {
-      "check": 7,
-      "elapsed_min": "1.17",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.59,
-      "avgCpu": 0.33,
-      "ledgerRows": 1025,
-      "p95_ms": 26,
-      "flushed": 23,
-      "errors": 0
-    },
-    {
-      "check": 8,
-      "elapsed_min": "1.33",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.59,
-      "avgCpu": 0.3,
-      "ledgerRows": 1026,
-      "p95_ms": 26,
-      "flushed": 26,
-      "errors": 0
-    },
-    {
-      "check": 9,
+      "check": 3,
       "elapsed_min": "1.50",
       "pass": {
         "memory": true,
@@ -172,49 +258,15 @@
         "api_p95": true,
         "queue": true
       },
-      "memDeltaPct": 15.78,
-      "avgCpu": 0.29,
-      "ledgerRows": 1027,
-      "p95_ms": 22,
-      "flushed": 29,
+      "memDeltaPct": -19.04,
+      "avgCpu": 0.13,
+      "ledgerRows": 2,
+      "p95_ms": 11,
+      "flushed": 19,
       "errors": 0
     },
     {
-      "check": 10,
-      "elapsed_min": "1.67",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.78,
-      "avgCpu": 0.28,
-      "ledgerRows": 1028,
-      "p95_ms": 22,
-      "flushed": 32,
-      "errors": 0
-    },
-    {
-      "check": 11,
-      "elapsed_min": "1.83",
-      "pass": {
-        "memory": true,
-        "cpu": true,
-        "ledger": true,
-        "api_p95": true,
-        "queue": true
-      },
-      "memDeltaPct": 15.96,
-      "avgCpu": 0.27,
-      "ledgerRows": 1029,
-      "p95_ms": 22,
-      "flushed": 35,
-      "errors": 0
-    },
-    {
-      "check": 12,
+      "check": 4,
       "elapsed_min": "2.00",
       "pass": {
         "memory": true,
@@ -223,11 +275,963 @@
         "api_p95": true,
         "queue": true
       },
-      "memDeltaPct": 16.34,
-      "avgCpu": 0.26,
-      "ledgerRows": 1030,
-      "p95_ms": 22,
-      "flushed": 38,
+      "memDeltaPct": -16.75,
+      "avgCpu": 0.12,
+      "ledgerRows": 3,
+      "p95_ms": 11,
+      "flushed": 25,
+      "errors": 0
+    },
+    {
+      "check": 5,
+      "elapsed_min": "2.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -10.92,
+      "avgCpu": 0.13,
+      "ledgerRows": 4,
+      "p95_ms": 12,
+      "flushed": 31,
+      "errors": 0
+    },
+    {
+      "check": 6,
+      "elapsed_min": "3.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.73,
+      "avgCpu": 0.12,
+      "ledgerRows": 5,
+      "p95_ms": 12,
+      "flushed": 37,
+      "errors": 0
+    },
+    {
+      "check": 7,
+      "elapsed_min": "3.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -20.01,
+      "avgCpu": 0.12,
+      "ledgerRows": 6,
+      "p95_ms": 12,
+      "flushed": 43,
+      "errors": 0
+    },
+    {
+      "check": 8,
+      "elapsed_min": "4.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.38,
+      "avgCpu": 0.11,
+      "ledgerRows": 7,
+      "p95_ms": 12,
+      "flushed": 49,
+      "errors": 0
+    },
+    {
+      "check": 9,
+      "elapsed_min": "4.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -12.41,
+      "avgCpu": 0.12,
+      "ledgerRows": 8,
+      "p95_ms": 12,
+      "flushed": 55,
+      "errors": 0
+    },
+    {
+      "check": 10,
+      "elapsed_min": "5.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -11.51,
+      "avgCpu": 0.12,
+      "ledgerRows": 9,
+      "p95_ms": 12,
+      "flushed": 61,
+      "errors": 0
+    },
+    {
+      "check": 11,
+      "elapsed_min": "5.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -10.92,
+      "avgCpu": 0.11,
+      "ledgerRows": 10,
+      "p95_ms": 12,
+      "flushed": 67,
+      "errors": 0
+    },
+    {
+      "check": 12,
+      "elapsed_min": "6.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -11.09,
+      "avgCpu": 0.11,
+      "ledgerRows": 11,
+      "p95_ms": 12,
+      "flushed": 73,
+      "errors": 0
+    },
+    {
+      "check": 13,
+      "elapsed_min": "6.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -10.3,
+      "avgCpu": 0.11,
+      "ledgerRows": 12,
+      "p95_ms": 12,
+      "flushed": 79,
+      "errors": 0
+    },
+    {
+      "check": 14,
+      "elapsed_min": "7.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.79,
+      "avgCpu": 0.11,
+      "ledgerRows": 13,
+      "p95_ms": 12,
+      "flushed": 85,
+      "errors": 0
+    },
+    {
+      "check": 15,
+      "elapsed_min": "7.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.76,
+      "avgCpu": 0.1,
+      "ledgerRows": 14,
+      "p95_ms": 12,
+      "flushed": 91,
+      "errors": 0
+    },
+    {
+      "check": 16,
+      "elapsed_min": "8.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -26.34,
+      "avgCpu": 0.1,
+      "ledgerRows": 15,
+      "p95_ms": 12,
+      "flushed": 97,
+      "errors": 0
+    },
+    {
+      "check": 17,
+      "elapsed_min": "8.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.12,
+      "avgCpu": 0.1,
+      "ledgerRows": 16,
+      "p95_ms": 12,
+      "flushed": 103,
+      "errors": 0
+    },
+    {
+      "check": 18,
+      "elapsed_min": "9.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.17,
+      "avgCpu": 0.1,
+      "ledgerRows": 17,
+      "p95_ms": 12,
+      "flushed": 109,
+      "errors": 0
+    },
+    {
+      "check": 19,
+      "elapsed_min": "9.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.79,
+      "avgCpu": 0.1,
+      "ledgerRows": 18,
+      "p95_ms": 12,
+      "flushed": 115,
+      "errors": 0
+    },
+    {
+      "check": 20,
+      "elapsed_min": "10.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.56,
+      "avgCpu": 0.1,
+      "ledgerRows": 19,
+      "p95_ms": 12,
+      "flushed": 121,
+      "errors": 0
+    },
+    {
+      "check": 21,
+      "elapsed_min": "10.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.59,
+      "avgCpu": 0.1,
+      "ledgerRows": 20,
+      "p95_ms": 12,
+      "flushed": 127,
+      "errors": 0
+    },
+    {
+      "check": 22,
+      "elapsed_min": "11.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.08,
+      "avgCpu": 0.1,
+      "ledgerRows": 21,
+      "p95_ms": 12,
+      "flushed": 133,
+      "errors": 0
+    },
+    {
+      "check": 23,
+      "elapsed_min": "11.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.41,
+      "avgCpu": 0.1,
+      "ledgerRows": 22,
+      "p95_ms": 12,
+      "flushed": 139,
+      "errors": 0
+    },
+    {
+      "check": 24,
+      "elapsed_min": "12.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.02,
+      "avgCpu": 0.09,
+      "ledgerRows": 23,
+      "p95_ms": 12,
+      "flushed": 145,
+      "errors": 0
+    },
+    {
+      "check": 25,
+      "elapsed_min": "12.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.86,
+      "avgCpu": 0.09,
+      "ledgerRows": 24,
+      "p95_ms": 11,
+      "flushed": 151,
+      "errors": 0
+    },
+    {
+      "check": 26,
+      "elapsed_min": "13.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.37,
+      "avgCpu": 0.09,
+      "ledgerRows": 25,
+      "p95_ms": 11,
+      "flushed": 157,
+      "errors": 0
+    },
+    {
+      "check": 27,
+      "elapsed_min": "13.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.18,
+      "avgCpu": 0.09,
+      "ledgerRows": 26,
+      "p95_ms": 11,
+      "flushed": 163,
+      "errors": 0
+    },
+    {
+      "check": 28,
+      "elapsed_min": "14.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.13,
+      "avgCpu": 0.09,
+      "ledgerRows": 27,
+      "p95_ms": 11,
+      "flushed": 169,
+      "errors": 0
+    },
+    {
+      "check": 29,
+      "elapsed_min": "14.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.86,
+      "avgCpu": 0.09,
+      "ledgerRows": 28,
+      "p95_ms": 11,
+      "flushed": 175,
+      "errors": 0
+    },
+    {
+      "check": 30,
+      "elapsed_min": "15.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.41,
+      "avgCpu": 0.09,
+      "ledgerRows": 29,
+      "p95_ms": 11,
+      "flushed": 181,
+      "errors": 0
+    },
+    {
+      "check": 31,
+      "elapsed_min": "15.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.89,
+      "avgCpu": 0.09,
+      "ledgerRows": 30,
+      "p95_ms": 11,
+      "flushed": 187,
+      "errors": 0
+    },
+    {
+      "check": 32,
+      "elapsed_min": "16.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.22,
+      "avgCpu": 0.09,
+      "ledgerRows": 31,
+      "p95_ms": 11,
+      "flushed": 193,
+      "errors": 0
+    },
+    {
+      "check": 33,
+      "elapsed_min": "16.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.98,
+      "avgCpu": 0.09,
+      "ledgerRows": 32,
+      "p95_ms": 11,
+      "flushed": 199,
+      "errors": 0
+    },
+    {
+      "check": 34,
+      "elapsed_min": "17.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.83,
+      "avgCpu": 0.09,
+      "ledgerRows": 33,
+      "p95_ms": 11,
+      "flushed": 205,
+      "errors": 0
+    },
+    {
+      "check": 35,
+      "elapsed_min": "17.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -24.46,
+      "avgCpu": 0.09,
+      "ledgerRows": 34,
+      "p95_ms": 11,
+      "flushed": 211,
+      "errors": 0
+    },
+    {
+      "check": 36,
+      "elapsed_min": "18.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.77,
+      "avgCpu": 0.09,
+      "ledgerRows": 35,
+      "p95_ms": 11,
+      "flushed": 217,
+      "errors": 0
+    },
+    {
+      "check": 37,
+      "elapsed_min": "18.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.56,
+      "avgCpu": 0.09,
+      "ledgerRows": 36,
+      "p95_ms": 11,
+      "flushed": 223,
+      "errors": 0
+    },
+    {
+      "check": 38,
+      "elapsed_min": "19.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -17.65,
+      "avgCpu": 0.09,
+      "ledgerRows": 37,
+      "p95_ms": 11,
+      "flushed": 229,
+      "errors": 0
+    },
+    {
+      "check": 39,
+      "elapsed_min": "19.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.67,
+      "avgCpu": 0.09,
+      "ledgerRows": 38,
+      "p95_ms": 11,
+      "flushed": 235,
+      "errors": 0
+    },
+    {
+      "check": 40,
+      "elapsed_min": "20.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.6,
+      "avgCpu": 0.09,
+      "ledgerRows": 39,
+      "p95_ms": 11,
+      "flushed": 241,
+      "errors": 0
+    },
+    {
+      "check": 41,
+      "elapsed_min": "20.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -22.83,
+      "avgCpu": 0.08,
+      "ledgerRows": 40,
+      "p95_ms": 11,
+      "flushed": 247,
+      "errors": 0
+    },
+    {
+      "check": 42,
+      "elapsed_min": "21.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.77,
+      "avgCpu": 0.08,
+      "ledgerRows": 41,
+      "p95_ms": 11,
+      "flushed": 253,
+      "errors": 0
+    },
+    {
+      "check": 43,
+      "elapsed_min": "21.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.99,
+      "avgCpu": 0.08,
+      "ledgerRows": 42,
+      "p95_ms": 11,
+      "flushed": 259,
+      "errors": 0
+    },
+    {
+      "check": 44,
+      "elapsed_min": "22.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.68,
+      "avgCpu": 0.08,
+      "ledgerRows": 43,
+      "p95_ms": 11,
+      "flushed": 265,
+      "errors": 0
+    },
+    {
+      "check": 45,
+      "elapsed_min": "22.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.77,
+      "avgCpu": 0.08,
+      "ledgerRows": 44,
+      "p95_ms": 11,
+      "flushed": 271,
+      "errors": 0
+    },
+    {
+      "check": 46,
+      "elapsed_min": "23.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.98,
+      "avgCpu": 0.08,
+      "ledgerRows": 45,
+      "p95_ms": 11,
+      "flushed": 277,
+      "errors": 0
+    },
+    {
+      "check": 47,
+      "elapsed_min": "23.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -24.84,
+      "avgCpu": 0.08,
+      "ledgerRows": 46,
+      "p95_ms": 11,
+      "flushed": 283,
+      "errors": 0
+    },
+    {
+      "check": 48,
+      "elapsed_min": "24.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -19.66,
+      "avgCpu": 0.08,
+      "ledgerRows": 47,
+      "p95_ms": 11,
+      "flushed": 289,
+      "errors": 0
+    },
+    {
+      "check": 49,
+      "elapsed_min": "24.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -24.94,
+      "avgCpu": 0.08,
+      "ledgerRows": 48,
+      "p95_ms": 11,
+      "flushed": 295,
+      "errors": 0
+    },
+    {
+      "check": 50,
+      "elapsed_min": "25.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.85,
+      "avgCpu": 0.08,
+      "ledgerRows": 49,
+      "p95_ms": 11,
+      "flushed": 301,
+      "errors": 0
+    },
+    {
+      "check": 51,
+      "elapsed_min": "25.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -18.83,
+      "avgCpu": 0.08,
+      "ledgerRows": 50,
+      "p95_ms": 11,
+      "flushed": 307,
+      "errors": 0
+    },
+    {
+      "check": 52,
+      "elapsed_min": "26.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -23.64,
+      "avgCpu": 0.08,
+      "ledgerRows": 51,
+      "p95_ms": 11,
+      "flushed": 313,
+      "errors": 0
+    },
+    {
+      "check": 53,
+      "elapsed_min": "26.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.34,
+      "avgCpu": 0.08,
+      "ledgerRows": 52,
+      "p95_ms": 11,
+      "flushed": 319,
+      "errors": 0
+    },
+    {
+      "check": 54,
+      "elapsed_min": "27.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.11,
+      "avgCpu": 0.08,
+      "ledgerRows": 53,
+      "p95_ms": 11,
+      "flushed": 325,
+      "errors": 0
+    },
+    {
+      "check": 55,
+      "elapsed_min": "27.50",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.67,
+      "avgCpu": 0.08,
+      "ledgerRows": 54,
+      "p95_ms": 11,
+      "flushed": 331,
+      "errors": 0
+    },
+    {
+      "check": 56,
+      "elapsed_min": "28.00",
+      "pass": {
+        "memory": false,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -16.06,
+      "avgCpu": 0.08,
+      "ledgerRows": 55,
+      "p95_ms": 11,
+      "flushed": 337,
+      "errors": 0
+    },
+    {
+      "check": 57,
+      "elapsed_min": "28.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.89,
+      "avgCpu": 0.08,
+      "ledgerRows": 56,
+      "p95_ms": 11,
+      "flushed": 343,
+      "errors": 0
+    },
+    {
+      "check": 58,
+      "elapsed_min": "29.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.87,
+      "avgCpu": 0.08,
+      "ledgerRows": 57,
+      "p95_ms": 11,
+      "flushed": 349,
+      "errors": 0
+    },
+    {
+      "check": 59,
+      "elapsed_min": "29.50",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.8,
+      "avgCpu": 0.08,
+      "ledgerRows": 58,
+      "p95_ms": 11,
+      "flushed": 355,
+      "errors": 0
+    },
+    {
+      "check": 60,
+      "elapsed_min": "30.00",
+      "pass": {
+        "memory": true,
+        "cpu": true,
+        "ledger": true,
+        "api_p95": true,
+        "queue": true
+      },
+      "memDeltaPct": -15.18,
+      "avgCpu": 0.08,
+      "ledgerRows": 59,
+      "p95_ms": 11,
+      "flushed": 361,
       "errors": 0
     }
   ]

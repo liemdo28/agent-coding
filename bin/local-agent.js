@@ -1634,6 +1634,473 @@ async function main() {
       console.log();
     });
 
+  // ── heal (Phase 24) ──────────────────────────────────────────────────────────
+  const healCmd = new Command('heal').description('Local self-healing engine — detect and recover from runtime failures');
+
+  healCmd
+    .command('status [path]')
+    .description('Show health status of all agent components')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { SelfHealManager } = await import('../local-agent/self-heal/SelfHealManager.js');
+      const manager = new SelfHealManager(targetDir);
+      const status = await manager.getStatus();
+      console.log(chalk.bold('Health Status:'));
+      console.log(`  ${chalk.gray('Last heal:')}    ${formatDate(status.lastHeal)}`);
+      console.log(`  ${chalk.gray('Recoveries:')}   ${status.recoveryCount}`);
+      console.log(`  ${chalk.gray('Unhealthy:')}    ${status.unhealthyComponents.length}`);
+      console.log(chalk.bold('\nComponents:'));
+      for (const c of status.healthReport.components) {
+        const icon = c.healthy ? chalk.green('●') : chalk.red('●');
+        const label = c.healthy ? chalk.green('HEALTHY') : chalk.red('UNHEALTHY');
+        console.log(`  ${icon} ${c.name.padEnd(15)} ${label}`);
+        if (!c.healthy && c.issues?.length) {
+          c.issues.forEach(i => console.log(`    ${chalk.gray('›')} ${i}`));
+        }
+      }
+      console.log();
+    });
+
+  healCmd
+    .command('repair-index [path]')
+    .description('Repair corrupted index files')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { SelfHealManager } = await import('../local-agent/self-heal/SelfHealManager.js');
+      const manager = new SelfHealManager(targetDir);
+      const spinner = ora('Repairing index...').start();
+      const result = await manager.repairIndex();
+      spinner.stop();
+      console.log(result.success ? chalk.green('✓ Index repaired') : chalk.red('✗ Repair failed'));
+      if (result.details) result.details.forEach(d => console.log(`  ${chalk.gray(d)}`));
+      console.log();
+    });
+
+  healCmd
+    .command('clear-cache [path]')
+    .description('Clear all cached data')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { SelfHealManager } = await import('../local-agent/self-heal/SelfHealManager.js');
+      const manager = new SelfHealManager(targetDir);
+      const spinner = ora('Clearing cache...').start();
+      const result = await manager.clearCache();
+      spinner.stop();
+      console.log(result.success ? chalk.green('✓ Cache cleared') : chalk.red('✗ Clear failed'));
+      console.log(`  ${chalk.gray('Cleared:')} ${result.clearedCount} entries`);
+      console.log();
+    });
+
+  healCmd
+    .command('recover-runtime [path]')
+    .description('Recover from stuck/stale runtime state')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { SelfHealManager } = await import('../local-agent/self-heal/SelfHealManager.js');
+      const manager = new SelfHealManager(targetDir);
+      const spinner = ora('Recovering runtime...').start();
+      const result = await manager.recoverRuntime();
+      spinner.stop();
+      console.log(result.success ? chalk.green('✓ Runtime recovered') : chalk.red('✗ Recovery failed'));
+      if (result.details) result.details.forEach(d => console.log(`  ${chalk.gray(d)}`));
+      console.log();
+    });
+
+  healCmd
+    .command('logs [path]')
+    .description('Show recovery logs')
+    .option('--project <path>', 'Path to target project')
+    .option('--count <n>', 'Number of entries', '20')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { SelfHealManager } = await import('../local-agent/self-heal/SelfHealManager.js');
+      const manager = new SelfHealManager(targetDir);
+      const logs = manager.getRecoveryLogs().slice(0, parseInt(opts.count) || 20);
+      console.log(chalk.bold(`Recovery Logs (${logs.length}):\n`));
+      logs.forEach(l => {
+        const icon = l.success ? chalk.green('✓') : chalk.red('✗');
+        console.log(`  ${icon} ${chalk.gray(new Date(l.timestamp).toLocaleString())}  ${l.action}  ${chalk.gray(l.component || '')}`);
+      });
+      console.log();
+    });
+
+  program.addCommand(healCmd);
+
+  // ── reason (Phase 25) ───────────────────────────────────────────────────────
+  const reasonCmd = new Command('reason').description('Multi-step reasoning and strategy planning');
+
+  reasonCmd
+    .command('decompose <task>')
+    .description('Decompose a complex task into steps')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, opts) => {
+      printBanner();
+      const { TaskDecomposer } = await import('../local-agent/reasoning/TaskDecomposer.js');
+      const decomposer = new TaskDecomposer();
+      const result = decomposer.decompose(task);
+      console.log(chalk.bold(`Task Decomposition: "${task}"\n`));
+      console.log(`  ${chalk.gray('Risk:')} ${result.estimatedRisk}  ${chalk.gray('Duration:')} ${result.estimatedTime}  ${chalk.gray('Parallelizable:')} ${result.canParallelize ? chalk.green('yes') : chalk.gray('no')}`);
+      console.log(chalk.bold('\nSteps:'));
+      result.steps.forEach((s, i) => {
+        const riskCol = s.risk === 'HIGH' ? 'red' : s.risk === 'MEDIUM' ? 'yellow' : 'green';
+        console.log(`  ${i + 1}. [${chalk[riskCol](s.risk)}] ${s.phase} — ${s.description}`);
+      });
+      console.log();
+    });
+
+  reasonCmd
+    .command('strategies <task>')
+    .description('Compare multiple fix strategies for a task')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, opts) => {
+      printBanner();
+      const { MultiStrategyPlanner } = await import('../local-agent/reasoning/MultiStrategyPlanner.js');
+      const planner = new MultiStrategyPlanner();
+      const result = planner.planStrategies(task);
+      console.log(chalk.bold(`Strategy Analysis: "${task}"\n`));
+      console.log(chalk.bold('Strategies ranked:'));
+      result.strategies.forEach((s, i) => {
+        const icon = i === 0 ? chalk.cyan('★') : chalk.gray('○');
+        const riskCol = s.risk === 'HIGH' ? 'red' : s.risk === 'MEDIUM' ? 'yellow' : 'green';
+        console.log(`  ${icon} ${chalk.bold(s.name.padEnd(15))} score:${s.weightedScore.toFixed(1)}  risk:${chalk[riskCol](s.risk)}  speed:${s.speed.toLowerCase()}`);
+        console.log(`    ${chalk.gray(s.description)}`);
+      });
+      console.log(chalk.bold('\nRecommended:') + ` ${result.recommended.name}`);
+      console.log(`  ${chalk.gray('Why:')} ${result.recommended.pros.slice(0, 2).join(', ')}`);
+      console.log();
+    });
+
+  reasonCmd
+    .command('risk <patch-id> [path]')
+    .description('Estimate risk for a patch')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getPatch } = await import('../local-agent/patch/PatchManager.js');
+      const { RiskWeightedPlanner } = await import('../local-agent/reasoning/RiskWeightedPlanner.js');
+      const patch = getPatch(patchId, targetDir);
+      if (!patch) die(`Patch not found: ${patchId}`);
+      const planner = new RiskWeightedPlanner();
+      const risk = planner.estimatePatchRisk(patch);
+      const riskCol = risk.level === 'HIGH' ? 'red' : risk.level === 'MEDIUM' ? 'yellow' : 'green';
+      console.log(chalk.bold(`Risk Analysis: ${patchId}\n`));
+      console.log(`  ${chalk.gray('Level:')} ${chalk[riskCol](risk.level)} (score: ${risk.score.toFixed(1)}/10)`);
+      console.log(`  ${chalk.gray('Recommendation:')} ${risk.recommendation}`);
+      if (risk.warnings?.length) {
+        console.log(chalk.bold('\nWarnings:'));
+        risk.warnings.forEach(w => {
+          const wCol = w.severity === 'HIGH' || w.severity === 'CRITICAL' ? 'red' : 'yellow';
+          console.log(`  ${chalk[wCol]('⚠')} ${w.warning}`);
+        });
+      }
+      console.log();
+    });
+
+  program.addCommand(reasonCmd);
+
+  // ── plan (Phase 25) ──────────────────────────────────────────────────────────
+  const planCmd = new Command('plan').description('Plan and compare fix strategies');
+
+  planCmd
+    .command('compare <fix-a> <fix-b>')
+    .description('Compare two fix options')
+    .option('--project <path>', 'Path to target project')
+    .action(async (fixA, fixB, opts) => {
+      printBanner();
+      const { DecisionComparator } = await import('../local-agent/reasoning/DecisionComparator.js');
+      const comparator = new DecisionComparator();
+      const fixAObj = { task: fixA, riskLevel: 'MEDIUM', filesChanged: [] };
+      const fixBObj = { task: fixB, riskLevel: 'MEDIUM', filesChanged: [] };
+      const result = comparator.compare(fixAObj, fixBObj);
+      console.log(chalk.bold(`Decision Comparison:\n`));
+      console.log(result.reasoning.replace(/^/gm, '  '));
+      console.log();
+    });
+
+  planCmd
+    .command('verify <patch-id> [path]')
+    .description('Plan verification steps for a patch')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getPatch } = await import('../local-agent/patch/PatchManager.js');
+      const { VerificationPlanner } = await import('../local-agent/reasoning/VerificationPlanner.js');
+      const patch = getPatch(patchId, targetDir);
+      if (!patch) die(`Patch not found: ${patchId}`);
+      const planner = new VerificationPlanner();
+      const result = planner.planVerification(patch);
+      console.log(chalk.bold(`Verification Plan: ${patchId}\n`));
+      console.log(chalk.bold('Critical Path:'));
+      result.criticalPath.forEach(s => {
+        console.log(`  [${s.risk}] ${s.name}: ${s.description}`);
+        console.log(`    ${chalk.gray(s.action)}`);
+      });
+      console.log(chalk.bold('\nEstimated Duration:') + ` ${result.estimatedDuration.formatted}`);
+      console.log();
+    });
+
+  program.addCommand(planCmd);
+
+  // ── optimize (Phase 26) ────────────────────────────────────────────────────
+  const optimizeCmd = new Command('optimize').description('Large project optimization tools');
+
+  optimizeCmd
+    .command('index [path]')
+    .description('Rebuild incremental index')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { LargeProjectCoordinator } = await import('../local-agent/optimizer/LargeProjectCoordinator.js');
+      const coord = new LargeProjectCoordinator(targetDir);
+      const spinner = ora('Building index...').start();
+      const result = await coord.scan();
+      spinner.stop();
+      const sizeCol = result.projectSize === 'SMALL' ? 'green' : result.projectSize === 'MEDIUM' ? 'yellow' : 'red';
+      console.log(chalk.bold('Index Complete:\n'));
+      console.log(`  ${chalk.gray('Mode:')} ${result.mode}`);
+      console.log(`  ${chalk.gray('Project size:')} ${chalk[sizeCol](result.projectSize)}`);
+      console.log(`  ${chalk.gray('Files:')} ${result.stats?.totalFiles || 0}`);
+      console.log(`  ${chalk.gray('Duration:')} ${result.durationMs}ms`);
+      console.log();
+    });
+
+  optimizeCmd
+    .command('cache [path]')
+    .description('Show file cache statistics')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { LargeProjectCoordinator } = await import('../local-agent/optimizer/LargeProjectCoordinator.js');
+      const coord = new LargeProjectCoordinator(targetDir);
+      const stats = coord.getStats();
+      console.log(chalk.bold('Optimization Stats:\n'));
+      console.log(`  ${chalk.gray('Project size:')} ${stats.projectSize}`);
+      console.log(`  ${chalk.gray('Context loader:')} ${stats.contextLoader?.loadedFiles || 0} files loaded`);
+      console.log(`  ${chalk.gray('File cache:')} ${stats.fileCache?.entries || 0} entries (${stats.fileCache?.usagePercent || 0}% used)`);
+      console.log(`  ${chalk.gray('Last scan:')} ${stats.lastScan?.durationMs ? stats.lastScan.durationMs + 'ms' : 'none'}`);
+      console.log();
+    });
+
+  optimizeCmd
+    .command('benchmark [path]')
+    .description('Benchmark scan performance')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { LargeProjectCoordinator } = await import('../local-agent/optimizer/LargeProjectCoordinator.js');
+      const coord = new LargeProjectCoordinator(targetDir);
+      const targets = coord.getPerformanceTargets();
+      console.log(chalk.bold('Performance Targets:\n'));
+      console.log(`  ${chalk.gray('Small project:')}   < ${targets.SMALL_PROJECT_SCAN_MS / 1000}s`);
+      console.log(`  ${chalk.gray('Medium project:')}  < ${targets.MEDIUM_PROJECT_SCAN_MS / 1000}s`);
+      console.log(`  ${chalk.gray('Large monorepo:')} < ${targets.LARGE_MONOREPO_INCREMENTAL_MS / 1000}s`);
+      console.log();
+    });
+
+  program.addCommand(optimizeCmd);
+
+  // ── plugins (Phase 27) ──────────────────────────────────────────────────────
+  const pluginsCmd = new Command('plugins').description('Local plugin and extension management');
+
+  pluginsCmd
+    .command('list [path]')
+    .description('List all available plugins')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { PluginLoader } = await import('../local-agent/plugins/PluginLoader.js');
+      const loader = new PluginLoader(targetDir);
+      const plugins = loader.listPlugins();
+      if (!plugins.length) {
+        console.log(chalk.yellow('No plugins found. Place plugins in: plugins/\n'));
+        return;
+      }
+      console.log(chalk.bold(`Plugins (${plugins.length}):\n`));
+      plugins.forEach(p => {
+        const status = p.enabled ? chalk.green('[ENABLED]') : p.approved ? chalk.yellow('[DISABLED]') : chalk.gray('[PENDING]');
+        console.log(`  ${chalk.bold(p.name.padEnd(20))} ${status}`);
+        console.log(`    ${chalk.gray(p.description || '')}`);
+        console.log(`    ${chalk.gray('v' + p.version)}  ${p.loaded ? chalk.green('loaded') : chalk.gray('not loaded')}`);
+      });
+      console.log();
+    });
+
+  pluginsCmd
+    .command('install <path> [target-path]')
+    .description('Install a plugin from a local path')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pluginPath, targetPath, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? targetPath);
+      const { PluginLoader } = await import('../local-agent/plugins/PluginLoader.js');
+      const loader = new PluginLoader(targetDir);
+      const spinner = ora('Installing plugin...').start();
+      try {
+        const result = loader.installPlugin(resolve(pluginPath));
+        spinner.succeed(chalk.green(`Plugin installed: ${result.name}`));
+        console.log(`  ${chalk.gray('Path:')} ${result.path}`);
+        console.log(`\n  ${chalk.yellow('Run: local-agent plugins validate')} to approve.\n`);
+      } catch (err) {
+        spinner.fail(chalk.red('Install failed'));
+        die(err.message);
+      }
+    });
+
+  pluginsCmd
+    .command('enable <name> [path]')
+    .description('Enable a plugin')
+    .option('--project <path>', 'Path to target project')
+    .action(async (name, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { PluginLoader } = await import('../local-agent/plugins/PluginLoader.js');
+      const loader = new PluginLoader(targetDir);
+      const result = loader.enablePlugin(name);
+      console.log(chalk.green(`Plugin enabled: ${name}\n`));
+    });
+
+  pluginsCmd
+    .command('disable <name> [path]')
+    .description('Disable a plugin')
+    .option('--project <path>', 'Path to target project')
+    .action(async (name, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { PluginLoader } = await import('../local-agent/plugins/PluginLoader.js');
+      const loader = new PluginLoader(targetDir);
+      const result = loader.disablePlugin(name);
+      console.log(chalk.yellow(`Plugin disabled: ${name}\n`));
+    });
+
+  pluginsCmd
+    .command('validate [path]')
+    .description('Validate pending plugins')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { PluginLoader } = await import('../local-agent/plugins/PluginLoader.js');
+      const loader = new PluginLoader(targetDir);
+      const plugins = loader.listPlugins().filter(p => !p.approved);
+      if (!plugins.length) {
+        console.log(chalk.green('No plugins pending validation.\n'));
+        return;
+      }
+      console.log(chalk.bold(`Pending Plugins (${plugins.length}):\n`));
+      plugins.forEach(p => {
+        console.log(`  ${chalk.bold(p.name)} ${chalk.gray(p.description)}`);
+        console.log(`    ${chalk.gray('Approve: local-agent plugins enable ' + p.name)}`);
+      });
+      console.log();
+    });
+
+  program.addCommand(pluginsCmd);
+
+  // ── team (Phase 28) ────────────────────────────────────────────────────────
+  const teamCmd = new Command('team').description('Local team collaboration tools');
+
+  teamCmd
+    .command('export-memory [path]')
+    .description('Export sanitized memory pack for team sharing')
+    .option('--project <path>', 'Path to target project')
+    .option('--recipes', 'Include fix recipes')
+    .option('--qa', 'Include QA summary')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { TeamPackExporter } = await import('../local-agent/team/TeamPackExporter.js');
+      const exporter = new TeamPackExporter(targetDir);
+      const spinner = ora('Exporting memory...').start();
+      const result = await exporter.exportMemoryPack({ includeRecipes: opts.recipes, includeQA: opts.qa });
+      spinner.succeed(chalk.green(`Memory exported: ${result.packId}`));
+      console.log(`  ${chalk.gray('Contents:')} ${result.contents.join(', ')}`);
+      console.log(`  ${chalk.gray('Sanitized:')} ${result.sanitized ? chalk.green('yes') : 'no'}`);
+      console.log(`  ${chalk.gray('Path:')} ${result.packPath}\n`);
+    });
+
+  teamCmd
+    .command('export-recipes [path]')
+    .description('Export fix recipes for team sharing')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { TeamPackExporter } = await import('../local-agent/team/TeamPackExporter.js');
+      const exporter = new TeamPackExporter(targetDir);
+      const spinner = ora('Exporting recipes...').start();
+      const result = await exporter.exportRecipes();
+      spinner.succeed(chalk.green(`Recipes exported: ${result.packId}`));
+      console.log(`  ${chalk.gray('Recipes:')} ${result.recipeCount}`);
+      console.log(`  ${chalk.gray('Path:')} ${result.packPath}\n`);
+    });
+
+  teamCmd
+    .command('import-memory <file> [path]')
+    .description('Import a memory pack from a file')
+    .option('--project <path>', 'Path to target project')
+    .action(async (file, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { TeamPackExporter } = await import('../local-agent/team/TeamPackExporter.js');
+      const exporter = new TeamPackExporter(targetDir);
+      const spinner = ora('Importing memory...').start();
+      try {
+        const result = exporter.importPack(resolve(file));
+        spinner.succeed(chalk.green('Memory imported successfully'));
+        console.log(`  ${chalk.gray('Pack:')} ${result.packId}  ${chalk.gray('Type:')} ${result.type}`);
+        if (result.profile) console.log(`  ${chalk.green('✓')} Profile imported`);
+        if (result.recipes) console.log(`  ${chalk.green('✓')} ${result.recipes} recipes imported`);
+        console.log();
+      } catch (err) {
+        spinner.fail(chalk.red('Import failed'));
+        die(err.message);
+      }
+    });
+
+  teamCmd
+    .command('audit-share [path]')
+    .description('Show audit log for team collaboration')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { CollaborationAudit } = await import('../local-agent/team/CollaborationAudit.js');
+      const audit = new CollaborationAudit(targetDir);
+      const report = audit.generateAuditReport();
+      const logs = audit.getAuditLogs(20);
+      console.log(chalk.bold('Collaboration Audit:\n'));
+      console.log(`  ${chalk.gray('Total events:')} ${report.totalEvents}`);
+      console.log(`  ${chalk.gray('Exports:')} ${report.recentExports}  ${chalk.gray('Imports:')} ${report.recentImports}  ${chalk.gray('Syncs:')} ${report.recentSyncs}`);
+      console.log(chalk.bold('\nRecent Activity:'));
+      logs.slice(0, 10).forEach(l => {
+        const icon = l.type === 'EXPORT' ? chalk.cyan('↑') : l.type === 'IMPORT' ? chalk.green('↓') : chalk.gray('↔');
+        console.log(`  ${icon} ${chalk.gray(new Date(l.timestamp).toLocaleString())}  ${l.type}  ${chalk.gray(l.action || '')}`);
+      });
+      console.log();
+    });
+
+  program.addCommand(teamCmd);
+
   program.parse(process.argv);
 
   if (process.argv.length <= 2) {
