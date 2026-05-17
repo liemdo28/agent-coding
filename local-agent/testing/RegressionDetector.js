@@ -56,7 +56,6 @@ export function getBaselineSummary(workspaceRoot) {
   const dir = getBaselineDir(workspaceRoot);
   if (!existsSync(dir)) return [];
   try {
-    const { readdirSync } = await import('fs');
     return readdirSync(dir)
       .filter((f) => f.startsWith('baseline-') && f.endsWith('.json'))
       .map((f) => {

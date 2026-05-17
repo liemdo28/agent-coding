@@ -22,16 +22,28 @@ function ensureDir(workspaceRoot) {
 
 export function getState(workspaceRoot) {
   const p = join(workspaceRoot, STATE_FILE);
-  if (!existsSync(p)) return { ...DEFAULT_STATE, risks: [...DEFAULT_STATE.risks] };
+  if (!existsSync(p)) return {
+    blockedSystems: [],
+    knownIssues:    [],
+    risks:          DEFAULT_STATE.risks.map((r) => ({ ...r })),
+    lastUpdated:    new Date().toISOString(),
+  };
   try {
     const loaded = JSON.parse(readFileSync(p, 'utf8'));
     return {
+      blockedSystems: Array.isArray(loaded.blockedSystems) ? loaded.blockedSystems : [],
+      knownIssues:    Array.isArray(loaded.knownIssues)    ? loaded.knownIssues    : [],
+      risks:          Array.isArray(loaded.risks)          ? loaded.risks          : DEFAULT_STATE.risks.map((r) => ({ ...r })),
+      lastUpdated:    loaded.lastUpdated ?? new Date().toISOString(),
+    };
+  } catch {
+    return {
       blockedSystems: [],
       knownIssues:    [],
-      risks:          [...DEFAULT_STATE.risks],
-      ...loaded,
+      risks:          DEFAULT_STATE.risks.map((r) => ({ ...r })),
+      lastUpdated:    new Date().toISOString(),
     };
-  } catch { return { ...DEFAULT_STATE, risks: [...DEFAULT_STATE.risks] }; }
+  }
 }
 
 export function saveState(workspaceRoot, state) {
