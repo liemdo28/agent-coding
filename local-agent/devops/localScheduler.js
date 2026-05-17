@@ -11,7 +11,7 @@ const SCHEDULE_FILE = '.local-agent/scheduler.json';
 /**
  * Parse a simple cron expression.
  * Supports: minute hour day-of-month month day-of-week (5 fields)
- * Values: '*', '*/n', or specific number.
+ * Values: star, star/n, or specific number.
  * @param {string} expr
  * @returns {{ minute, hour, dom, month, dow }}
  */
@@ -45,7 +45,7 @@ function shouldRun(cron) {
 /**
  * Schedule a task with a cron expression.
  * @param {string} name
- * @param {string} cronExpr  e.g. '*/5 * * * *'
+ * @param {string} cronExpr  e.g. "star/5 star star star star" (minute/5 every hour)
  * @param {Function} fn  async or sync task function
  * @param {{ workspaceRoot?: string }} options
  */
