@@ -4,12 +4,17 @@
   "description": "Fully local/offline AI Coding Agent",
   "type": "module",
   "bin": {
-    "local-agent": "./bin/local-agent.js"
+    "local-agent": "./bin/local-agent.js",
+    "accounting": "./accounting-engine/bin/accounting.js"
   },
   "scripts": {
     "start": "node bin/local-agent.js",
     "dev": "node bin/local-agent.js",
-    "ui:server": "node local-agent/ui/backend/server.js"
+    "ui:server": "node local-agent/ui/backend/server.js",
+    "accounting:api": "node accounting-engine/api/server.js",
+    "accounting:stress": "cd accounting-engine && node --experimental-vm-modules node_modules/.bin/jest tests/stress --runInBand",
+    "accounting:verify": "node accounting-engine/bin/accounting.js verify-ledger",
+    "accounting:cert": "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
