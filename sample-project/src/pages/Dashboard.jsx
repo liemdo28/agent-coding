@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-// FIXME: Hardcoded API key — must move to env var before release
-const API_KEY = 'sk-hardcoded-secret-key-1234567890abcdef';
+// FIXME: Demo placeholder; move real credentials to env vars before release
+const DEMO_TOKEN = 'demo-token-placeholder';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -9,7 +9,7 @@ export default function Dashboard() {
   useEffect(() => {
     // TODO: Replace with real API call
     fetch('/api/data', {
-      headers: { Authorization: `Bearer ${API_KEY}` }
+      headers: { Authorization: `Bearer ${DEMO_TOKEN}` }
     }).then(r => r.json()).then(setData);
   }, []);
 

@@ -114,14 +114,21 @@ app.get('/logs/stream', (req, res) => {
 });
 
 // ── Mount routers ─────────────────────────────────────────────────────────────
-app.use('/', projectRouter);
-app.use('/', patchesRouter);
-app.use('/', qaRouter);
-app.use('/', reportsRouter);
-app.use('/', policyRouter);
-app.use('/', memoryRouter);
-app.use('/', agentRouter);
-app.use('/', projectsRouter);
+const apiRouters = [
+  projectRouter,
+  patchesRouter,
+  qaRouter,
+  reportsRouter,
+  policyRouter,
+  memoryRouter,
+  agentRouter,
+  projectsRouter,
+];
+
+for (const router of apiRouters) {
+  app.use('/', router);
+  app.use('/api', router);
+}
 
 // ── Serve frontend dist (if built) ────────────────────────────────────────────
 const frontendDist = resolve(__dirname, '../frontend/dist');
