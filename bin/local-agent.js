@@ -1216,6 +1216,424 @@ async function main() {
 
   program.addCommand(projectsCmd);
 
+  // ── models (Phase 9) ─────────────────────────────────────────────────────
+  const modelsCmd = new Command('models').description('Manage local LLM models');
+
+  modelsCmd
+    .command('list [path]')
+    .description('List all available local models across providers')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const mm        = (await import('../local-agent/models/ModelManager.js')).default;
+      const spinner   = ora('Detecting local LLM providers...').start();
+      try {
+        const { providers, totalModels } = await mm.listModels(config);
+        spinner.stop();
+        console.log(chalk.bold(`Local Models (${totalModels} total):\n`));
+        for (const p of providers) {
+          const icon = p.available ? chalk.green('●') : chalk.gray('○');
+          console.log(`  ${icon} ${chalk.bold(p.name.padEnd(12))} ${p.available ? chalk.green('online') : chalk.gray('offline')}  ${p.baseUrl}`);
+          if (p.available && p.models.length) {
+            for (const m of p.models.slice(0, 10)) {
+              const info = m.info ?? {};
+              console.log(`    ${chalk.gray('›')} ${m.name}  ${chalk.gray(`ctx:${info.contextWindow ?? '?'}  ram:${info.ramEstimateGB ?? '?'}GB  code:${info.codingScore ?? '?'}/10`)}`);
+            }
+          } else if (!p.available) {
+            console.log(chalk.gray(`    (offline — start ${p.name} to use models)`));
+          }
+          console.log();
+        }
+        if (!totalModels) console.log(chalk.yellow('No models detected. Start Ollama, LM Studio, or llama.cpp.\n'));
+      } catch (err) {
+        spinner.fail(chalk.red('Model detection failed'));
+        die(err.message);
+      }
+    });
+
+  modelsCmd
+    .command('status [path]')
+    .description('Show the currently active model status')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const mm        = (await import('../local-agent/models/ModelManager.js')).default;
+      const spinner   = ora('Checking model status...').start();
+      try {
+        const status = await mm.getStatus(config);
+        spinner.stop();
+        console.log(chalk.bold('Active Model:'));
+        console.log(`  ${chalk.gray('Provider:')}     ${status.activeProvider ?? '—'}`);
+        console.log(`  ${chalk.gray('Model:')}        ${status.activeModel ?? '—'}`);
+        console.log(`  ${chalk.gray('Available:')}    ${status.available ? chalk.green('yes') : chalk.red('no')}`);
+        if (status.contextWindow) console.log(`  ${chalk.gray('Context:')}      ${status.contextWindow.toLocaleString()} tokens`);
+        if (status.ramEstimate)   console.log(`  ${chalk.gray('RAM estimate:')} ${status.ramEstimate}`);
+        if (status.codingScore)   console.log(`  ${chalk.gray('Coding score:')} ${status.codingScore}/10`);
+        if (status.fallback)      console.log(`  ${chalk.gray('Fallback:')}     ${status.fallback}`);
+        console.log();
+      } catch (err) {
+        spinner.fail(chalk.red('Status check failed'));
+        die(err.message);
+      }
+    });
+
+  modelsCmd
+    .command('select <model-name> [path]')
+    .description('Set the active model in project config')
+    .option('--project <path>', 'Path to target project')
+    .action(async (modelName, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const mm = (await import('../local-agent/models/ModelManager.js')).default;
+      mm.selectModel(modelName, targetDir);
+      console.log(chalk.green(`✓ Active model set to: ${modelName}`));
+      console.log(chalk.gray('  Config updated in .local-agent/config.json\n'));
+    });
+
+  modelsCmd
+    .command('test [path]')
+    .description('Send a test prompt to verify the active model responds')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const mm        = (await import('../local-agent/models/ModelManager.js')).default;
+      const spinner   = ora('Testing model...').start();
+      try {
+        const result = await mm.testModel(config);
+        spinner[result.success ? 'succeed' : 'fail'](
+          result.success ? chalk.green(`Model responded in ${result.latencyMs}ms`) : chalk.red('Model test failed')
+        );
+        if (result.response) console.log(chalk.gray('\n  Response preview:\n  ' + result.response.slice(0, 200) + '\n'));
+        if (result.error)    console.log(chalk.red('  Error: ' + result.error + '\n'));
+      } catch (err) {
+        spinner.fail(chalk.red('Test failed'));
+        die(err.message);
+      }
+    });
+
+  modelsCmd
+    .command('benchmark [path]')
+    .description('Benchmark all available models and save results')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const mm        = (await import('../local-agent/models/ModelManager.js')).default;
+      const spinner   = ora('Benchmarking models (this may take a while)...').start();
+      try {
+        const results = await mm.benchmarkModels(config);
+        spinner.stop();
+        if (!results?.length) { console.log(chalk.yellow('No models available to benchmark.\n')); return; }
+        console.log(chalk.bold(`Benchmark Results (${results.length} models):\n`));
+        results.forEach((r) => {
+          const tps = r.tokensPerSec ? `${r.tokensPerSec.toFixed(1)} tok/s` : 'timeout';
+          console.log(`  ${chalk.bold(r.model?.padEnd(30))} ${chalk.gray('lat:')} ${(r.latencyMs ?? 0).toFixed(0)}ms  ${chalk.gray('speed:')} ${tps}`);
+        });
+        console.log(chalk.gray(`\n  Results saved to .local-agent/model-benchmarks.json\n`));
+      } catch (err) {
+        spinner.fail(chalk.red('Benchmark failed'));
+        die(err.message);
+      }
+    });
+
+  program.addCommand(modelsCmd);
+
+  // ── coding-db (Phase 10) ──────────────────────────────────────────────────
+  const codingDbCmd = new Command('coding-db').description('Local coding knowledge database');
+
+  codingDbCmd
+    .command('status [path]')
+    .description('Show coding knowledge DB status')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getStatus } = await import('../local-agent/coding-db/CodingDBManager.js');
+      const status = await getStatus(targetDir);
+      console.log(chalk.bold('Coding DB Status:'));
+      console.log(`  ${chalk.gray('Local SQLite DB:')}   ${status.localDb ? chalk.green('exists') : chalk.yellow('not yet created')}`);
+      console.log(`  ${chalk.gray('Remote service:')}    ${status.remoteService ? chalk.green('online at ' + status.url) : chalk.gray('offline')}`);
+      console.log(`  ${chalk.gray('Recipes stored:')}    ${status.recipeCount ?? 0}`);
+      console.log(`  ${chalk.gray('DB path:')}           ${status.dbPath}`);
+      if (!status.localDb) console.log(chalk.gray('\n  Run: local-agent coding-db sync-local  to initialize.\n'));
+      console.log();
+    });
+
+  codingDbCmd
+    .command('search <query> [path]')
+    .description('Search for fix recipes matching an error description')
+    .option('--project <path>', 'Path to target project')
+    .action(async (query, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { search } = await import('../local-agent/coding-db/CodingDBManager.js');
+      const spinner = ora('Searching...').start();
+      const { results, source, warning } = await search(query, targetDir);
+      spinner.stop();
+      if (warning) console.log(chalk.yellow(`⚠  ${warning}\n`));
+      console.log(chalk.bold(`Recipes (${results.length} found, source: ${source}):\n`));
+      if (!results.length) { console.log(chalk.gray('  No recipes found. Try: local-agent coding-db sync-local\n')); return; }
+      results.forEach((r, i) => {
+        console.log(`  ${chalk.bold(String(i+1) + '.')} ${chalk.cyan(r.error_pattern ?? r.errorPattern)}`);
+        console.log(`     ${r.fix_description ?? r.fixDescription}`);
+        if (r.fix_snippet ?? r.fixSnippet) console.log(chalk.gray('     ' + (r.fix_snippet ?? r.fixSnippet).split('\n')[0]));
+        console.log();
+      });
+    });
+
+  codingDbCmd
+    .command('diagnose <logfile> [path]')
+    .description('Parse a build/test log and look up recipes for each error')
+    .option('--project <path>', 'Path to target project')
+    .action(async (logfile, pathArg, opts) => {
+      printBanner();
+      const logPath   = resolve(logfile);
+      if (!existsSync(logPath)) die(`Log file not found: ${logPath}`);
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { diagnose } = await import('../local-agent/coding-db/CodingDBManager.js');
+      const spinner = ora('Diagnosing log...').start();
+      const { readFileSync: rfs } = await import('fs');
+      const content = rfs(logPath, 'utf8');
+      const result  = await diagnose(content, targetDir);
+      spinner.stop();
+      console.log(chalk.bold(`Diagnosis: ${result.errors.length} error type(s), ${result.totalRecipes} recipe(s)\n`));
+      result.errors.forEach(({ errorText, recipes }) => {
+        console.log(`  ${chalk.red('›')} ${errorText.slice(0, 80)}`);
+        if (recipes.length) {
+          recipes.forEach((r) => console.log(`    ${chalk.green('→')} ${r.fix_description ?? r.fixDescription}`));
+        } else {
+          console.log(chalk.gray('    (no recipe found)'));
+        }
+        console.log();
+      });
+    });
+
+  codingDbCmd
+    .command('sync-local [path]')
+    .description('Build/update local DB from project fix history')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const { syncLocal } = await import('../local-agent/coding-db/CodingDBManager.js');
+      const spinner = ora('Syncing local knowledge base...').start();
+      const result  = syncLocal(targetDir);
+      spinner.succeed(chalk.green(`Sync complete — ${result.synced} new, ${result.updated} updated, ${result.total} total recipes`));
+      console.log();
+    });
+
+  program.addCommand(codingDbCmd);
+
+  // ── context (Phase 11) ───────────────────────────────────────────────────
+  const contextCmd = new Command('context').description('Advanced context engine for LLM prompts');
+
+  contextCmd
+    .command('build <task> [path]')
+    .description('Build optimized context for a task and show summary')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const config  = loadConfig(targetDir);
+      const { buildContext, getContextSummary } = await import('../local-agent/context/AdvancedContextEngine.js');
+      const spinner = ora('Building context...').start();
+      const ctx     = await buildContext(task, targetDir, config);
+      spinner.stop();
+      const summary = getContextSummary(ctx);
+      console.log(chalk.bold('Context Summary:'));
+      console.log(`  ${chalk.gray('Files selected:')}  ${summary.fileCount}`);
+      console.log(`  ${chalk.gray('Total tokens:')}    ~${summary.totalTokens}`);
+      console.log(`  ${chalk.gray('Truncated:')}       ${summary.truncated ? chalk.yellow('yes') : 'no'}`);
+      console.log(`  ${chalk.gray('Keywords:')}        ${ctx.keywords.join(', ')}`);
+      console.log(`\n${chalk.bold('Top files:')}`);
+      summary.topFiles.forEach((f) => console.log(`  ${chalk.cyan('›')} ${f}`));
+      console.log();
+    });
+
+  contextCmd
+    .command('explain <task> [path]')
+    .description('Explain why each file was chosen for this task')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const { buildContext, explainContext } = await import('../local-agent/context/AdvancedContextEngine.js');
+      const ctx  = await buildContext(task, targetDir, config);
+      const expl = explainContext(ctx);
+      console.log(expl + '\n');
+    });
+
+  contextCmd
+    .command('files <task> [path]')
+    .description('List the files that would be included in context for a task')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const config    = loadConfig(targetDir);
+      const { buildContext } = await import('../local-agent/context/AdvancedContextEngine.js');
+      const ctx = await buildContext(task, targetDir, config);
+      console.log(chalk.bold(`Context files (${ctx.files.length}):\n`));
+      ctx.files.forEach((f) => console.log(`  ${chalk.cyan(f.relPath)}  ${chalk.gray('~' + f.tokens + ' tok')}`));
+      if (ctx.truncated) console.log(chalk.yellow(`\n  + ${ctx.skippedCount} file(s) skipped (budget exhausted)`));
+      console.log();
+    });
+
+  contextCmd
+    .command('budget [path]')
+    .description('Show current context token budget settings')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const { DEFAULT_BUDGET } = await import('../local-agent/context/ContextBudget.js');
+      console.log(chalk.bold('Context Token Budget:'));
+      Object.entries(DEFAULT_BUDGET).forEach(([k, v]) =>
+        console.log(`  ${chalk.gray(k.padEnd(16))} ${v.toLocaleString()} tokens`)
+      );
+      console.log();
+    });
+
+  program.addCommand(contextCmd);
+
+  // ── generate-test (Phase 12) ─────────────────────────────────────────────
+  program
+    .command('generate-test <task> [path]')
+    .description('Generate a test file for a task (creates patch proposal — does NOT auto-apply)')
+    .option('--project <path>', 'Path to target project')
+    .action(async (task, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      if (!isWorkspaceInitialized(targetDir)) die('Workspace not initialized. Run: local-agent init');
+      const config  = loadConfig(targetDir);
+      const { generateTest } = await import('../local-agent/testing/TestGenerator.js');
+      const spinner = ora('Generating test...').start();
+      try {
+        const result = await generateTest(task, targetDir, config);
+        spinner.succeed(chalk.green(`Test patch created: ${result.patchId}`));
+        console.log(`  ${chalk.gray('Framework:')} ${result.testFramework}`);
+        console.log(`  ${chalk.gray('Target:')}    ${result.targetFile}`);
+        console.log(`  ${chalk.gray('LLM used:')}  ${result.llmUsed ? 'yes' : 'no (template fallback)'}`);
+        console.log(`\n  ${chalk.gray('Review:')}  local-agent show-patch ${result.patchId}`);
+        console.log(`  ${chalk.gray('Apply:')}   local-agent apply ${result.patchId} --project ${opts.project ?? '.'}\n`);
+      } catch (err) {
+        spinner.fail(chalk.red('Test generation failed'));
+        die(err.message);
+      }
+    });
+
+  program
+    .command('test:regression <patch-id> [path]')
+    .description('Generate a regression test for an applied patch')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const config = loadConfig(targetDir);
+      const { generateRegressionTest } = await import('../local-agent/testing/TestGenerator.js');
+      const spinner = ora('Generating regression test...').start();
+      try {
+        const result = await generateRegressionTest(patchId, targetDir, config);
+        spinner.succeed(chalk.green(`Regression test patch: ${result.patchId}`));
+        console.log(`  ${chalk.gray('Target:')} ${result.targetFile}`);
+        console.log(`  local-agent show-patch ${result.patchId}\n`);
+      } catch (err) {
+        spinner.fail(chalk.red('Failed'));
+        die(err.message);
+      }
+    });
+
+  // ── release-check (Phase 13) ─────────────────────────────────────────────
+  program
+    .command('release-check [path]')
+    .description('Check release readiness (build, tests, secrets, debug code, docs)')
+    .option('--project <path>', 'Path to target project')
+    .option('--deep', 'Also run build and test commands (slower)')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
+      const config  = loadConfig(targetDir);
+      const { runAllChecks } = await import('../local-agent/release/ReleaseChecker.js');
+      const { generateReport } = await import('../local-agent/release/ReleaseReporter.js');
+      const spinner = ora('Running release checks...').start();
+      try {
+        const result = await runAllChecks(targetDir, config, { deep: opts.deep ?? false });
+        spinner.stop();
+        const { checks, failCount, warnCount, blockers, recommendations } = result;
+        const rcCol = result.result === 'PASS' ? 'green' : result.result === 'WARNING' ? 'yellow' : 'red';
+
+        console.log(chalk.bold('Release Readiness:\n'));
+        for (const c of checks) {
+          const ic = c.passed === true ? chalk.green('✓') : c.passed === false && c.severity === 'FAIL' ? chalk.red('✗') :
+                     c.passed === false ? chalk.yellow('⚠') : chalk.gray('–');
+          const sc = c.severity === 'FAIL' ? chalk.red('[FAIL]') : c.severity === 'WARN' ? chalk.yellow('[WARN]') : chalk.gray('[INFO]');
+          console.log(`  ${ic}  ${chalk.gray(c.name.padEnd(28))} ${sc}  ${c.message}`);
+          c.details.slice(0, 2).forEach((d) => console.log(`       ${chalk.gray('→')} ${d}`));
+        }
+
+        console.log(`\n  ${chalk[rcCol].bold(`Overall: ${result.result}`)}  ${chalk.gray(`(${failCount} fail, ${warnCount} warn)`)}`);
+
+        if (blockers.length) {
+          console.log('\n' + chalk.bold.red('Blockers:'));
+          blockers.forEach((b) => console.log(`  ${chalk.red('✗')} ${b.name}: ${b.message}`));
+        }
+        if (recommendations.length) {
+          console.log('\n' + chalk.bold('Recommendations:'));
+          recommendations.slice(0, 5).forEach((r) => console.log(`  ${chalk.gray('›')} ${r}`));
+        }
+
+        const { mdPath, jsonPath } = generateReport(targetDir, result);
+        console.log(`\n  ${chalk.gray('Report:')} ${mdPath}`);
+        console.log(`  ${chalk.gray('JSON:')}   ${jsonPath}\n`);
+
+        if (result.result === 'FAIL') process.exit(1);
+      } catch (err) {
+        spinner.fail(chalk.red('Release check failed'));
+        die(err.message);
+      }
+    });
+
+  program
+    .command('release-report [path]')
+    .description('Show the latest release readiness report')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getLatestReport, listReports } = await import('../local-agent/release/ReleaseReporter.js');
+      const reports = listReports(targetDir);
+      if (!reports.length) {
+        console.log(chalk.yellow('No release reports yet. Run: local-agent release-check\n'));
+        return;
+      }
+      const latest = getLatestReport(targetDir);
+      const rcCol  = latest.result === 'PASS' ? 'green' : latest.result === 'WARNING' ? 'yellow' : 'red';
+      console.log(chalk.bold('Latest Release Report:'));
+      console.log(`  ${chalk.gray('Generated:')} ${formatDate(latest.generatedAt)}`);
+      console.log(`  ${chalk.gray('Project:')}   ${latest.projectName}`);
+      console.log(`  ${chalk.gray('Checks:')}    ${latest.checks?.length ?? 0} total`);
+      console.log(`  ${chalk[rcCol].bold(`  Result: ${latest.result}  (${latest.failCount} fail, ${latest.warnCount} warn)`)}`);
+      console.log(`\n  All reports: ${latest.checks ? '' : ''}`);
+      reports.slice(0, 5).forEach((r) => {
+        const col = r.result === 'PASS' ? 'green' : r.result === 'WARNING' ? 'yellow' : 'red';
+        console.log(`  ${chalk[col]('●')} ${r.filename.replace('.json', '')}  ${chalk.gray(r.result ?? '?')}`);
+      });
+      console.log();
+    });
+
   program.parse(process.argv);
 
   if (process.argv.length <= 2) {
