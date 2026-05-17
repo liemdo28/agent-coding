@@ -1,129 +1,133 @@
-// collectors/GPUMonitor.js - GPU monitoring with graceful fallback (no hard NVIDIA dep)
-// macOS: system_profiler SPDisplaysDataType -json
-// Windows: wmic path Win32_VideoController
-// Linux: nvidia-smi (optional), graceful null if absent
-// All paths must return null gracefully when GPU info is unavailable.
-import { exec } from 'child_process';
-import { promisify } from 'util';
+// collectors/GPUMonitor.js - GPU monitoring with NVIDIA/AMD/Intel fallback
+// Never crashes if GPU unavailable — gracefully returns null fields
+import { execSync } from 'child_process';
+import { EventEmitter } from 'events';
 
-const execAsync = promisify(exec);
-const EXEC_TIMEOUT_MS = 4000;
+const SAMPLE_INTERVAL_MS = 10000;
 
-export class GPUMonitor {
-  constructor() {
-    this._platform    = process.platform;
-    this._available   = null;   // null = unchecked, true/false after probe()
-    this._lastReading = null;
-  }
-
-  // Run once at startup to detect whether GPU info is available.
-  async probe() {
-    try {
-      const reading     = await this._readGPU();
-      this._available   = reading !== null;
-      this._lastReading = reading;
-      return this._available;
-    } catch {
-      this._available = false;
-      return false;
+function tryNvidia() {
+  try {
+    const out = execSync(
+      'nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits',
+      { timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }
+    ).toString().trim();
+    if (!out) return null;
+    const lines = out.split('\n').map((l) => l.split(',').map((v) => parseFloat(v.trim())));
+    // Sum across GPUs
+    let gpu_pct = 0, vram_used = 0, vram_total = 0, temp = 0;
+    for (const [util, memUsed, memTotal, temperature] of lines) {
+      gpu_pct   += isNaN(util)        ? 0 : util;
+      vram_used += isNaN(memUsed)     ? 0 : memUsed;
+      vram_total+= isNaN(memTotal)    ? 0 : memTotal;
+      temp       = isNaN(temperature) ? temp : Math.max(temp, temperature);
     }
+    return {
+      vendor:        'nvidia',
+      gpu_pct:       Math.round((gpu_pct / lines.length) * 10) / 10,
+      vram_mb:       Math.round(vram_used),
+      vram_total_mb: Math.round(vram_total),
+      temperature_c: temp || null,
+    };
+  } catch {
+    return null;
   }
-
-  // Read current GPU state. Returns null when unavailable — never throws.
-  async read() {
-    if (this._available === false) return null;
-    try {
-      const reading     = await this._readGPU();
-      this._lastReading = reading;
-      return reading;
-    } catch {
-      this._available = false;
-      return null;
-    }
-  }
-
-  async _readGPU() {
-    switch (this._platform) {
-      case 'darwin': return this._readMacOS();
-      case 'win32':  return this._readWindows();
-      case 'linux':  return this._readLinux();
-      default:       return null;
-    }
-  }
-
-  async _readMacOS() {
-    try {
-      const { stdout } = await execAsync(
-        'system_profiler SPDisplaysDataType -json 2>/dev/null',
-        { timeout: EXEC_TIMEOUT_MS }
-      );
-      const data    = JSON.parse(stdout);
-      const display = data?.SPDisplaysDataType?.[0];
-      if (!display) return null;
-
-      const vramStr = display.spdisplays_vram ?? display.spdisplays_vram_shared ?? null;
-      return {
-        name:              display.spdisplays_vendor ?? display._name ?? 'Unknown GPU',
-        vram_mb:           vramStr ? _parseVRAM(vramStr) : null,
-        utilization_pct:   null,    // macOS doesn't expose GPU utilization without private APIs
-        platform:          'darwin',
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  async _readWindows() {
-    try {
-      const { stdout } = await execAsync(
-        'wmic path Win32_VideoController get Name,AdapterRAM /format:csv 2>NUL',
-        { timeout: EXEC_TIMEOUT_MS }
-      );
-      const lines = stdout.split('\n').filter((l) => l.trim() && !l.startsWith('Node'));
-      if (!lines.length) return null;
-
-      const parts      = lines[0].split(',');
-      const adapterRam = parseInt(parts[1], 10);
-      const name       = (parts[2] ?? '').trim() || 'Unknown GPU';
-      return {
-        name,
-        vram_mb:         isNaN(adapterRam) ? null : Math.round(adapterRam / 1048576),
-        utilization_pct: null,
-        platform:        'win32',
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  async _readLinux() {
-    try {
-      // nvidia-smi is optional — fall back gracefully if absent
-      const { stdout } = await execAsync(
-        'nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader,nounits 2>/dev/null',
-        { timeout: EXEC_TIMEOUT_MS }
-      );
-      const parts = stdout.trim().split(',').map((s) => s.trim());
-      if (parts.length < 3) return null;
-      return {
-        name:            parts[0],
-        vram_mb:         parseInt(parts[1], 10) || null,
-        vram_total_mb:   parseInt(parts[2], 10) || null,
-        utilization_pct: parseInt(parts[3], 10) || null,
-        platform:        'linux',
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  get isAvailable()  { return this._available === true; }
-  get lastReading()  { return this._lastReading; }
 }
 
-function _parseVRAM(str) {
-  const m = String(str).match(/(\d+)\s*(MB|GB)/i);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  return m[2].toUpperCase() === 'GB' ? n * 1024 : n;
+function tryAMD() {
+  try {
+    const out = execSync(
+      'rocm-smi --showuse --showmeminfo vram --showtemp --csv',
+      { timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }
+    ).toString().trim();
+    if (!out) return null;
+    // rocm-smi CSV format is inconsistent — just confirm it ran
+    return { vendor: 'amd', gpu_pct: null, vram_mb: null, vram_total_mb: null, temperature_c: null };
+  } catch {
+    return null;
+  }
+}
+
+function tryIntel() {
+  try {
+    // intel_gpu_top exists on some Linux systems
+    const out = execSync(
+      'intel_gpu_top -J -s 100 2>/dev/null | head -20',
+      { timeout: 2000, shell: true, stdio: ['ignore', 'pipe', 'ignore'] }
+    ).toString();
+    if (!out) return null;
+    return { vendor: 'intel', gpu_pct: null, vram_mb: null, vram_total_mb: null, temperature_c: null };
+  } catch {
+    return null;
+  }
+}
+
+export class GPUMonitor extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this._intervalMs = options.intervalMs ?? SAMPLE_INTERVAL_MS;
+    this._timer      = null;
+    this._vendor     = null;   // detected once, cached
+    this._available  = null;   // null=unknown, false=no GPU, true=has GPU
+  }
+
+  start() {
+    if (this._timer) return this;
+    this._timer = setInterval(() => this._sample(), this._intervalMs);
+    if (this._timer.unref) this._timer.unref();
+    return this;
+  }
+
+  stop() {
+    if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    return this;
+  }
+
+  sample() { return this._sample(); }
+
+  _sample() {
+    // Short-circuit once we know no GPU is present
+    if (this._available === false) {
+      const row = this._nullRow();
+      this.emit('sample', row);
+      return row;
+    }
+
+    let result = tryNvidia();
+    if (!result) result = tryAMD();
+    if (!result) result = tryIntel();
+
+    if (!result) {
+      this._available = false;
+      const row = this._nullRow();
+      this.emit('sample', row);
+      return row;
+    }
+
+    this._available = true;
+    this._vendor    = result.vendor;
+    const row = {
+      vendor:        result.vendor,
+      gpu_pct:       result.gpu_pct,
+      vram_mb:       result.vram_mb,
+      vram_total_mb: result.vram_total_mb,
+      temperature_c: result.temperature_c,
+      timestamp:     new Date().toISOString(),
+    };
+    this.emit('sample', row);
+    return row;
+  }
+
+  _nullRow() {
+    return {
+      vendor:        null,
+      gpu_pct:       null,
+      vram_mb:       null,
+      vram_total_mb: null,
+      temperature_c: null,
+      timestamp:     new Date().toISOString(),
+    };
+  }
+
+  get available() { return this._available; }
+  get vendor()    { return this._vendor; }
 }

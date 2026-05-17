@@ -1,83 +1,112 @@
-// core/MetricsCompressor.js - Hourly aggregation of old resource_metrics rows
-// Keeps raw samples for the recent retention window; collapses older rows
-// into hourly averages to control disk growth on long-running systems.
-import { withTransaction } from './DatabaseManager.js';
+// core/MetricsCompressor.js - Compress raw metrics >24h into hourly aggregates
+// Raw recent data stays intact; old data is rolled up then deleted to prevent DB bloat
 
-const DEFAULT_RAW_RETENTION_HOURS = 24;
+const RAW_RETENTION_MS = 24 * 60 * 60 * 1000;  // 24 hours
 
-/**
- * Compress resource_metrics older than rawRetentionHours into hourly averages.
- * Runs inside a single transaction: delete old raw rows, insert hourly aggregates.
- * @returns {{ rowsBefore, rowsAfter, rowsSaved, hoursCompressed, cutoff }}
- */
-export function compressMetrics(db, options = {}) {
-  const rawRetentionHours = options.rawRetentionHours ?? DEFAULT_RAW_RETENTION_HOURS;
-  const cutoff = new Date(Date.now() - rawRetentionHours * 3_600_000).toISOString();
-
-  let rowsBefore, rowsAfter, hoursCompressed;
-
-  withTransaction(db, () => {
-    rowsBefore = db.prepare('SELECT COUNT(*) as c FROM resource_metrics').get().c;
-
-    // Hourly averages for everything older than the cutoff
-    const hourlyAverages = db.prepare(`
-      SELECT
-        session_id,
-        strftime('%Y-%m-%dT%H:00:00.000Z', timestamp) AS hour_bucket,
-        ROUND(AVG(cpu_pct), 4)          AS cpu_pct,
-        ROUND(AVG(memory_mb), 4)        AS memory_mb,
-        ROUND(AVG(heap_used_mb), 4)     AS heap_used_mb,
-        ROUND(AVG(heap_total_mb), 4)    AS heap_total_mb,
-        ROUND(AVG(rss_mb), 4)           AS rss_mb,
-        ROUND(AVG(memory_delta_pct), 4) AS memory_delta_pct,
-        ROUND(AVG(gpu_mb), 4)           AS gpu_mb,
-        ROUND(AVG(disk_free_mb), 4)     AS disk_free_mb
-      FROM resource_metrics
-      WHERE timestamp < ?
-      GROUP BY session_id, hour_bucket
-    `).all(cutoff);
-
-    // Delete the raw rows
-    db.prepare('DELETE FROM resource_metrics WHERE timestamp < ?').run(cutoff);
-
-    // Re-insert one aggregated row per (session, hour)
-    const ins = db.prepare(`
-      INSERT INTO resource_metrics
-        (session_id, timestamp, cpu_pct, memory_mb, heap_used_mb, heap_total_mb,
-         rss_mb, memory_delta_pct, gpu_mb, disk_free_mb)
-      VALUES
-        (@session_id, @hour_bucket, @cpu_pct, @memory_mb, @heap_used_mb, @heap_total_mb,
-         @rss_mb, @memory_delta_pct, @gpu_mb, @disk_free_mb)
-    `);
-    for (const row of hourlyAverages) ins.run(row);
-
-    hoursCompressed = hourlyAverages.length;
-    rowsAfter = db.prepare('SELECT COUNT(*) as c FROM resource_metrics').get().c;
-  })();
-
-  return {
-    rowsBefore,
-    rowsAfter,
-    rowsSaved:       rowsBefore - rowsAfter,
-    hoursCompressed,
-    cutoff,
-  };
+export function ensureHourlyTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS metrics_hourly (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id    TEXT,
+      hour_bucket   TEXT    NOT NULL,
+      sample_count  INTEGER DEFAULT 0,
+      cpu_min       REAL, cpu_avg  REAL, cpu_max  REAL, cpu_p95  REAL,
+      mem_min       REAL, mem_avg  REAL, mem_max  REAL, mem_p95  REAL,
+      created_at    TEXT    NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_metrics_hourly_bucket
+      ON metrics_hourly(session_id, hour_bucket);
+  `);
 }
 
-/**
- * Return storage stats for resource_metrics (no writes).
- */
-export function getMetricsStorageStats(db) {
-  const counts  = db.prepare(`
-    SELECT COUNT(*) as total, MIN(timestamp) as oldest, MAX(timestamp) as newest
+export function compressOldMetrics(db, retentionMs = RAW_RETENTION_MS) {
+  ensureHourlyTable(db);
+
+  const cutoff = new Date(Date.now() - retentionMs).toISOString();
+
+  // Get distinct session × hour combinations that are old enough
+  const buckets = db.prepare(`
+    SELECT
+      session_id,
+      strftime('%Y-%m-%dT%H:00:00.000Z', timestamp) as hour_bucket,
+      COUNT(*) as n
     FROM resource_metrics
-  `).get();
-  const pageSize  = db.pragma('page_size')[0].page_size;
-  const pageCount = db.pragma('page_count')[0].page_count;
-  return {
-    total_samples: counts.total,
-    oldest_sample: counts.oldest,
-    newest_sample: counts.newest,
-    db_size_mb:    Math.round((pageSize * pageCount) / 1_048_576 * 100) / 100,
-  };
+    WHERE timestamp < ?
+    GROUP BY session_id, hour_bucket
+    HAVING n > 0
+  `).all(cutoff);
+
+  if (!buckets.length) return { bucketsCompressed: 0, rowsDeleted: 0 };
+
+  let bucketsCompressed = 0;
+  let rowsDeleted       = 0;
+
+  const insertBucket = db.prepare(`
+    INSERT OR REPLACE INTO metrics_hourly
+      (session_id, hour_bucket, sample_count,
+       cpu_min, cpu_avg, cpu_max, cpu_p95,
+       mem_min, mem_avg, mem_max, mem_p95, created_at)
+    VALUES
+      (@session_id, @hour_bucket, @sample_count,
+       @cpu_min, @cpu_avg, @cpu_max, @cpu_p95,
+       @mem_min, @mem_avg, @mem_max, @mem_p95, @created_at)
+  `);
+
+  const deleteRaw = db.prepare(`
+    DELETE FROM resource_metrics
+    WHERE session_id IS @session_id
+      AND strftime('%Y-%m-%dT%H:00:00.000Z', timestamp) = @hour_bucket
+      AND timestamp < @cutoff
+  `);
+
+  const compressBucket = db.transaction((bucket) => {
+    const rows = db.prepare(`
+      SELECT cpu_pct, memory_mb FROM resource_metrics
+      WHERE session_id IS ? AND strftime('%Y-%m-%dT%H:00:00.000Z', timestamp) = ?
+      ORDER BY cpu_pct
+    `).all(bucket.session_id, bucket.hour_bucket);
+
+    if (!rows.length) return 0;
+
+    const cpus = rows.map((r) => r.cpu_pct).sort((a, b) => a - b);
+    const mems = rows.map((r) => r.memory_mb).sort((a, b) => a - b);
+    const p95i = Math.floor(rows.length * 0.95);
+
+    insertBucket.run({
+      session_id:    bucket.session_id,
+      hour_bucket:   bucket.hour_bucket,
+      sample_count:  rows.length,
+      cpu_min:  cpus[0],
+      cpu_avg:  cpus.reduce((s, v) => s + v, 0) / cpus.length,
+      cpu_max:  cpus[cpus.length - 1],
+      cpu_p95:  cpus[p95i],
+      mem_min:  mems[0],
+      mem_avg:  mems.reduce((s, v) => s + v, 0) / mems.length,
+      mem_max:  mems[mems.length - 1],
+      mem_p95:  mems[p95i],
+      created_at: new Date().toISOString(),
+    });
+
+    const del = deleteRaw.run({ session_id: bucket.session_id, hour_bucket: bucket.hour_bucket, cutoff });
+    return del.changes;
+  });
+
+  for (const bucket of buckets) {
+    const deleted = compressBucket(bucket);
+    rowsDeleted += deleted;
+    bucketsCompressed++;
+  }
+
+  return { bucketsCompressed, rowsDeleted };
+}
+
+export function getHourlyStats(db, sessionId = null, hours = 168) {
+  ensureHourlyTable(db);
+  const since = new Date(Date.now() - hours * 3600000).toISOString();
+  const where = sessionId ? 'AND session_id = ?' : '';
+  const args  = sessionId ? [since, sessionId] : [since];
+  return db.prepare(`
+    SELECT * FROM metrics_hourly WHERE hour_bucket > ? ${where}
+    ORDER BY hour_bucket DESC
+  `).all(...args);
 }
