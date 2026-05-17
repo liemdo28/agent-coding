@@ -3413,6 +3413,258 @@ async function main() {
       console.log(`  ${chalk.cyan('local-agent correlate failures --auto')} Root cause\n`);
     });
 
+  // ── logs (Engineering Build Log System) ─────────────────────────────────
+  const logsCmd = program
+    .command('logs')
+    .description('Engineering Build Log — single source of truth for project state');
+
+  logsCmd
+    .command('latest [path]')
+    .description('Show latest.md — current project state (single source of truth)')
+    .option('--project <path>', 'Path to target project')
+    .option('--raw', 'Print raw Markdown without paging')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { readLatest, generateLatest, initLogStructure } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+      let content = readLatest(targetDir);
+      if (!content) {
+        const spinner = ora('Generating latest.md...').start();
+        generateLatest(targetDir);
+        spinner.succeed('latest.md generated');
+        content = readLatest(targetDir);
+      }
+      if (!content) { die('Failed to read latest.md'); return; }
+      // Render with simple markdown formatting
+      console.log('\n' + content.split('\n').map((line) => {
+        if (line.startsWith('# '))  return chalk.bold.cyan(line);
+        if (line.startsWith('## ')) return chalk.bold.yellow('\n' + line);
+        if (line.startsWith('### ')) return chalk.bold(line);
+        if (line.startsWith('- **')) return '  ' + chalk.cyan(line.trim());
+        if (line.startsWith('- '))  return '  ' + chalk.gray('•') + ' ' + line.slice(2);
+        if (line.startsWith('1. ') || /^\d+\. /.test(line)) return '  ' + chalk.cyan(line.trim());
+        if (line.startsWith('> '))  return chalk.italic.gray(line);
+        if (line.startsWith('`'))   return chalk.green(line);
+        return line;
+      }).join('\n') + '\n');
+    });
+
+  logsCmd
+    .command('checkpoints [path]')
+    .description('List recent checkpoints')
+    .option('--project <path>', 'Path to target project')
+    .option('--show <id>', 'Show a specific checkpoint by ID or number')
+    .option('--limit <n>', 'Max checkpoints to list', '10')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { listCheckpoints, readCheckpoint } = await import('../local-agent/eng-log/CheckpointWriter.js');
+      if (opts.show) {
+        const content = readCheckpoint(targetDir, opts.show);
+        if (!content) { die(`Checkpoint not found: ${opts.show}`); return; }
+        console.log('\n' + content + '\n');
+        return;
+      }
+      const checkpoints = listCheckpoints(targetDir, { limit: parseInt(opts.limit) || 10 });
+      if (!checkpoints.length) {
+        console.log(chalk.yellow('No checkpoints yet. Run: local-agent logs checkpoint\n'));
+        return;
+      }
+      console.log(chalk.bold(`Checkpoints (${checkpoints.length}):\n`));
+      checkpoints.forEach((c) => console.log(`  ${chalk.cyan(c.id)}  ${chalk.gray(c.preview)}`));
+      console.log(`\n  View: local-agent logs checkpoints --show <id>\n`);
+    });
+
+  logsCmd
+    .command('checkpoint [path]')
+    .description('Write a new checkpoint for the current progress')
+    .option('--project <path>', 'Path to target project')
+    .option('--phase <phase>', 'Current phase name')
+    .option('--title <title>', 'Checkpoint title')
+    .option('--qa <result>', 'QA result (PASS/FAIL/n/a)', 'n/a')
+    .option('--next <step>', 'Next step description')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { writeCheckpoint } = await import('../local-agent/eng-log/CheckpointWriter.js');
+      const { initLogStructure } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+      const spinner = ora('Writing checkpoint...').start();
+      const result  = writeCheckpoint(targetDir, {
+        phase:        opts.phase ?? 'Current Phase',
+        title:        opts.title ?? `Checkpoint ${new Date().toISOString().slice(0, 10)}`,
+        implemented:  [],
+        filesChanged: [],
+        risks:        [],
+        decisions:    [],
+        rollbackNotes: 'Standard git revert applies.',
+        qaResult:     opts.qa,
+        nextStep:     opts.next ?? 'See latest.md for current priorities.',
+      });
+      spinner.succeed(chalk.green(`Checkpoint written: ${result.id}`));
+      console.log(`  Path: ${result.path}\n`);
+    });
+
+  logsCmd
+    .command('summary [path]')
+    .description('Generate a build/QA summary')
+    .option('--project <path>', 'Path to target project')
+    .option('--phase <phase>', 'Phase name')
+    .option('--qa <result>', 'QA result', 'PASS')
+    .option('--score <n>', 'QA score (0-100)')
+    .option('--errors <list>', 'Comma-separated errors')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { generateBuildSummary } = await import('../local-agent/eng-log/BuildSummaryGenerator.js');
+      const { initLogStructure }     = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+      const result = generateBuildSummary(targetDir, {
+        commands:       [],
+        durationMs:     0,
+        errors:         opts.errors ? opts.errors.split(',').map((e) => e.trim()) : [],
+        fixes:          [],
+        patches:        [],
+        qaResult:       opts.qa ?? 'PASS',
+        qaScore:        opts.score ? parseInt(opts.score) : undefined,
+        phase:          opts.phase ?? 'current',
+        recommendation: 'See latest.md for next steps.',
+      });
+      console.log(chalk.green(`Build summary written: ${result.filename}`));
+      console.log(`  Path: ${result.path}\n`);
+    });
+
+  logsCmd
+    .command('incidents [path]')
+    .description('List engineering log incidents')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { listIncidents } = await import('../local-agent/eng-log/IncidentRecorder.js');
+      const incidents = listIncidents(targetDir);
+      if (!incidents.length) { console.log(chalk.green('No incidents in engineering log.\n')); return; }
+      console.log(chalk.bold(`Engineering Log Incidents (${incidents.length}):\n`));
+      incidents.forEach((i) => {
+        const col = i.severity === 'critical' ? 'red' : i.severity === 'high' ? 'yellow' : 'gray';
+        console.log(`  ${chalk[col](i.incidentId.padEnd(14))} [${i.severity.padEnd(8)}] ${i.title}`);
+        console.log(`    Root: ${i.rootCause.slice(0, 70)}`);
+      });
+      console.log();
+    });
+
+  logsCmd
+    .command('architecture [path]')
+    .description('Show architecture documentation')
+    .option('--project <path>', 'Path to target project')
+    .option('--file <name>', 'system-architecture|module-map|dependency-map|runtime-flow|security-model')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { writeArchitectureDocs, initLogStructure } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+      writeArchitectureDocs(targetDir);
+      const { join: _j } = await import('path');
+      const { existsSync: _ex, readFileSync: _rf } = await import('fs');
+      const archDir  = _j(targetDir, '.local-agent', 'engineering-log', 'architecture');
+      const fileName = (opts.file ?? 'system-architecture') + '.md';
+      const filePath = _j(archDir, fileName);
+      if (_ex(filePath)) {
+        console.log('\n' + _rf(filePath, 'utf8') + '\n');
+      } else {
+        const files = ['system-architecture', 'module-map', 'dependency-map', 'runtime-flow', 'security-model'];
+        console.log(chalk.bold('Architecture Docs:\n'));
+        files.forEach((f) => console.log(`  ${chalk.cyan(f)}`));
+        console.log(`\n  View: local-agent logs architecture --file <name>\n`);
+      }
+    });
+
+  logsCmd
+    .command('decision [path]')
+    .description('Record an engineering decision')
+    .option('--project <path>', 'Path to target project')
+    .option('--title <title>', 'Decision title')
+    .option('--reason <reason>', 'Reason for the decision')
+    .option('--impact <impact>', 'Impact of the decision')
+    .option('--risk <risk>', 'Risk level: low|medium|high', 'low')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      if (!opts.title || !opts.reason || !opts.impact) {
+        die('Required: --title, --reason, --impact');
+        return;
+      }
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { recordDecision } = await import('../local-agent/eng-log/DecisionTracker.js');
+      const { initLogStructure } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      initLogStructure(targetDir);
+      const d = recordDecision(targetDir, {
+        title:  opts.title,
+        reason: opts.reason,
+        impact: opts.impact,
+        risk:   opts.risk ?? 'low',
+      });
+      console.log(chalk.green(`Decision recorded: ${d.decisionId}`));
+      console.log(`  ${chalk.bold(d.title)}\n`);
+    });
+
+  logsCmd
+    .command('update [path]')
+    .description('Regenerate latest.md with current project state')
+    .option('--project <path>', 'Path to target project')
+    .option('--phase <phase>', 'Set current phase')
+    .option('--qa <status>', 'Latest QA status string')
+    .option('--security <status>', 'Latest security status string')
+    .option('--priority <items>', 'Comma-separated priorities')
+    .option('--complete <items>', 'Comma-separated completed items')
+    .option('--in-progress <items>', 'Comma-separated in-progress items')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { initLogStructure, generateLatest, writeArchitectureDocs } = await import('../local-agent/eng-log/EngineeringLogManager.js');
+      const { setCurrentPhase, markCompleted, addInProgress, setPriorities, loadProgress, saveProgress } = await import('../local-agent/eng-log/ProgressTracker.js');
+      initLogStructure(targetDir);
+
+      const spinner = ora('Updating engineering log...').start();
+
+      if (opts.phase) setCurrentPhase(targetDir, opts.phase);
+      if (opts.priority) setPriorities(targetDir, opts.priority.split(',').map((s) => s.trim()));
+      if (opts.complete) {
+        for (const item of opts.complete.split(',')) markCompleted(targetDir, item.trim());
+      }
+      if (opts.inProgress) {
+        const p = loadProgress(targetDir);
+        p.inProgress = opts.inProgress.split(',').map((s) => s.trim());
+        saveProgress(targetDir, p);
+      }
+
+      writeArchitectureDocs(targetDir);
+      const latestPath = generateLatest(targetDir, {
+        qaStatus:       opts.qa,
+        securityStatus: opts.security,
+      });
+
+      spinner.succeed(chalk.green('Engineering log updated'));
+      console.log(`  latest.md → ${latestPath}`);
+      console.log(`  Architecture docs → .local-agent/engineering-log/architecture/\n`);
+    });
+
+  logsCmd.action(async (pathArg, opts) => {
+    printBanner();
+    console.log(chalk.bold('Engineering Build Log — commands:\n'));
+    [
+      ['latest',        'Show current project state (single source of truth)'],
+      ['checkpoints',   'List recent checkpoints'],
+      ['checkpoint',    'Write a new checkpoint'],
+      ['summary',       'Generate a build/QA summary'],
+      ['incidents',     'List engineering log incidents'],
+      ['architecture',  'Show architecture documentation'],
+      ['decision',      'Record an engineering decision'],
+      ['update',        'Regenerate latest.md with current state'],
+    ].forEach(([cmd, desc]) => console.log(`  ${chalk.cyan('local-agent logs ' + cmd.padEnd(16))} ${chalk.gray(desc)}`));
+    console.log();
+  });
+
   program.parse(process.argv);
 
   if (process.argv.length <= 2) {
