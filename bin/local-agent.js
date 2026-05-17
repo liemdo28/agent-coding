@@ -2761,6 +2761,658 @@ async function main() {
     console.log(`\n  Subcommands: evolve | audit | refresh\n`);
   });
 
+  // ── terminal (Phase 44) ───────────────────────────────────────────────────
+  const termCmd = program
+    .command('terminal')
+    .description('Terminal intelligence: parse history, classify failures, recommend next steps');
+
+  termCmd
+    .command('analyze [histFile]')
+    .description('Analyze terminal history for failures and dangerous commands')
+    .option('--limit <n>', 'Lines to analyze', '100')
+    .action(async (histFile, opts) => {
+      printBanner();
+      const { loadHistory, analyzeHistory } = await import('../local-agent/terminal/TerminalAnalyzer.js');
+      const lines   = loadHistory(histFile ?? null);
+      if (!lines.length) { console.log(chalk.yellow('No terminal history found.\n')); return; }
+      const result  = analyzeHistory(lines, { limit: parseInt(opts.limit) || 100 });
+      const col     = result.failures === 0 ? 'green' : result.failures < 5 ? 'yellow' : 'red';
+      console.log(chalk.bold('Terminal Analysis:\n'));
+      console.log(`  Commands analyzed: ${result.total}`);
+      console.log(`  Failures:          ${chalk[col](result.failures)}`);
+      console.log(`  Dangerous cmds:    ${result.dangerous > 0 ? chalk.red(result.dangerous) : chalk.green('0')}`);
+      if (result.dangerous > 0) {
+        console.log(chalk.bold.red('\nDangerous Commands Detected:'));
+        result.dangerousCmds.forEach((c) => console.log(`  ${chalk.red('⚠')} ${c}`));
+      }
+      if (result.recentFails.length) {
+        console.log(chalk.bold('\nRecent Failures:'));
+        result.recentFails.forEach((f) => console.log(`  ${chalk.yellow('✗')} [${f.type}] ${f.cmd.slice(0, 80)}`));
+      }
+      if (result.suggestions.length) {
+        console.log(chalk.bold('\nSuggested Next Commands:'));
+        result.suggestions.forEach((s) => console.log(`  ${chalk.cyan('→')} ${s}`));
+      }
+      console.log();
+    });
+
+  termCmd
+    .command('history [histFile]')
+    .description('Show recent build/run commands from history')
+    .option('--limit <n>', 'Lines to show', '50')
+    .action(async (histFile, opts) => {
+      printBanner();
+      const { loadHistory, analyzeHistory } = await import('../local-agent/terminal/TerminalAnalyzer.js');
+      const lines  = loadHistory(histFile ?? null);
+      const result = analyzeHistory(lines, { limit: parseInt(opts.limit) || 50 });
+      console.log(chalk.bold('Recent Build/Run Commands:\n'));
+      if (!result.buildCmds.length) { console.log(chalk.yellow('  No build commands in recent history.\n')); return; }
+      result.buildCmds.forEach((c) => console.log(`  ${chalk.gray('$')} ${c}`));
+      console.log();
+    });
+
+  termCmd
+    .command('summarize [histFile]')
+    .description('Summarize the recent build/test session')
+    .action(async (histFile) => {
+      printBanner();
+      const { loadHistory, summarizeSession } = await import('../local-agent/terminal/TerminalAnalyzer.js');
+      const lines   = loadHistory(histFile ?? null);
+      const summary = summarizeSession(lines);
+      console.log(chalk.bold('Session Summary:\n'));
+      summary.split('\n').forEach((l) => console.log(`  ${l}`));
+      console.log();
+    });
+
+  // ── config (Phase 45) ─────────────────────────────────────────────────────
+  const cfgCmd = program
+    .command('config-drift')
+    .description('Configuration drift detection: env mismatch, duplicate configs, stale config');
+
+  cfgCmd
+    .command('scan [path]')
+    .description('Scan project for config issues')
+    .option('--project <path>', 'Path to target project')
+    .option('--json', 'Output JSON')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { scanConfig } = await import('../local-agent/config-drift/ConfigDriftDetector.js');
+      const spinner  = ora('Scanning config files...').start();
+      const result   = scanConfig(targetDir);
+      spinner.stop();
+      if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+      const col = result.healthy ? 'green' : 'yellow';
+      console.log(chalk.bold(`Config Scan: ${chalk[col](result.issueCount + ' issue(s)')}\n`));
+      console.log(`  Configs found: ${result.foundConfigs.join(', ') || 'none'}`);
+      result.issues.forEach((i) =>
+        console.log(`  ${chalk.yellow('⚠')} [${i.type}] ${i.severity.toUpperCase()}  ${i.msg}`));
+      if (result.healthy) console.log(chalk.green('  All configs look healthy.'));
+      console.log();
+    });
+
+  cfgCmd
+    .command('drift [path]')
+    .description('Show env drift between .env files')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { scanConfig } = await import('../local-agent/config-drift/ConfigDriftDetector.js');
+      const result  = scanConfig(targetDir);
+      const drifts  = result.issues.filter((i) => i.type === 'env_drift' || i.type === 'env_extra');
+      if (!drifts.length) { console.log(chalk.green('No env drift detected.\n')); return; }
+      console.log(chalk.bold('Env Drift:\n'));
+      drifts.forEach((d) => console.log(`  ${chalk.yellow('⚠')} ${d.msg}`));
+      console.log();
+    });
+
+  cfgCmd
+    .command('compare <pathA> <pathB>')
+    .description('Compare config files between two directories')
+    .option('--json', 'Output JSON')
+    .action(async (pathA, pathB, opts) => {
+      printBanner();
+      const { compareConfigDirs } = await import('../local-agent/config-drift/ConfigDriftDetector.js');
+      const result = compareConfigDirs(resolve(pathA), resolve(pathB));
+      if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+      console.log(chalk.bold(`Config Compare: ${pathA} vs ${pathB}\n`));
+      if (!result.drifts.length) { console.log(chalk.green('  No config drift found.\n')); return; }
+      result.drifts.forEach((d) =>
+        console.log(`  ${chalk.yellow('⚠')} ${d.file.padEnd(28)} [${d.type}]`));
+      console.log();
+    });
+
+  // ── fs (Phase 46) ─────────────────────────────────────────────────────────
+  const fsCmd = program
+    .command('fs')
+    .description('Filesystem intelligence: orphans, duplicates, oversized folders, junk');
+
+  fsCmd
+    .command('scan [path]')
+    .description('Scan filesystem for health issues')
+    .option('--project <path>', 'Path to target project')
+    .option('--json', 'Output JSON')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { scanFilesystem } = await import('../local-agent/fsint/FilesystemIntelligence.js');
+      const spinner = ora('Scanning filesystem...').start();
+      const result  = scanFilesystem(targetDir);
+      spinner.stop();
+      if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+      console.log(chalk.bold(`Filesystem Scan: ${result.totalFiles} files  ${result.totalMB} MB total\n`));
+      console.log(`  Junk files:     ${result.junkFiles.length}`);
+      console.log(`  Orphan files:   ${result.orphanFiles.length}`);
+      console.log(`  Oversized dirs: ${result.oversizedDirs.length}`);
+      console.log(`  Stale artifacts: ${result.staleArtifacts.length}`);
+      if (result.oversizedDirs.length) {
+        console.log(chalk.bold('\nOversized Directories:'));
+        result.oversizedDirs.forEach((d) => console.log(`  ${chalk.yellow('⚠')} ${d.dir}  ${d.sizeMB} MB`));
+      }
+      if (result.staleArtifacts.length) {
+        console.log(chalk.bold('\nStale Build Artifacts:'));
+        result.staleArtifacts.forEach((a) => console.log(`  ${chalk.gray('○')} ${a.dir}  ${a.sizeMB} MB`));
+      }
+      console.log();
+    });
+
+  fsCmd
+    .command('cleanup-plan [path]')
+    .description('Generate a cleanup plan for junk and stale artifacts')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { scanFilesystem, buildCleanupPlan } = await import('../local-agent/fsint/FilesystemIntelligence.js');
+      const spinner = ora('Building cleanup plan...').start();
+      const scan    = scanFilesystem(targetDir);
+      const plan    = buildCleanupPlan(scan);
+      spinner.stop();
+      console.log(chalk.bold(`Cleanup Plan: ${plan.totalSteps} action(s) — saves ${plan.savedMB} MB\n`));
+      plan.steps.slice(0, 20).forEach((s) =>
+        console.log(`  ${chalk.gray('[' + s.action + ']')}  ${s.path}  ${chalk.gray('(' + s.reason + ')')}`));
+      console.log(`\n  ${chalk.gray(plan.note)}\n`);
+    });
+
+  fsCmd
+    .command('duplicates [path]')
+    .description('Find duplicate files by content hash')
+    .option('--project <path>', 'Path to target project')
+    .option('--min-size <bytes>', 'Minimum file size', '1024')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { findDuplicates } = await import('../local-agent/fsint/FilesystemIntelligence.js');
+      const spinner = ora('Finding duplicates...').start();
+      const groups  = findDuplicates(targetDir, { minSizeBytes: parseInt(opts.minSize) || 1024 });
+      spinner.stop();
+      if (!groups.length) { console.log(chalk.green('No duplicate files found.\n')); return; }
+      const totalWaste = groups.reduce((s, g) => s + g.sizeBytes * (g.count - 1), 0);
+      console.log(chalk.bold(`Duplicates: ${groups.length} group(s)  wasted: ${formatBytes(totalWaste)}\n`));
+      groups.slice(0, 10).forEach((g) => {
+        console.log(`  ${chalk.yellow('≡')} ${formatBytes(g.sizeBytes)} × ${g.count}  ${chalk.gray(g.hash.slice(0, 8) + '...')}`);
+        g.paths.forEach((p) => console.log(`    ${chalk.gray(p)}`));
+      });
+      console.log();
+    });
+
+  // ── standards (Phase 47) ──────────────────────────────────────────────────
+  const stdCmd = program
+    .command('standards')
+    .description('Coding standards enforcement: naming, architecture, test coverage, commit hooks');
+
+  stdCmd
+    .command('check [path]')
+    .description('Run all coding standards checks')
+    .option('--project <path>', 'Path to target project')
+    .option('--json', 'Output JSON')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { checkStandards } = await import('../local-agent/standards/StandardsChecker.js');
+      const spinner  = ora('Checking coding standards...').start();
+      const result   = checkStandards(targetDir);
+      spinner.stop();
+      if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+      const col = result.healthy ? 'green' : result.findings < 10 ? 'yellow' : 'red';
+      console.log(chalk.bold(`Standards Check: ${result.totalFiles} files  ${chalk[col](result.findings + ' finding(s)')}\n`));
+      Object.entries(result.byRule).forEach(([rule, count]) =>
+        console.log(`  ${chalk.yellow('⚠')} ${rule.padEnd(35)} ${count} file(s)`));
+      if (result.details.length) {
+        console.log(chalk.bold('\nTop Findings:'));
+        result.details.slice(0, 10).forEach((f) =>
+          console.log(`  ${chalk.gray(f.ruleId.padEnd(35))} ${f.file}`));
+      }
+      if (result.healthy) console.log(chalk.green('  All standards met.'));
+      console.log();
+    });
+
+  stdCmd
+    .command('fix-plan [path]')
+    .description('Generate fix suggestions for standards violations')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { checkStandards, buildFixPlan } = await import('../local-agent/standards/StandardsChecker.js');
+      const result = checkStandards(targetDir);
+      const plan   = buildFixPlan(result);
+      console.log(chalk.bold('Standards Fix Plan:\n'));
+      if (!plan.steps.length) { console.log(chalk.green('  No fixes needed.\n')); return; }
+      plan.steps.forEach((s) =>
+        console.log(`  ${chalk.cyan('[' + s.ruleId + ']')} (${s.count} issues)\n    ${chalk.gray('→')} ${s.suggestion}\n`));
+    });
+
+  stdCmd
+    .command('report [path]')
+    .description('Standards compliance report')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { checkStandards } = await import('../local-agent/standards/StandardsChecker.js');
+      const result  = checkStandards(targetDir);
+      const score   = Math.max(0, 100 - Math.round((result.findings / Math.max(result.totalFiles, 1)) * 100));
+      const col     = score >= 90 ? 'green' : score >= 70 ? 'yellow' : 'red';
+      console.log(chalk.bold('Standards Compliance Report:\n'));
+      console.log(`  Files checked:  ${result.totalFiles}`);
+      console.log(`  Findings:       ${result.findings}`);
+      console.log(`  Compliance:     ${chalk[col](score + '%')}`);
+      console.log();
+    });
+
+  // ── patch-sim (Phase 48) ──────────────────────────────────────────────────
+  const patchSimCmd = program
+    .command('patch-sim')
+    .description('Patch simulation engine: estimate regression risk, test/API impact before apply');
+
+  patchSimCmd
+    .command('simulate <patchId> [path]')
+    .description('Simulate patch impact before applying')
+    .option('--project <path>', 'Path to target project')
+    .option('--json', 'Output JSON')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { simulatePatch } = await import('../local-agent/patch-sim/PatchSimulator.js');
+      const spinner  = ora(`Simulating ${patchId}...`).start();
+      const result   = simulatePatch(targetDir, patchId);
+      spinner.stop();
+      if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+      const rCol = result.regressionRisk.level === 'critical' ? 'red'
+                 : result.regressionRisk.level === 'high' ? 'yellow' : 'green';
+      console.log(chalk.bold(`Patch Simulation: ${patchId}\n`));
+      if (!result.found) console.log(chalk.yellow('  Patch not found — showing generic simulation\n'));
+      console.log(`  Files affected:   ${result.fileCount}`);
+      console.log(`  Regression risk:  ${chalk[rCol](result.regressionRisk.level.toUpperCase())} (score: ${result.regressionRisk.score})`);
+      console.log(`  Tests affected:   ${result.testCount}`);
+      console.log(`  API impact:       ${result.apiImpact.length > 0 ? result.apiImpact.join(', ') : 'none'}`);
+      console.log(`  Rollback:         ${result.rollback.complexity} — ${result.rollback.reason}`);
+      console.log(chalk.bold('\nRisk Factors:'));
+      result.regressionRisk.factors.slice(0, 5).forEach((f) => console.log(`  ${chalk.gray('→')} ${f}`));
+      console.log(`\n  ${chalk[rCol](result.recommendation)}\n`);
+    });
+
+  patchSimCmd
+    .command('impact <patchId> [path]')
+    .description('Show patch impact on tests and APIs')
+    .option('--project <path>', 'Path to target project')
+    .action(async (patchId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { simulatePatch } = await import('../local-agent/patch-sim/PatchSimulator.js');
+      const result = simulatePatch(targetDir, patchId);
+      console.log(chalk.bold(`Patch Impact: ${patchId}\n`));
+      console.log(chalk.bold('Affected Tests:'));
+      if (result.affectedTests.length) result.affectedTests.forEach((t) => console.log(`  ${chalk.cyan('→')} ${t}`));
+      else console.log('  (none detected)');
+      console.log(chalk.bold('\nAffected APIs/Routes:'));
+      if (result.apiImpact.length) result.apiImpact.forEach((a) => console.log(`  ${chalk.cyan('→')} ${a}`));
+      else console.log('  (none detected)');
+      console.log();
+    });
+
+  // ── mode (Phase 49) ───────────────────────────────────────────────────────
+  const modeCmd = program
+    .command('mode')
+    .description('Agent operational modes and personality');
+
+  modeCmd
+    .command('list')
+    .description('List all available agent modes')
+    .action(async () => {
+      printBanner();
+      const { listModes } = await import('../local-agent/modes/AgentModes.js');
+      const modes = listModes();
+      console.log(chalk.bold('Agent Modes:\n'));
+      modes.forEach((m) => {
+        console.log(`  ${chalk[m.color]('●')} ${chalk.bold(m.name.padEnd(28))} [${m.id}]`);
+        console.log(`    ${chalk.gray(m.description)}`);
+        console.log(`    Retry: ${m.retryDepth}  Patch: ${m.patchAggression}  QA: ${m.qaStrictness}  Verbose: ${m.verbosity}`);
+      });
+      console.log();
+    });
+
+  modeCmd
+    .command('set <modeId> [path]')
+    .description('Set the active agent mode')
+    .option('--project <path>', 'Path to target project')
+    .action(async (modeId, pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { setMode } = await import('../local-agent/modes/AgentModes.js');
+      try {
+        const mode = setMode(targetDir, modeId);
+        console.log(chalk.green(`Mode set: ${chalk.bold(mode.name)}`));
+        console.log(`  ${chalk.gray(mode.description)}\n`);
+      } catch (err) { die(err.message); }
+    });
+
+  modeCmd
+    .command('status [path]')
+    .description('Show current agent mode')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { getMode } = await import('../local-agent/modes/AgentModes.js');
+      const mode = getMode(targetDir);
+      console.log(chalk.bold(`Current Mode: ${chalk[mode.color](mode.name)}\n`));
+      console.log(`  ${chalk.gray(mode.description)}`);
+      console.log(`  Retry depth:    ${mode.retryDepth}`);
+      console.log(`  Patch style:    ${mode.patchAggression}`);
+      console.log(`  QA strictness:  ${mode.qaStrictness}`);
+      console.log(`  Verbosity:      ${mode.verbosity}`);
+      console.log(`  Risk tolerance: ${mode.riskTolerance}\n`);
+    });
+
+  // ── memory (Phase 50 — Memory Visualizer) ─────────────────────────────────
+  const memCmd = program
+    .command('memory-viz')
+    .description('Engineering memory visualizer: trends, unstable modules, patch chains');
+
+  memCmd
+    .command('graph [path]')
+    .description('Show memory graph: patch chains, QA trend, unstable modules')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { qaTrendChart, patchChainSummary } = await import('../local-agent/memviz/MemoryVisualizer.js');
+      const qa      = qaTrendChart(targetDir);
+      const patches = patchChainSummary(targetDir);
+      console.log(chalk.bold('QA Pass Rate (last 14 days):\n'));
+      console.log(qa.chart || '  (no QA events recorded)');
+      console.log(chalk.bold('\nPatch Chain Outcomes:\n'));
+      console.log(patches.chart);
+      console.log(`\n  Success rate: ${patches.successRate ?? 'n/a'}%\n`);
+    });
+
+  memCmd
+    .command('trends [path]')
+    .description('Show regression bug type trends')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { bugTrends } = await import('../local-agent/memviz/MemoryVisualizer.js');
+      const result = bugTrends(targetDir);
+      console.log(chalk.bold(`Bug Trends (${result.total} total regressions):\n`));
+      console.log(result.chart || '  (no regression events)');
+      console.log();
+    });
+
+  memCmd
+    .command('unstable [path]')
+    .description('Show most-changed (unstable) modules')
+    .option('--project <path>', 'Path to target project')
+    .option('--top <n>', 'Top N files', '10')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { unstableModules } = await import('../local-agent/memviz/MemoryVisualizer.js');
+      const result = unstableModules(targetDir, { topN: parseInt(opts.top) || 10 });
+      console.log(chalk.bold('Most Unstable Modules:\n'));
+      if (!result.data.length) { console.log(chalk.yellow('  No file change events recorded.\n')); return; }
+      console.log(result.chart);
+      console.log();
+    });
+
+  // ── correlate (Phase 51) ──────────────────────────────────────────────────
+  const corrCmd = program
+    .command('correlate')
+    .description('Root cause correlation: map multiple failures to a single cause');
+
+  corrCmd
+    .command('failures [descriptions...]')
+    .description('Correlate failure descriptions to a root cause')
+    .option('--auto', 'Auto-correlate from recent timeline')
+    .option('--project <path>', 'Path to target project')
+    .action(async (descriptions, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project);
+      const { correlateFailures, correlateTimelineFailures } = await import('../local-agent/correlate/RootCauseCorrelator.js');
+      let result;
+      if (opts.auto || !descriptions.length) {
+        result = correlateTimelineFailures(targetDir);
+      } else {
+        result = correlateFailures(descriptions);
+      }
+      console.log(chalk.bold('Root Cause Correlation:\n'));
+      console.log(`  Symptoms detected: ${result.symptoms.join(', ') || 'none'}`);
+      if (result.message) { console.log(chalk.yellow(`  ${result.message}\n`)); return; }
+      if (!result.topCause) { console.log(chalk.yellow('  No matching root cause pattern found.\n')); return; }
+      const top = result.topCause;
+      console.log(chalk.bold(`\nTop Cause: ${chalk.red(top.rootCause)} (confidence: ${top.confidence}%)`));
+      console.log(`  Matching symptoms: ${top.hits.join(', ')}`);
+      console.log(`  Remedy: ${chalk.cyan(top.remedy)}`);
+      if (result.matches.length > 1) {
+        console.log(chalk.bold('\nOther Possible Causes:'));
+        result.matches.slice(1).forEach((m) =>
+          console.log(`  ${chalk.gray('○')} ${m.rootCause} (${m.confidence}%)`));
+      }
+      console.log();
+    });
+
+  corrCmd
+    .command('build-runtime [path]')
+    .description('Correlate build and runtime failures in timeline')
+    .option('--project <path>', 'Path to target project')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+      const { correlateBuildRuntime } = await import('../local-agent/correlate/RootCauseCorrelator.js');
+      const result = correlateBuildRuntime(targetDir);
+      console.log(chalk.bold('Build–Runtime Correlation:\n'));
+      console.log(`  Build failures:      ${result.buildFailures}`);
+      console.log(`  Regressions:         ${result.regressions}`);
+      console.log(`  Correlated pairs:    ${result.correlatedPairs}`);
+      if (result.topCause) {
+        console.log(chalk.bold(`\nRoot Cause: ${chalk.red(result.topCause.rootCause)}`));
+        console.log(`  Remedy: ${chalk.cyan(result.topCause.remedy)}`);
+      } else {
+        console.log(chalk.green('\n  No strong build-regression correlation found.'));
+      }
+      console.log();
+    });
+
+  // ── playbooks (Phase 52) ──────────────────────────────────────────────────
+  const pbCmd = program
+    .command('playbooks')
+    .description('Engineering playbooks: standard workflows for releases, migrations, incidents');
+
+  pbCmd
+    .command('list')
+    .description('List all available playbooks')
+    .action(async () => {
+      printBanner();
+      const { BUILTIN_PLAYBOOKS } = await import('../local-agent/playbooks/PlaybookLibrary.js');
+      console.log(chalk.bold(`Playbooks (${BUILTIN_PLAYBOOKS.length}):\n`));
+      BUILTIN_PLAYBOOKS.forEach((pb) => {
+        console.log(`  ${chalk.cyan(pb.id.padEnd(26))} ${chalk.bold(pb.name)}`);
+        console.log(`    ${chalk.gray(pb.description)}`);
+        console.log(`    Tags: ${pb.tags.join(', ')}  Steps: ${pb.steps.length}`);
+      });
+      console.log(`\n  Run: local-agent playbooks run <id>\n`);
+    });
+
+  pbCmd
+    .command('run <query>')
+    .description('Show a playbook run plan (dry-run)')
+    .option('--json', 'Output JSON')
+    .action(async (query, opts) => {
+      printBanner();
+      const { planRun } = await import('../local-agent/playbooks/PlaybookRunner.js');
+      const plan = planRun(query);
+      if (!plan) { die(`Playbook not found: "${query}". Run: local-agent playbooks list`); return; }
+      if (opts.json) { console.log(JSON.stringify(plan, null, 2)); return; }
+      console.log(chalk.bold(`Playbook: ${plan.name}\n`));
+      plan.steps.forEach((s) => {
+        console.log(`  ${chalk.cyan(String(s.seq).padStart(2, '0'))}. [${chalk.gray(s.phase.padEnd(12))}] ${s.desc}`);
+        console.log(`      ${chalk.gray('$')} ${s.cmd}`);
+      });
+      console.log(`\n  ${chalk.gray(plan.note)}\n`);
+    });
+
+  pbCmd
+    .command('export <targetDir>')
+    .description('Export all playbooks as JSON files to a directory')
+    .action(async (targetDir) => {
+      printBanner();
+      const { exportPlaybooks } = await import('../local-agent/playbooks/PlaybookRunner.js');
+      const result = exportPlaybooks(resolve(targetDir));
+      console.log(chalk.green(`Exported ${result.exported} playbooks to: ${result.path}\n`));
+    });
+
+  // ── os (Phase 53 — Engineering OS) ────────────────────────────────────────
+  program
+    .command('os [path]')
+    .description('Engineering OS — unified dashboard for all local agent systems')
+    .option('--project <path>', 'Path to target project')
+    .option('--json', 'Output JSON')
+    .action(async (pathArg, opts) => {
+      printBanner();
+      const targetDir = resolveTarget(opts.project ?? pathArg);
+
+      // Import all subsystems
+      const [
+        { getSummary },
+        { fullAnalytics },
+        { loadGovernance },
+        { getMode },
+        { snapshot, checkThresholds },
+        { listIncidents },
+        { auditKnowledge },
+        { listUsers },
+        { BUILTIN_PLAYBOOKS },
+        { scanConfig },
+      ] = await Promise.all([
+        import('../local-agent/timeline/TimelineEngine.js'),
+        import('../local-agent/analytics/AnalyticsEngine.js'),
+        import('../local-agent/governance/GovernanceEngine.js'),
+        import('../local-agent/modes/AgentModes.js'),
+        import('../local-agent/resources/ResourceMonitor.js'),
+        import('../local-agent/incident/IncidentManager.js'),
+        import('../local-agent/knowledge/KnowledgeEvolver.js'),
+        import('../local-agent/rbac/RBACManager.js'),
+        import('../local-agent/playbooks/PlaybookLibrary.js'),
+        import('../local-agent/config-drift/ConfigDriftDetector.js'),
+      ]);
+
+      const [timeline, analytics, governance, mode, resources, incidents, knowledge, users, config] = await Promise.all([
+        Promise.resolve(getSummary(targetDir)),
+        Promise.resolve(fullAnalytics(targetDir)),
+        Promise.resolve(loadGovernance(targetDir)),
+        Promise.resolve(getMode(targetDir)),
+        Promise.resolve(snapshot()),
+        Promise.resolve(listIncidents(targetDir, { status: 'open' })),
+        Promise.resolve(auditKnowledge(targetDir)),
+        Promise.resolve(listUsers(targetDir)),
+        Promise.resolve(scanConfig(targetDir)),
+      ]);
+
+      const resHealth   = checkThresholds(resources);
+      const qaPassRate  = analytics.qa.passRate;
+      const qaCol       = qaPassRate === null ? 'gray' : qaPassRate >= 80 ? 'green' : qaPassRate >= 50 ? 'yellow' : 'red';
+
+      if (opts.json) {
+        console.log(JSON.stringify({ timeline, analytics, governance, mode: mode.id, resources, incidents: incidents.length, knowledge, users: users.length, configIssues: config.issueCount }, null, 2));
+        return;
+      }
+
+      const W = 56;
+      const HR = '─'.repeat(W);
+      const box = (title, content) => {
+        console.log(chalk.gray(`┌─ ${title} ${'─'.repeat(Math.max(0, W - title.length - 3))}┐`));
+        content.forEach((line) => console.log(chalk.gray('│') + ' ' + line.padEnd(W - 1) + chalk.gray('│')));
+        console.log(chalk.gray('└' + '─'.repeat(W) + '┘'));
+      };
+
+      console.log(chalk.bold.cyan(`\n  ╔${'═'.repeat(W)}╗`));
+      console.log(chalk.bold.cyan(`  ║${'  LOCAL AI ENGINEERING OS'.padStart(Math.floor(W/2) + 13).padEnd(W)}║`));
+      console.log(chalk.bold.cyan(`  ╚${'═'.repeat(W)}╝\n`));
+
+      // Row 1: Mode + Resources
+      box('AGENT MODE', [
+        `  Mode: ${chalk.bold(mode.name)} [${mode.id}]`,
+        `  Risk tolerance: ${mode.riskTolerance}   QA: ${mode.qaStrictness}`,
+      ]);
+
+      box('RESOURCES', [
+        `  CPU: ${chalk[resHealth.healthy ? 'green' : 'yellow'](resources.cpuPct + '%')}   RAM: ${resources.rssMB} MB   Disk: ${resources.diskFreeGB ?? 'n/a'} GB free`,
+        `  Health: ${resHealth.healthy ? chalk.green('✓ OK') : chalk.yellow(resHealth.warnings.join('; '))}`,
+      ]);
+
+      // Row 2: QA + Analytics
+      box('QA + ANALYTICS', [
+        `  QA pass rate:    ${chalk[qaCol]((qaPassRate ?? 'n/a') + '%')}`,
+        `  Regressions:     ${analytics.regressions.total}   Patches applied: ${analytics.patches.applied}`,
+        `  Fix success:     ${analytics.patches.fixSuccessRate ?? 'n/a'}%`,
+      ]);
+
+      box('TIMELINE', [
+        `  Total events:   ${timeline.totalEvents}   QA runs: ${timeline.qaRuns}`,
+        `  Regressions:    ${timeline.regressions}`,
+        `  Most unstable:  ${timeline.unstable[0]?.file ?? 'none'}`,
+      ]);
+
+      // Row 3: Incidents + Governance
+      box('INCIDENTS', [
+        `  Open incidents: ${incidents.length > 0 ? chalk.red(incidents.length) : chalk.green('0')}`,
+        incidents.length
+          ? `  Latest: [${incidents[0].severity}] ${incidents[0].title.slice(0, 44)}`
+          : '  All clear.',
+      ]);
+
+      box('GOVERNANCE', [
+        `  Patch approval: ${governance.patchApprovalRequired ? chalk.yellow('required') : chalk.green('auto')}`,
+        `  Risk threshold: ${governance.riskThreshold}   Offline: ${governance.modelPolicy.requireOffline ? chalk.green('YES') : chalk.red('NO')}`,
+        `  Config issues:  ${config.issueCount > 0 ? chalk.yellow(config.issueCount) : chalk.green('0')}`,
+      ]);
+
+      // Row 4: Knowledge + Security + RBAC
+      box('KNOWLEDGE', [
+        `  Recipes: ${knowledge.total}   High-conf: ${knowledge.highConfidence}   Stale: ${knowledge.stale}`,
+        `  Avg confidence: ${knowledge.averageConfidence ?? 'n/a'}`,
+      ]);
+
+      box('TEAM + ACCESS', [
+        `  Users:     ${users.length}`,
+        `  Playbooks: ${BUILTIN_PLAYBOOKS.length} built-in`,
+      ]);
+
+      console.log(chalk.bold('\n  Quick Commands:'));
+      console.log(`  ${chalk.cyan('local-agent heal')}              Self-healing`);
+      console.log(`  ${chalk.cyan('local-agent qa')}                Run QA`);
+      console.log(`  ${chalk.cyan('local-agent analytics')}         Engineering metrics`);
+      console.log(`  ${chalk.cyan('local-agent incident create')}   New incident`);
+      console.log(`  ${chalk.cyan('local-agent playbooks list')}    Available playbooks`);
+      console.log(`  ${chalk.cyan('local-agent governance status')} Policy status`);
+      console.log(`  ${chalk.cyan('local-agent vault scan')}        Secret detection`);
+      console.log(`  ${chalk.cyan('local-agent correlate failures --auto')} Root cause\n`);
+    });
+
   program.parse(process.argv);
 
   if (process.argv.length <= 2) {
