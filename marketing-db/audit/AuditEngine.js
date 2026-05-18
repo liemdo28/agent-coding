@@ -83,6 +83,16 @@ const TELEMETRY_PATTERNS = [
 // Engine/Manager filenames considered "core" — fake implementations here are failures
 const CORE_MODULE_SUFFIXES = ['Engine', 'Manager', 'Analyzer', 'Importer', 'Processor'];
 
+// Files that intentionally contain pattern strings as detection rules — exclude from self-scan.
+// Without this, AuditEngine.js flags itself (FAKE_PATTERNS contains "placeholder"),
+// OfflineGuard.js flags itself (BLOCKED_PATTERNS contains "openai", "anthropic"), etc.
+const SELF_SCAN_EXCLUDE = [
+  'marketing-db/audit/AuditEngine.js',
+  'marketing-db/core/OfflineGuard.js',
+  'bin/marketing-db.js',
+  'bin/local-agent.js',
+];
+
 // ── File scanning helpers ──────────────────────────────────────────────────────
 
 /**
@@ -231,13 +241,21 @@ export async function runAudit(workspaceRoot) {
     try { source = readFileSync(file, 'utf8'); } catch { continue; }
     const rel = relative(workspaceRoot, file);
 
-    // 4a — Fake / placeholder detection
-    const fakeHits = checkPatterns(source, FAKE_PATTERNS);
-    if (fakeHits.length) {
-      report.fakeImplementation.violations.push({ file: rel, issues: fakeHits });
-      // Failures only count in core engine/manager files
-      if (isCoreModule(file)) {
-        report.fakeImplementation.ok = false;
+    // Skip files that are part of the audit/guard infrastructure — they contain
+    // detection pattern strings by design and would otherwise self-flag.
+    const isSelfExcluded = SELF_SCAN_EXCLUDE.some(
+      (ex) => rel === ex || rel.endsWith('/' + ex.split('/').pop())
+    );
+
+    // 4a — Fake / placeholder detection (skip audit/guard infra files)
+    if (!isSelfExcluded) {
+      const fakeHits = checkPatterns(source, FAKE_PATTERNS);
+      if (fakeHits.length) {
+        report.fakeImplementation.violations.push({ file: rel, issues: fakeHits });
+        // Failures only count in core engine/manager files
+        if (isCoreModule(file)) {
+          report.fakeImplementation.ok = false;
+        }
       }
     }
 
@@ -248,18 +266,22 @@ export async function runAudit(workspaceRoot) {
       report.brokenImports.ok = false;
     }
 
-    // 4c — Internet policy
-    const internetHits = checkPatterns(source, INTERNET_PATTERNS);
-    if (internetHits.length) {
-      report.internetPolicy.violations.push({ file: rel, issues: internetHits });
-      report.internetPolicy.ok = false;
+    // 4c — Internet policy (skip audit/guard infra files)
+    if (!isSelfExcluded) {
+      const internetHits = checkPatterns(source, INTERNET_PATTERNS);
+      if (internetHits.length) {
+        report.internetPolicy.violations.push({ file: rel, issues: internetHits });
+        report.internetPolicy.ok = false;
+      }
     }
 
-    // 4d — Telemetry
-    const telemetryHits = checkPatterns(source, TELEMETRY_PATTERNS);
-    if (telemetryHits.length) {
-      report.telemetryCheck.violations.push({ file: rel, issues: telemetryHits });
-      report.telemetryCheck.ok = false;
+    // 4d — Telemetry (skip audit/guard infra files)
+    if (!isSelfExcluded) {
+      const telemetryHits = checkPatterns(source, TELEMETRY_PATTERNS);
+      if (telemetryHits.length) {
+        report.telemetryCheck.violations.push({ file: rel, issues: telemetryHits });
+        report.telemetryCheck.ok = false;
+      }
     }
   }
 
