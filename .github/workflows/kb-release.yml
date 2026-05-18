@@ -1,0 +1,85 @@
+name: KB Release
+
+# Triggered by a tag like kb-v1.0, kb-v1.1, etc.
+# Runs on an internet-connected GitHub runner (BUILD-TIME only).
+# Target machines (offline) download the artifact from the release — no ingest needed there.
+
+on:
+  push:
+    tags:
+      - 'kb-v*'
+
+jobs:
+  build-and-release:
+    name: Ingest → Package → Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install native build tools (required for better-sqlite3)
+        run: sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ingest KB (BUILD-TIME — requires internet)
+        run: npm run kb:ingest
+        # Idempotent: skips articles already in DB. On a fresh runner this fetches all ~1,300.
+
+      - name: Package KB artifact
+        run: node scripts/kb-package.js
+        # Outputs: dist/kb/knowledge.db.gz + dist/kb/manifest.json
+
+      - name: Read manifest
+        id: manifest
+        run: |
+          echo "docs=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.documents)")" >> $GITHUB_OUTPUT
+          echo "chunks=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.chunks)")" >> $GITHUB_OUTPUT
+          echo "words=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.words)")" >> $GITHUB_OUTPUT
+          echo "size=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.compressedSizeMB)")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Knowledge Base ${{ github.ref_name }}"
+          body: |
+            ## Offline Knowledge Base — ${{ github.ref_name }}
+
+            Pre-built SQLite database for the local-agent KB system.
+            **No internet required on target machines** — install with one command.
+
+            | Stat | Value |
+            |------|-------|
+            | Documents | ${{ steps.manifest.outputs.docs }} |
+            | Chunks | ${{ steps.manifest.outputs.chunks }} |
+            | Words | ${{ steps.manifest.outputs.words }} |
+            | Compressed size | ${{ steps.manifest.outputs.size }} MB |
+            | License | CC BY-SA 4.0 (Wikipedia contributors) |
+            | Built | ${{ github.run_started_at }} |
+
+            ## Install (offline machine)
+
+            ```bash
+            # Transfer knowledge.db.gz to the target machine, then:
+            npm run kb:install <path-to-knowledge.db.gz>
+
+            # Verify:
+            npm run kb:stats
+            npm run kb:query "your question here"
+            ```
+
+            See `kb/README.md` → **DEPLOY/RUNTIME Flow** for full instructions.
+          files: |
+            dist/kb/knowledge.db.gz
+            dist/kb/manifest.json
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

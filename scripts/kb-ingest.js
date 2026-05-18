@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-// scripts/kb-ingest.js — one-command KB setup: runs ingest-all.js for all 10 domains
+// scripts/kb-ingest.js — BUILD-TIME TOOL (requires internet)
+// Fetches Wikipedia articles and builds the offline knowledge base.
+// Run this ONCE on a dev/CI machine with internet access.
+// DO NOT run on target/production machines — they are offline and use a pre-built artifact.
+//
+// After ingest, package and distribute with:
+//   npm run kb:package   → dist/kb/knowledge.db.gz
+//   Upload to GitHub Release → offline machines install with: npm run kb:install <file>
+//
 // Called by `npm run kb:ingest`
 // Safe to re-run: idempotent (skips already-ingested articles).
 import { spawnSync } from 'child_process';
@@ -12,7 +20,11 @@ const INGEST  = join(ROOT, 'kb', 'ingest-all.js');
 const DB_PATH = join(ROOT, '.local-agent', 'kb', 'knowledge.db');
 
 console.log('═'.repeat(60));
-console.log('  Knowledge Base Setup — npm run kb:ingest');
+console.log('  ⚠  BUILD-TIME TOOL — requires outbound internet access');
+console.log('  ⚠  DO NOT run on offline / target machines');
+console.log('     Offline machines install via: npm run kb:install <artifact>');
+console.log('═'.repeat(60));
+console.log('  Knowledge Base Ingest — npm run kb:ingest');
 console.log('═'.repeat(60));
 console.log(`  DB location : ${DB_PATH}`);
 console.log(`  Source      : Wikipedia CC BY-SA 4.0 (REST API)`);

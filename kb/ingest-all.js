@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// kb/ingest-all.js — bulk ingest all domains from Wikipedia
+// kb/ingest-all.js — BUILD-TIME TOOL — bulk ingest all domains from Wikipedia
+// Requires outbound internet (Wikipedia API). DO NOT run on offline target machines.
+// Target machines install a pre-built artifact: npm run kb:install <knowledge.db.gz>
 import { resolve, dirname } from 'path';
 import { fileURLToPath }    from 'url';
 import { openKnowledgeBase }           from './KnowledgeBase.js';

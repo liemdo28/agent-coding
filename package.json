@@ -21,6 +21,8 @@
     "accounting:verify":  "node accounting-engine/bin/accounting.js verify-ledger",
     "accounting:cert":    "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m",
     "kb:ingest":          "node scripts/kb-ingest.js",
+    "kb:package":         "node scripts/kb-package.js",
+    "kb:install":         "node scripts/kb-install.js",
     "kb:query":           "node bin/kb.js query",
     "kb:stats":           "node bin/kb.js stats",
     "kb:seed":            "node bin/kb.js seed"
