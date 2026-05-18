@@ -146,7 +146,7 @@ class SharedIssueCluster {
   extractStackFrames(stack) {
     return stack.split('\n')
       .map(line => {
-        const match = line.match(/at\\s+(.+?)\\s+\\(/);
+        const match = line.match(/at\s+(.+?)\s+\(/);
         return match ? match[1] : '';
       })
       .filter(f => f.length > 0);

@@ -241,25 +241,25 @@ export class CodeCleanup {
     try {
       const content = readFileSync(filePath, 'utf8');
       const originalContent = content;
-      let content = content;
+      let updatedContent = content;
 
       // Safe changes only:
       // 1. Remove trailing whitespace
-      content = content.replace(/[ \t]+$/gm, '');
+      updatedContent = updatedContent.replace(/[ \t]+$/gm, '');
 
       // 2. Fix multiple blank lines
-      content = content.replace(/\n{3,}/g, '\n\n');
+      updatedContent = updatedContent.replace(/\n{3,}/g, '\n\n');
 
       // 3. Remove trailing empty lines
-      content = content.replace(/\n+$/, '\n');
+      updatedContent = updatedContent.replace(/\n+$/, '\n');
 
       // 4. Ensure file ends with newline
-      if (!content.endsWith('\n')) {
-        content += '\n';
+      if (!updatedContent.endsWith('\n')) {
+        updatedContent += '\n';
       }
 
-      if (content !== originalContent) {
-        writeFileSync(filePath, content);
+      if (updatedContent !== originalContent) {
+        writeFileSync(filePath, updatedContent);
         return { success: true, changes: true, filePath };
       }
 

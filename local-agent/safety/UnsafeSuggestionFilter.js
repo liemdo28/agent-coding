@@ -1,1 +1,11 @@
-class UnsafeSuggestionFilter {\n  filter(suggestion) {\n    const unsafe = ['rm -rf', 'DROP TABLE', 'DELETE FROM', 'curl remote'];\n    return { safe: !unsafe.some(u => suggestion.includes(u)), blocked: unsafe.filter(u => suggestion.includes(u)) };\n  }\n}\nmodule.exports = { UnsafeSuggestionFilter };\n
+class UnsafeSuggestionFilter {
+  filter(suggestion) {
+    const unsafe = ['rm -rf', 'DROP TABLE', 'DELETE FROM', 'curl remote'];
+    return {
+      safe: !unsafe.some(u => suggestion.includes(u)),
+      blocked: unsafe.filter(u => suggestion.includes(u)),
+    };
+  }
+}
+
+module.exports = { UnsafeSuggestionFilter };

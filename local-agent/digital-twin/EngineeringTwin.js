@@ -1,2 +1,14 @@
 class EngineeringTwin {
-n  constructor() {\n    this.state = { architecture: {}, runtime: {}, qa: {}, deps: {} };\n  }\n  update(state) {\n    this.state = { ...this.state, ...state };\n    return { updated: true };\n  }\n  getState() { return this.state; }\n}\nmodule.exports = { EngineeringTwin };\n
+  constructor() {
+    this.state = { architecture: {}, runtime: {}, qa: {}, deps: {} };
+  }
+
+  update(state) {
+    this.state = { ...this.state, ...state };
+    return { updated: true };
+  }
+
+  getState() { return this.state; }
+}
+
+module.exports = { EngineeringTwin };
