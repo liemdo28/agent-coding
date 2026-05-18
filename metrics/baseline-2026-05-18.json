@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-05-18T15:22:35+07:00",
+  "branch": "claude/local-offline-ai-agent-PQx1C",
+  "commit": "e2543bb",
+  "engineer_role": "infra-sec",
+  "version_target": "V1.0",
+  "counts": {
+    "js_files":      254,
+    "js_loc":    35728,
+    "syntax_errors": 0,
+    "databases": 6,
+    "tables_total": 30,
+    "cli_subcommands_local_agent": 56,
+    "cli_subcommands_kb": 7,
+    "cli_subcommands_accounting": 8,
+    "kb_documents": 1265,
+    "kb_chunks": 13461,
+    "kb_words": 4056139,
+    "tests_pass": 28,
+    "tests_fail": 0,
+    "languages_ast_parsed": 0,
+    "specialist_agents": 0,
+    "industry_verticals": 0
+  },
+  "benchmarks": {
+    "humaneval_pass_at_1":           null,
+    "mbpp_pass_at_1":                null,
+    "swe_bench_lite_resolve_rate":   null,
+    "swe_bench_full_resolve_rate":   null,
+    "multipl_e_pass_at_1":           null,
+    "ds_1000_pass_at_1":             null,
+    "golden_corpus_pass_rate":       null
+  },
+  "performance": {
+    "scan_latency_sample_project_ms":   null,
+    "scan_latency_1m_loc_ms":           null,
+    "kb_query_p50_ms":                  null,
+    "kb_query_p99_ms":                  null,
+    "ide_completion_p50_ms":            null,
+    "patch_generation_avg_s":           null,
+    "ram_steady_state_mb":              null
+  },
+  "v1_targets": {
+    "humaneval_pass_at_1":          0.85,
+    "mbpp_pass_at_1":               0.80,
+    "swe_bench_lite_resolve_rate":  0.35,
+    "tests_total":                  2500,
+    "languages_ast_parsed":         6,
+    "paying_users":                 10000,
+    "arr_usd":                      5000000
+  },
+  "v3_targets_36mo": {
+    "humaneval_pass_at_1":          0.95,
+    "swe_bench_full_resolve_rate":  0.60,
+    "languages_ast_parsed":         25,
+    "paying_users":                 500000,
+    "arr_usd":                      250000000
+  }
+}
