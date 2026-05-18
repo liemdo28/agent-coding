@@ -13,6 +13,8 @@ jobs:
   build-and-release:
     name: Ingest → Package → Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create GitHub Releases
 
     steps:
       - name: Checkout
