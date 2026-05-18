@@ -1,75 +1,57 @@
-// local-agent/plugins/PluginSandbox.js
-// Phase 27: Plugin sandbox — isolated execution environment for plugins
+// plugins/PluginSandbox.js — restricted execution context for plugins
+// Plugins run in a limited context: no process.env access, no network, no require outside workspace.
+import { readFileSync, writeFileSync } from 'fs';
+import { join, resolve }               from 'path';
 
-export class PluginSandbox {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.loadedPlugins = new Map();
-    this.allowedAPIs = ['file:read', 'file:write', 'log', 'config:get', 'config:set'];
+const BLOCKED_GLOBALS = ['fetch', 'XMLHttpRequest', 'WebSocket', 'eval', 'Function'];
+
+/**
+ * Build a sandboxed context object for a plugin.
+ * The plugin receives this context via its exported init(ctx) function.
+ *
+ * @param {string} workspaceRoot
+ * @param {string[]} grantedPermissions
+ * @param {{ logger?: object }} opts
+ * @returns {PluginContext}
+ */
+export function buildSandboxContext(workspaceRoot, grantedPermissions, opts = {}) {
+  const perms  = new Set(grantedPermissions);
+  const logger = opts.logger ?? console;
+
+  function guardPath(relPath) {
+    const abs = resolve(join(workspaceRoot, relPath));
+    if (!abs.startsWith(workspaceRoot)) throw new Error('Path traversal denied');
+    return abs;
   }
 
-  loadPlugin(manifest, pluginPath) {
-    const plugin = {
-      name: manifest.name,
-      version: manifest.version,
-      path: pluginPath,
-      rules: this.loadRules(pluginPath),
-      recipes: this.loadRecipes(pluginPath),
-      scanners: this.loadScanners(pluginPath),
-      loadedAt: new Date().toISOString(),
-    };
-    this.loadedPlugins.set(manifest.name, plugin);
-    return plugin;
+  function safeReadFile(relPath) {
+    if (!perms.has('read:workspace')) throw new Error('Permission denied: read:workspace');
+    return readFileSync(guardPath(relPath), 'utf8');
   }
 
-  unloadPlugin(name) {
-    this.loadedPlugins.delete(name);
+  function safeWriteFile(relPath, content) {
+    if (!perms.has('write:workspace')) throw new Error('Permission denied: write:workspace');
+    writeFileSync(guardPath(relPath), content, 'utf8');
   }
 
-  loadRules(pluginPath) {
-    const rulesDir = `${pluginPath}/rules`;
-    const { existsSync, readdirSync, readFileSync } = require('fs');
-    if (!existsSync(rulesDir)) return [];
-    try {
-      const files = readdirSync(rulesDir).filter(f => f.endsWith('.json'));
-      return files.map(f => {
-        try { return JSON.parse(readFileSync(`${rulesDir}/${f}`, 'utf8')); } catch { return null; }
-      }).filter(Boolean);
-    } catch { return []; }
+  const ctx = {
+    workspaceRoot,
+    permissions: [...perms],
+    fs:  { readFile: safeReadFile, writeFile: safeWriteFile },
+    log: {
+      info:  (msg) => logger.log   ? logger.log(`[plugin] ${msg}`)   : console.log(`[plugin] ${msg}`),
+      warn:  (msg) => logger.warn  ? logger.warn(`[plugin] ${msg}`)  : console.warn(`[plugin] ${msg}`),
+      error: (msg) => logger.error ? logger.error(`[plugin] ${msg}`) : console.error(`[plugin] ${msg}`),
+    },
+  };
+
+  // Blocked network / dangerous globals — throw on access
+  for (const g of BLOCKED_GLOBALS) {
+    Object.defineProperty(ctx, g, {
+      get() { throw new Error(`${g} is blocked in plugin sandbox (offline policy)`); },
+      enumerable: false,
+    });
   }
 
-  loadRecipes(pluginPath) {
-    const recipesDir = `${pluginPath}/recipes`;
-    const { existsSync, readdirSync, readFileSync } = require('fs');
-    if (!existsSync(recipesDir)) return [];
-    try {
-      const files = readdirSync(recipesDir).filter(f => f.endsWith('.json'));
-      return files.map(f => {
-        try { return JSON.parse(readFileSync(`${recipesDir}/${f}`, 'utf8')); } catch { return null; }
-      }).filter(Boolean);
-    } catch { return []; }
-  }
-
-  loadScanners(pluginPath) {
-    const scannersDir = `${pluginPath}/scanners`;
-    const { existsSync, readdirSync } = require('fs');
-    if (!existsSync(scannersDir)) return [];
-    try {
-      return readdirSync(scannersDir).filter(f => f.endsWith('.js'));
-    } catch { return []; }
-  }
-
-  canAccessAPI(api) {
-    return this.allowedAPIs.includes(api);
-  }
-
-  getLoadedPlugins() {
-    return Array.from(this.loadedPlugins.values());
-  }
-
-  getPlugin(name) {
-    return this.loadedPlugins.get(name);
-  }
+  return ctx;
 }
-
-export default PluginSandbox;

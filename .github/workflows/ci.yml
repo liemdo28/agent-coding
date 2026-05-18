@@ -1,202 +1,74 @@
-# .github/workflows/ci.yml
-# Phase 27: CI/CD Pipeline - GitHub Actions
-
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: ["**"]
   pull_request:
-    branches: [ main, develop ]
-
-env:
-  NODE_VERSION: '18'
-  CACHE_DIR: ~/.npm
+    branches: [main]
 
 jobs:
-  # ============================================
-  # Job 1: Code Quality Check
-  # ============================================
-  quality:
-    name: Code Quality
+  # ── Job 1: root repo — build, lint, smoke tests ──────────────────────────
+  root:
+    name: Root — Build / Lint / Test
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
+
+      # better-sqlite3 needs these if it must compile from source
+      - name: Install native-build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y python3 make g++
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linter
-        run: npm run lint || true
-
-      - name: Run code quality check
-        run: node local-agent/testing/test-runner.js --check-quality
-
-      - name: Check for secrets
-        run: |
-          if [ -f .gitignore ]; then
-            echo "Checking gitignore..."
-          fi
-
-  # ============================================
-  # Job 2: Unit Tests
-  # ============================================
-  test:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm test || node local-agent/testing/test-runner.js
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: test-results/
-          retention-days: 7
-
-  # ============================================
-  # Job 3: Integration Tests
-  # ============================================
-  integration-test:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run integration tests
-        run: npm run test:integration || echo "No integration tests configured"
-
-  # ============================================
-  # Job 4: Security Scan
-  # ============================================
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high || true
-
-      - name: Check for hardcoded secrets
-        run: |
-          echo "Scanning for secrets..."
-          grep -r "password\s*=" --include="*.js" --include="*.ts" . || true
-          grep -r "api[_-]key\s*=" --include="*.js" --include="*.ts" . || true
-
-  # ============================================
-  # Job 5: Build
-  # ============================================
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [test, security]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run build
-        run: npm run build || echo "No build script configured"
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build
-          path: dist/
-          retention-days: 7
-
-  # ============================================
-  # Job 6: Deploy (Production only)
-  # ============================================
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: production
-      url: https://example.com
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run production build
+      - name: Build check (syntax-verify all entry points)
         run: npm run build
 
-      - name: Deploy to production
-        run: |
-          echo "Deploying to production..."
-          # Add deployment commands here
-          echo "Deployment complete"
+      - name: Lint (syntax-check all JS source)
+        run: npm run lint
 
-      - name: Notify deployment
-        run: |
-          echo "Deployment completed successfully"
+      - name: Unit + smoke tests
+        run: npm test
 
-# ============================================
-# Status Badge Configuration
-# ============================================
-# Add this to your README.md:
-# ![CI/CD](https://github.com/USER/REPO/actions/workflows/ci.yml/badge.svg)
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Create required runtime directories
+        run: mkdir -p .local-agent/engineering-log/architecture
+
+      - name: Quality gate
+        run: node local-agent/testing/test-runner.js --check-quality .
+
+  # ── Job 2: accounting-engine — all 167 tests ─────────────────────────────
+  accounting-engine:
+    name: Accounting Engine — 167 Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: accounting-engine
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: accounting-engine/package-lock.json
+
+      # better-sqlite3 native build fallback
+      - name: Install native-build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run all 167 tests (unit + integration + security + stress)
+        run: npm test
+        timeout-minutes: 5

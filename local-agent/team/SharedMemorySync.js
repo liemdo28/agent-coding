@@ -1,2 +1,85 @@
-// local-agent/team/SharedMemorySync.js
-// Phase 28: Shared memory sync — sync memory across team machines via shared storage\n\nimport { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';\nimport { join } from 'path';\n\nexport class SharedMemorySync {\n  constructor(workspaceRoot) {\n    this.workspaceRoot = workspaceRoot;\n    this.syncDir = join(workspaceRoot, '.local-agent', 'shared');\n    this.auditFile = join(this.syncDir, 'sync-audit.json');\n    this.ensureSyncDir();\n  }\n\n  ensureSyncDir() {\n    mkdirSync(this.syncDir, { recursive: true });\n  }\n\n  syncToShared(recipientId) {\n    const memoryFile = join(this.workspaceRoot, '.local-agent', 'project-memory.json');\n    const sharedMemoryFile = join(this.syncDir, `memory-${recipientId}.json`);\n\n    if (!existsSync(memoryFile)) {\n      return { success: false, error: 'No memory to sync' };\n    }\n\n    try {\n      const memory = JSON.parse(readFileSync(memoryFile, 'utf8'));\n      writeFileSync(sharedMemoryFile, JSON.stringify(memory, null, 2));\n      this.logSync('OUTBOUND', recipientId, memory);\n      return { success: true, recipientId, size: memory.size };\n    } catch (err) {\n      return { success: false, error: err.message };\n    }\n  }\n\n  syncFromShared(senderId) {\n    const sharedMemoryFile = join(this.syncDir, `memory-${senderId}.json`);\n    const memoryFile = join(this.workspaceRoot, '.local-agent', 'project-memory.json');\n\n    if (!existsSync(sharedMemoryFile)) {\n      return { success: false, error: 'No shared memory from sender' };\n    }\n\n    try {\n      const shared = JSON.parse(readFileSync(sharedMemoryFile, 'utf8'));\n      writeFileSync(memoryFile, JSON.stringify(shared, null, 2));\n      this.logSync('INBOUND', senderId, shared);\n      return { success: true, senderId, size: shared.size };\n    } catch (err) {\n      return { success: false, error: err.message };\n    }\n  }\n\n  logSync(direction, partnerId, data) {\n    let audit = [];\n    if (existsSync(this.auditFile)) {\n      try { audit = JSON.parse(readFileSync(this.auditFile, 'utf8')); } catch { /* ignore */ }\n    }\n    audit.unshift({\n      direction,\n      partnerId,\n      timestamp: new Date().toISOString(),\n      size: JSON.stringify(data).length,\n    });\n    if (audit.length > 100) audit = audit.slice(0, 100);\n    writeFileSync(this.auditFile, JSON.stringify(audit, null, 2));\n  }\n\n  getSyncHistory() {\n    if (!existsSync(this.auditFile)) return [];\n    try { return JSON.parse(readFileSync(this.auditFile, 'utf8')); } catch { return []; }\n  }\n\n  getSharedMemoryIds() {\n    if (!existsSync(this.syncDir)) return [];\n    const { readdirSync } = require('fs');\n    try {\n      return readdirSync(this.syncDir)\n        .filter(f => f.startsWith('memory-') && f.endsWith('.json'))\n        .map(f => f.replace('memory-', '').replace('.json', ''));\n    } catch { return []; }\n  }\n}\n\nexport default SharedMemorySync;\n
+// team/SharedMemorySync.js — export/import agent memory for LAN/NAS team sharing
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, statSync } from 'fs';
+import { join, basename } from 'path';
+import { validateSyncTarget } from './InternalPolicyManager.js';
+import { sanitizeForExport }  from './TeamPackExporter.js';
+
+const MEMORY_DIR = '.local-agent/memory';
+
+/**
+ * Export memory files to a shared LAN/NAS folder.
+ * @param {string} workspaceRoot
+ * @param {string} targetDir — absolute path to shared folder (LAN or NAS mount)
+ * @param {{ dryRun?: boolean }} opts
+ * @returns {{ exported: number, skipped: number, errors: string[], totalBytes: number }}
+ */
+export function exportMemory(workspaceRoot, targetDir, { dryRun = false } = {}) {
+  const check = validateSyncTarget(workspaceRoot, targetDir);
+  if (!check.allowed) throw new Error(`Export denied: ${check.reason}`);
+
+  const srcDir = join(workspaceRoot, MEMORY_DIR);
+  if (!existsSync(srcDir)) return { exported: 0, skipped: 0, errors: [], totalBytes: 0 };
+
+  let exported = 0, skipped = 0, totalBytes = 0;
+  const errors = [];
+
+  if (!dryRun) mkdirSync(targetDir, { recursive: true });
+
+  for (const f of readdirSync(srcDir)) {
+    const srcPath = join(srcDir, f);
+    const stat    = statSync(srcPath);
+    if (!stat.isFile()) continue;
+
+    try {
+      const raw       = readFileSync(srcPath, 'utf8');
+      const sanitized = sanitizeForExport(raw);
+      const dstPath   = join(targetDir, f);
+      totalBytes += Buffer.byteLength(sanitized, 'utf8');
+      if (!dryRun) writeFileSync(dstPath, sanitized, 'utf8');
+      exported++;
+    } catch (err) {
+      errors.push(`${f}: ${err.message}`);
+      skipped++;
+    }
+  }
+
+  return { exported, skipped, errors, totalBytes, dryRun };
+}
+
+/**
+ * Import memory files from a shared LAN/NAS folder into workspace.
+ * @param {string} workspaceRoot
+ * @param {string} sourceDir — absolute path to shared folder
+ * @param {{ dryRun?: boolean, overwrite?: boolean }} opts
+ * @returns {{ imported: number, skipped: number, errors: string[] }}
+ */
+export function importMemory(workspaceRoot, sourceDir, { dryRun = false, overwrite = false } = {}) {
+  if (!existsSync(sourceDir)) throw new Error(`Source directory not found: ${sourceDir}`);
+
+  const check = validateSyncTarget(workspaceRoot, sourceDir);
+  if (!check.allowed) throw new Error(`Import denied: ${check.reason}`);
+
+  const dstDir = join(workspaceRoot, MEMORY_DIR);
+  if (!dryRun) mkdirSync(dstDir, { recursive: true });
+
+  let imported = 0, skipped = 0;
+  const errors = [];
+
+  for (const f of readdirSync(sourceDir)) {
+    const srcPath = join(sourceDir, f);
+    const stat    = statSync(srcPath);
+    if (!stat.isFile()) continue;
+
+    const dstPath = join(dstDir, f);
+    if (!overwrite && existsSync(dstPath)) { skipped++; continue; }
+
+    try {
+      if (!dryRun) copyFileSync(srcPath, dstPath);
+      imported++;
+    } catch (err) {
+      errors.push(`${f}: ${err.message}`);
+    }
+  }
+
+  return { imported, skipped, errors, dryRun };
+}

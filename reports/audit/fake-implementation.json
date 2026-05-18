@@ -1,0 +1,23 @@
+{
+  "ok": false,
+  "violations": [
+    {
+      "file": "marketing-db/audit/AuditEngine.js",
+      "issues": [
+        "TODO placeholder",
+        "placeholder",
+        "mock response",
+        "hardcoded result",
+        "fake scoring",
+        "empty engine",
+        "not implemented"
+      ]
+    },
+    {
+      "file": "bin/local-agent.js",
+      "issues": [
+        "placeholder"
+      ]
+    }
+  ]
+}

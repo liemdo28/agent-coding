@@ -1,299 +1,138 @@
-// local-agent/testing/test-runner.js
-// Phase 26: Test runner — comprehensive testing framework
-
-import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
-import { join, extname, dirname } from 'path';
+// local-agent/testing/test-runner.js — TestRunner with --check-quality CLI gate
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
 
 export class TestRunner {
   constructor(workspaceRoot) {
     this.workspaceRoot = workspaceRoot;
-    this.testFiles = [];
-    this.results = {
-      passed: 0,
-      failed: 0,
-      skipped: 0,
-      total: 0,
-      suites: [],
-      duration: 0,
-    };
-    this.coverage = {
-      files: 0,
-      lines: 0,
-      covered: 0,
-      uncovered: [],
-    };
   }
 
-  async runTests(options = {}) {
-    const startTime = Date.now();
-    this.results = {
-      passed: 0,
-      failed: 0,
-      skipped: 0,
-      total: 0,
-      suites: [],
-      duration: 0,
+  /**
+   * Run the quality gate — checks workspace health without running a full test suite.
+   * Returns a structured report that can drive CI pass/fail.
+   */
+  async checkQuality() {
+    const results = {
+      timestamp:     new Date().toISOString(),
+      workspaceRoot: this.workspaceRoot,
+      checks:        [],
+      passed:        0,
+      failed:        0,
     };
 
-    // Find test files
-    const testDir = options.testDir || join(this.workspaceRoot, 'tests');
-    this.testFiles = this.findTestFiles(testDir);
+    const check = (name, ok, detail) => {
+      results.checks.push({ name, passed: ok, detail });
+      ok ? results.passed++ : results.failed++;
+    };
 
-    // Run each test file
-    for (const testFile of this.testFiles) {
-      const suiteResult = await this.runTestFile(testFile, options);
-      this.results.suites.push(suiteResult);
-      this.results.passed += suiteResult.passed;
-      this.results.failed += suiteResult.failed;
-      this.results.skipped += suiteResult.skipped;
-      this.results.total += suiteResult.total;
+    // 1 — Critical entry points
+    for (const entry of ['bin/local-agent.js', 'accounting-engine/bin/accounting.js']) {
+      const ok = existsSync(join(this.workspaceRoot, entry));
+      check(`Entry: ${entry}`, ok, ok ? 'exists' : 'MISSING — critical file absent');
     }
 
-    this.results.duration = Date.now() - startTime;
+    // 2 — Engineering log structure
+    for (const dir of ['.local-agent/engineering-log', '.local-agent/engineering-log/architecture']) {
+      const ok = existsSync(join(this.workspaceRoot, dir));
+      check(`Log dir: ${dir}`, ok, ok ? 'exists' : 'MISSING — run: local-agent logs update');
+    }
 
-    return {
-      success: this.results.failed === 0,
-      results: this.results,
-      coverage: this.calculateCoverage(),
-      summary: this.generateSummary(),
-    };
-  }
+    // 3 — Required package.json scripts
+    const pkgPath = join(this.workspaceRoot, 'package.json');
+    if (existsSync(pkgPath)) {
+      let pkg;
+      try { pkg = JSON.parse(readFileSync(pkgPath, 'utf8')); } catch { pkg = {}; }
+      for (const script of ['test', 'build', 'lint', 'test:integration']) {
+        const ok = Boolean(pkg.scripts?.[script]);
+        check(`Script: ${script}`, ok, ok ? pkg.scripts[script].slice(0, 80) : 'MISSING from package.json');
+      }
+    }
 
-  findTestFiles(dir) {
-    const files = [];
-    if (!existsSync(dir)) return files;
+    // 4 — No TODO placeholders in eng-log modules (quality gate for AI-written code)
+    const engLogDir = join(this.workspaceRoot, 'local-agent/eng-log');
+    if (existsSync(engLogDir)) {
+      for (const file of readdirSync(engLogDir).filter((f) => f.endsWith('.js'))) {
+        let src;
+        try { src = readFileSync(join(engLogDir, file), 'utf8'); } catch { continue; }
+        const hasTODO = /\bTODO\b/.test(src);
+        check(`No-TODO: eng-log/${file}`, !hasTODO,
+          hasTODO ? 'Contains TODO placeholder — not production ready' : 'clean');
+      }
+    }
 
-    try {
-      const entries = readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = join(dir, entry.name);
-        if (entry.isDirectory()) {
-          files.push(...this.findTestFiles(fullPath));
-        } else if (entry.isFile()) {
-          const ext = extname(entry.name);
-          if (['.test.js', '.spec.js', '.test.ts', '.spec.ts'].includes(ext)) {
-            files.push(fullPath);
+    // 5 — No internet imports in local-agent source
+    const srcDir = join(this.workspaceRoot, 'local-agent');
+    const INTERNET_PATTERNS = [/\bfetch\s*\(/, /from\s+['"]axios['"]/, /from\s+['"]node-fetch['"]/, /openai/i, /anthropic/i];
+    if (existsSync(srcDir)) {
+      const violations = [];
+      const scan = (dir) => {
+        try {
+          for (const f of readdirSync(dir)) {
+            const full = join(dir, f);
+            try {
+              if (existsSync(full) && readFileSync(full).toString().length === 0) continue;
+            } catch { continue; }
+            if (f.endsWith('.js')) {
+              try {
+                const src = readFileSync(full, 'utf8');
+                if (INTERNET_PATTERNS.some((p) => p.test(src))) violations.push(f);
+              } catch { /* skip */ }
+            } else {
+              try { if (readdirSync(full)) scan(full); } catch { /* not dir */ }
+            }
           }
-        }
-      }
-    } catch (err) {
-      // ignore
-    }
-    return files;
-  }
-
-  async runTestFile(testFile, options) {
-    const suite = {
-      file: testFile,
-      name: testFile.split('/').pop(),
-      passed: 0,
-      failed: 0,
-      skipped: 0,
-      total: 0,
-      tests: [],
-      duration: 0,
-    };
-
-    const startTime = Date.now();
-
-    try {
-      const content = readFileSync(testFile, 'utf8');
-      const tests = this.parseTests(content);
-
-      for (const test of tests) {
-        const testResult = await this.runTest(test, options);
-        suite.tests.push(testResult);
-        if (testResult.status === 'passed') suite.passed++;
-        else if (testResult.status === 'failed') suite.failed++;
-        else suite.skipped++;
-        suite.total++;
-      }
-    } catch (err) {
-      suite.error = err.message;
-      suite.failed++;
-      suite.total++;
+        } catch { /* skip */ }
+      };
+      scan(srcDir);
+      check('Offline policy: no internet imports', violations.length === 0,
+        violations.length ? `Violations: ${violations.join(', ')}` : 'all clear');
     }
 
-    suite.duration = Date.now() - startTime;
-    return suite;
+    // 6 — CI workflow exists
+    const ciPath = join(this.workspaceRoot, '.github/workflows/ci.yml');
+    const ok = existsSync(ciPath);
+    check('CI workflow: .github/workflows/ci.yml', ok, ok ? 'exists' : 'MISSING — CI not configured');
+
+    results.overallPassed = results.failed === 0;
+    return results;
   }
 
-  parseTests(content) {
-    const tests = [];
-    const testPattern = /(?:it|test)\s*\(['"]([^'"]+)['"]/g;
-    let match;
-
-    while ((match = testPattern.exec(content)) !== null) {
-      tests.push({
-        name: match[1],
-        line: content.substring(0, match.index).split('\n').length,
-      });
-    }
-
-    return tests;
-  }
-
-  async runTest(test, options) {
-    // Simplified test execution - in real implementation, this would execute actual tests
-    return {
-      name: test.name,
-      status: 'passed',
-      duration: Math.random() * 100,
-      assertions: Math.floor(Math.random() * 5) + 1,
-    };
-  }
-
-  calculateCoverage() {
-    // Simplified coverage calculation
-    return {
-      ...this.coverage,
-      percentage: this.coverage.lines > 0
-        ? Math.round((this.coverage.covered / this.coverage.lines) * 100)
-        : 0,
-    };
-  }
-
-  generateSummary() {
-    const passRate = this.results.total > 0
-      ? Math.round((this.results.passed / this.results.total) * 100)
-      : 0;
-
-    return {
-      totalTests: this.results.total,
-      passed: this.results.passed,
-      failed: this.results.failed,
-      skipped: this.results.skipped,
-      passRate: `${passRate}%`,
-      duration: `${this.results.duration}ms`,
-      coverage: this.calculateCoverage().percentage,
-      status: this.results.failed === 0 ? 'PASSED' : 'FAILED',
-    };
-  }
-
-  async runUnitTests(modulePath) {
-    const testFile = modulePath.replace(/\.js$/, '.test.js');
-    if (existsSync(testFile)) {
-      return this.runTests({ testDir: dirname(testFile) });
-    }
-    return { success: true, message: 'No unit tests found' };
-  }
-
-  async runIntegrationTests() {
-    const testDir = join(this.workspaceRoot, 'tests', 'integration');
-    if (!existsSync(testDir)) {
-      return { success: true, message: 'No integration tests found' };
-    }
-    return this.runTests({ testDir });
-  }
-
-  async runCoverage(targetPath) {
-    const files = this.findSourceFiles(targetPath);
-    this.coverage.files = files.length;
-
-    for (const file of files) {
-      try {
-        const content = readFileSync(file, 'utf8');
-        const lines = content.split('\n');
-        this.coverage.lines += lines.length;
-        this.coverage.covered += Math.floor(lines.length * 0.8); // Simplified
-      } catch (err) {
-        // ignore
-      }
-    }
-
-    return {
-      success: true,
-      coverage: this.calculateCoverage(),
-      files,
-    };
-  }
-
-  findSourceFiles(dir) {
-    const files = [];
-    if (!existsSync(dir)) return files;
-
-    try {
-      const entries = readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (!this.shouldIgnore(entry.name)) {
-            files.push(...this.findSourceFiles(fullPath));
-          }
-        } else if (entry.isFile()) {
-          const ext = extname(entry.name);
-          if (['.js', '.ts', '.jsx', '.tsx'].includes(ext)) {
-            files.push(fullPath);
-          }
-        }
-      }
-    } catch (err) {
-      // ignore
-    }
-    return files;
-  }
-
-  shouldIgnore(name) {
-    const ignored = ['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'coverage', '.local-agent'];
-    return ignored.includes(name) || name.startsWith('.');
-  }
-
-  generateReport(format = 'json') {
-    if (format === 'json') {
-      return JSON.stringify(this.results, null, 2);
-    } else if (format === 'html') {
-      return this.generateHTMLReport();
-    } else if (format === 'markdown') {
-      return this.generateMarkdownReport();
-    }
-    return this.generateSummary();
-  }
-
-  generateHTMLReport() {
-    const summary = this.generateSummary();
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Test Results</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .passed { color: green; }
-    .failed { color: red; }
-    .skipped { color: orange; }
-    .summary { background: #f5f5f5; padding: 20px; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <h1>Test Results</h1>
-  <div class="summary">
-    <p>Total: ${summary.totalTests}</p>
-    <p class="passed">Passed: ${summary.passed}</p>
-    <p class="failed">Failed: ${summary.failed}</p>
-    <p class="skipped">Skipped: ${summary.skipped}</p>
-    <p>Pass Rate: ${summary.passRate}</p>
-    <p>Coverage: ${summary.coverage}%</p>
-  </div>
-</body>
-</html>
-    `.trim();
-  }
-
-  generateMarkdownReport() {
-    const summary = this.generateSummary();
-    return `# Test Results
-
-## Summary
-- Total Tests: ${summary.totalTests}
-- Passed: ${summary.passed}
-- Failed: ${summary.failed}
-- Skipped: ${summary.skipped}
-- Pass Rate: ${summary.passRate}
-- Duration: ${summary.duration}
-
-## Status: ${summary.status}
-`;
+  /** Alias kept for backward compatibility. */
+  async runTests() {
+    return this.checkQuality();
   }
 }
 
-export default TestRunner;
+// ── CLI entry ─────────────────────────────────────────────────────────────────
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  const args          = process.argv.slice(2);
+  const checkQuality  = args.includes('--check-quality');
+  const workspaceRoot = args.find((a) => !a.startsWith('--')) ?? process.cwd();
+
+  if (!checkQuality) {
+    console.log('Usage: node local-agent/testing/test-runner.js --check-quality [workspace-path]');
+    process.exit(0);
+  }
+
+  const runner  = new TestRunner(workspaceRoot);
+  const results = await runner.checkQuality();
+
+  const width = 60;
+  console.log(`\nQuality Gate — ${results.timestamp}`);
+  console.log('─'.repeat(width));
+  for (const c of results.checks) {
+    const icon   = c.passed ? '✓' : '✗';
+    const color  = c.passed ? '\x1b[32m' : '\x1b[31m';
+    const reset  = '\x1b[0m';
+    const detail = c.detail.length > 50 ? c.detail.slice(0, 47) + '...' : c.detail;
+    console.log(`  ${color}${icon}${reset} ${c.name.padEnd(38)} ${color}${detail}${reset}`);
+  }
+  console.log('─'.repeat(width));
+
+  const status = results.overallPassed ? '\x1b[32mPASSED\x1b[0m' : '\x1b[31mFAILED\x1b[0m';
+  console.log(`Result: ${status}  (${results.passed} passed, ${results.failed} failed)\n`);
+
+  if (!results.overallPassed) process.exit(1);
+}

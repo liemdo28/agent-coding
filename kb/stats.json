@@ -1,0 +1,1520 @@
+{
+  "generatedAt": "2026-05-18T00:53:03.303Z",
+  "total": {
+    "documents": 1265,
+    "chunks": 13461,
+    "words": 4056139
+  },
+  "byDomain": [
+    {
+      "domain": "accounting",
+      "domainName": "Accounting & Finance",
+      "documents": 139,
+      "chunks": 1199,
+      "words": 365795,
+      "firstIngested": "2026-05-18 00:17:37",
+      "lastUpdated": "2026-05-18 00:45:05",
+      "sampleDocuments": [
+        {
+          "title": "Double-Entry Bookkeeping — Principles and Practice",
+          "source_url": null,
+          "license": "CC BY 4.0",
+          "word_count": 612,
+          "chunk_count": 2
+        },
+        {
+          "title": "Cash vs Accrual Accounting — Choosing a Method and Tax Implications",
+          "source_url": null,
+          "license": "CC BY 4.0",
+          "word_count": 653,
+          "chunk_count": 2
+        },
+        {
+          "title": "Depreciation — Methods, Calculations, and Tax Treatment",
+          "source_url": null,
+          "license": "CC BY 4.0",
+          "word_count": 791,
+          "chunk_count": 3
+        },
+        {
+          "title": "Accounting",
+          "source_url": "https://en.wikipedia.org/wiki/Accounting",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2932,
+          "chunk_count": 10
+        },
+        {
+          "title": "Double-entry bookkeeping",
+          "source_url": "https://en.wikipedia.org/wiki/Double-entry_bookkeeping",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1771,
+          "chunk_count": 6
+        }
+      ]
+    },
+    {
+      "domain": "business-analyst",
+      "domainName": "Business Analysis",
+      "documents": 110,
+      "chunks": 933,
+      "words": 285482,
+      "firstIngested": "2026-05-18 00:39:05",
+      "lastUpdated": "2026-05-18 00:48:10",
+      "sampleDocuments": [
+        {
+          "title": "Business analysis",
+          "source_url": "https://en.wikipedia.org/wiki/Business_analysis",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3683,
+          "chunk_count": 12
+        },
+        {
+          "title": "Requirements analysis",
+          "source_url": "https://en.wikipedia.org/wiki/Requirements_analysis",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2608,
+          "chunk_count": 9
+        },
+        {
+          "title": "Business requirements",
+          "source_url": "https://en.wikipedia.org/wiki/Business_requirements",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1873,
+          "chunk_count": 6
+        },
+        {
+          "title": "Functional requirement",
+          "source_url": "https://en.wikipedia.org/wiki/Functional_requirement",
+          "license": "CC BY-SA 4.0",
+          "word_count": 519,
+          "chunk_count": 2
+        },
+        {
+          "title": "Non-functional requirement",
+          "source_url": "https://en.wikipedia.org/wiki/Non-functional_requirement",
+          "license": "CC BY-SA 4.0",
+          "word_count": 693,
+          "chunk_count": 3
+        }
+      ]
+    },
+    {
+      "domain": "coding",
+      "domainName": "Software Development",
+      "documents": 219,
+      "chunks": 2305,
+      "words": 694174,
+      "firstIngested": "2026-05-18 00:17:34",
+      "lastUpdated": "2026-05-18 00:44:36",
+      "sampleDocuments": [
+        {
+          "title": "Asynchronous JavaScript — Promises, async/await, and the Event Loop",
+          "source_url": null,
+          "license": "CC BY-SA 2.5",
+          "word_count": 564,
+          "chunk_count": 2
+        },
+        {
+          "title": "Node.js Module Systems — CommonJS and ES Modules",
+          "source_url": null,
+          "license": "MIT",
+          "word_count": 529,
+          "chunk_count": 1
+        },
+        {
+          "title": "SQLite in Node.js — better-sqlite3 and WAL Mode",
+          "source_url": null,
+          "license": "MIT",
+          "word_count": 569,
+          "chunk_count": 1
+        },
+        {
+          "title": "JavaScript",
+          "source_url": "https://en.wikipedia.org/wiki/JavaScript",
+          "license": "CC BY-SA 4.0",
+          "word_count": 5236,
+          "chunk_count": 17
+        },
+        {
+          "title": "TypeScript",
+          "source_url": "https://en.wikipedia.org/wiki/TypeScript",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1265,
+          "chunk_count": 4
+        }
+      ]
+    },
+    {
+      "domain": "data-analyst",
+      "domainName": "Data Analysis",
+      "documents": 108,
+      "chunks": 1195,
+      "words": 347200,
+      "firstIngested": "2026-05-18 00:38:07",
+      "lastUpdated": "2026-05-18 00:46:38",
+      "sampleDocuments": [
+        {
+          "title": "Data analysis",
+          "source_url": "https://en.wikipedia.org/wiki/Data_analysis",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4534,
+          "chunk_count": 15
+        },
+        {
+          "title": "Data science",
+          "source_url": "https://en.wikipedia.org/wiki/Data_science",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1141,
+          "chunk_count": 4
+        },
+        {
+          "title": "Business intelligence",
+          "source_url": "https://en.wikipedia.org/wiki/Business_intelligence",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2009,
+          "chunk_count": 7
+        },
+        {
+          "title": "Data mining",
+          "source_url": "https://en.wikipedia.org/wiki/Data_mining",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3442,
+          "chunk_count": 11
+        },
+        {
+          "title": "Data warehouse",
+          "source_url": "https://en.wikipedia.org/wiki/Data_warehouse",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4075,
+          "chunk_count": 13
+        }
+      ]
+    },
+    {
+      "domain": "design",
+      "domainName": "UI/UX Design",
+      "documents": 110,
+      "chunks": 1045,
+      "words": 318608,
+      "firstIngested": "2026-05-18 00:37:11",
+      "lastUpdated": "2026-05-18 00:46:04",
+      "sampleDocuments": [
+        {
+          "title": "User experience design",
+          "source_url": "https://en.wikipedia.org/wiki/User_experience_design",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2866,
+          "chunk_count": 9
+        },
+        {
+          "title": "User interface design",
+          "source_url": "https://en.wikipedia.org/wiki/User_interface_design",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2085,
+          "chunk_count": 7
+        },
+        {
+          "title": "Interaction design",
+          "source_url": "https://en.wikipedia.org/wiki/Interaction_design",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1795,
+          "chunk_count": 6
+        },
+        {
+          "title": "Usability",
+          "source_url": "https://en.wikipedia.org/wiki/Usability",
+          "license": "CC BY-SA 4.0",
+          "word_count": 6709,
+          "chunk_count": 21
+        },
+        {
+          "title": "User research",
+          "source_url": "https://en.wikipedia.org/wiki/User_research",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2137,
+          "chunk_count": 7
+        }
+      ]
+    },
+    {
+      "domain": "hr",
+      "domainName": "Human Resources",
+      "documents": 105,
+      "chunks": 1498,
+      "words": 466319,
+      "firstIngested": "2026-05-18 00:38:36",
+      "lastUpdated": "2026-05-18 00:48:06",
+      "sampleDocuments": [
+        {
+          "title": "Human resource management",
+          "source_url": "https://en.wikipedia.org/wiki/Human_resource_management",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4005,
+          "chunk_count": 13
+        },
+        {
+          "title": "Recruitment",
+          "source_url": "https://en.wikipedia.org/wiki/Recruitment",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2885,
+          "chunk_count": 9
+        },
+        {
+          "title": "Onboarding",
+          "source_url": "https://en.wikipedia.org/wiki/Onboarding",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4002,
+          "chunk_count": 13
+        },
+        {
+          "title": "Job interview",
+          "source_url": "https://en.wikipedia.org/wiki/Job_interview",
+          "license": "CC BY-SA 4.0",
+          "word_count": 14364,
+          "chunk_count": 45
+        },
+        {
+          "title": "Job description",
+          "source_url": "https://en.wikipedia.org/wiki/Job_description",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1656,
+          "chunk_count": 6
+        }
+      ]
+    },
+    {
+      "domain": "logistics",
+      "domainName": "Logistics & Supply Chain",
+      "documents": 100,
+      "chunks": 1101,
+      "words": 340674,
+      "firstIngested": "2026-05-18 00:39:31",
+      "lastUpdated": "2026-05-18 00:47:26",
+      "sampleDocuments": [
+        {
+          "title": "Logistics",
+          "source_url": "https://en.wikipedia.org/wiki/Logistics",
+          "license": "CC BY-SA 4.0",
+          "word_count": 5716,
+          "chunk_count": 18
+        },
+        {
+          "title": "Supply chain management",
+          "source_url": "https://en.wikipedia.org/wiki/Supply_chain_management",
+          "license": "CC BY-SA 4.0",
+          "word_count": 9900,
+          "chunk_count": 31
+        },
+        {
+          "title": "Supply chain",
+          "source_url": "https://en.wikipedia.org/wiki/Supply_chain",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3668,
+          "chunk_count": 12
+        },
+        {
+          "title": "Economic order quantity",
+          "source_url": "https://en.wikipedia.org/wiki/Economic_order_quantity",
+          "license": "CC BY-SA 4.0",
+          "word_count": 2575,
+          "chunk_count": 10
+        },
+        {
+          "title": "Safety stock",
+          "source_url": "https://en.wikipedia.org/wiki/Safety_stock",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1920,
+          "chunk_count": 7
+        }
+      ]
+    },
+    {
+      "domain": "machine-learning",
+      "domainName": "Machine Learning & AI",
+      "documents": 131,
+      "chunks": 1940,
+      "words": 547343,
+      "firstIngested": "2026-05-18 00:37:33",
+      "lastUpdated": "2026-05-18 00:46:21",
+      "sampleDocuments": [
+        {
+          "title": "Machine learning",
+          "source_url": "https://en.wikipedia.org/wiki/Machine_learning",
+          "license": "CC BY-SA 4.0",
+          "word_count": 8562,
+          "chunk_count": 27
+        },
+        {
+          "title": "Artificial intelligence",
+          "source_url": "https://en.wikipedia.org/wiki/Artificial_intelligence",
+          "license": "CC BY-SA 4.0",
+          "word_count": 12939,
+          "chunk_count": 41
+        },
+        {
+          "title": "Deep learning",
+          "source_url": "https://en.wikipedia.org/wiki/Deep_learning",
+          "license": "CC BY-SA 4.0",
+          "word_count": 8323,
+          "chunk_count": 26
+        },
+        {
+          "title": "Statistical learning theory",
+          "source_url": "https://en.wikipedia.org/wiki/Statistical_learning_theory",
+          "license": "CC BY-SA 4.0",
+          "word_count": 1618,
+          "chunk_count": 6
+        },
+        {
+          "title": "Bias–variance tradeoff",
+          "source_url": "https://en.wikipedia.org/wiki/Bias%E2%80%93variance_tradeoff",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3800,
+          "chunk_count": 15
+        }
+      ]
+    },
+    {
+      "domain": "marketing",
+      "domainName": "Marketing",
+      "documents": 129,
+      "chunks": 1471,
+      "words": 455127,
+      "firstIngested": "2026-05-18 00:36:06",
+      "lastUpdated": "2026-05-18 00:45:22",
+      "sampleDocuments": [
+        {
+          "title": "Marketing",
+          "source_url": "https://en.wikipedia.org/wiki/Marketing",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4760,
+          "chunk_count": 15
+        },
+        {
+          "title": "Marketing mix",
+          "source_url": "https://en.wikipedia.org/wiki/Marketing_mix",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3090,
+          "chunk_count": 10
+        },
+        {
+          "title": "Market segmentation",
+          "source_url": "https://en.wikipedia.org/wiki/Market_segmentation",
+          "license": "CC BY-SA 4.0",
+          "word_count": 7446,
+          "chunk_count": 24
+        },
+        {
+          "title": "Target market",
+          "source_url": "https://en.wikipedia.org/wiki/Target_market",
+          "license": "CC BY-SA 4.0",
+          "word_count": 4966,
+          "chunk_count": 16
+        },
+        {
+          "title": "Brand",
+          "source_url": "https://en.wikipedia.org/wiki/Brand",
+          "license": "CC BY-SA 4.0",
+          "word_count": 11372,
+          "chunk_count": 36
+        }
+      ]
+    },
+    {
+      "domain": "website",
+      "domainName": "Web Development & Design",
+      "documents": 114,
+      "chunks": 774,
+      "words": 235417,
+      "firstIngested": "2026-05-18 00:36:40",
+      "lastUpdated": "2026-05-18 00:45:41",
+      "sampleDocuments": [
+        {
+          "title": "HTML",
+          "source_url": "https://en.wikipedia.org/wiki/HTML",
+          "license": "CC BY-SA 4.0",
+          "word_count": 7143,
+          "chunk_count": 23
+        },
+        {
+          "title": "HTML5",
+          "source_url": "https://en.wikipedia.org/wiki/HTML5",
+          "license": "CC BY-SA 4.0",
+          "word_count": 3155,
+          "chunk_count": 10
+        },
+        {
+          "title": "CSS",
+          "source_url": "https://en.wikipedia.org/wiki/CSS",
+          "license": "CC BY-SA 4.0",
+          "word_count": 6075,
+          "chunk_count": 19
+        },
+        {
+          "title": "CSS grid layout",
+          "source_url": "https://en.wikipedia.org/wiki/CSS_grid_layout",
+          "license": "CC BY-SA 4.0",
+          "word_count": 464,
+          "chunk_count": 2
+        },
+        {
+          "title": "Responsive web design",
+          "source_url": "https://en.wikipedia.org/wiki/Responsive_web_design",
+          "license": "CC BY-SA 4.0",
+          "word_count": 831,
+          "chunk_count": 3
+        }
+      ]
+    }
+  ],
+  "byTopic": [
+    {
+      "domain": "accounting",
+      "topic": "analysis",
+      "topicName": "Financial Analysis",
+      "documents": 18,
+      "chunks": 84,
+      "words": 24180
+    },
+    {
+      "domain": "accounting",
+      "topic": "assets",
+      "topicName": "Assets & Liabilities",
+      "documents": 11,
+      "chunks": 58,
+      "words": 17116
+    },
+    {
+      "domain": "accounting",
+      "topic": "audit",
+      "topicName": "Auditing",
+      "documents": 8,
+      "chunks": 75,
+      "words": 22910
+    },
+    {
+      "domain": "accounting",
+      "topic": "business-types",
+      "topicName": "Business Structures",
+      "documents": 6,
+      "chunks": 57,
+      "words": 17913
+    },
+    {
+      "domain": "accounting",
+      "topic": "cost",
+      "topicName": "Cost Accounting",
+      "documents": 11,
+      "chunks": 70,
+      "words": 20702
+    },
+    {
+      "domain": "accounting",
+      "topic": "depreciation",
+      "topicName": "Depreciation & Valuation",
+      "documents": 4,
+      "chunks": 10,
+      "words": 2976
+    },
+    {
+      "domain": "accounting",
+      "topic": "finance",
+      "topicName": "Banking & Finance",
+      "documents": 26,
+      "chunks": 417,
+      "words": 130117
+    },
+    {
+      "domain": "accounting",
+      "topic": "fundamentals",
+      "topicName": "Accounting Fundamentals",
+      "documents": 18,
+      "chunks": 90,
+      "words": 26437
+    },
+    {
+      "domain": "accounting",
+      "topic": "inventory",
+      "topicName": "Inventory",
+      "documents": 1,
+      "chunks": 3,
+      "words": 749
+    },
+    {
+      "domain": "accounting",
+      "topic": "managerial",
+      "topicName": "Managerial Accounting",
+      "documents": 5,
+      "chunks": 40,
+      "words": 12134
+    },
+    {
+      "domain": "accounting",
+      "topic": "payroll",
+      "topicName": "Payroll",
+      "documents": 3,
+      "chunks": 33,
+      "words": 10238
+    },
+    {
+      "domain": "accounting",
+      "topic": "standards",
+      "topicName": "Accounting Standards",
+      "documents": 8,
+      "chunks": 87,
+      "words": 27045
+    },
+    {
+      "domain": "accounting",
+      "topic": "statements",
+      "topicName": "Financial Statements",
+      "documents": 7,
+      "chunks": 34,
+      "words": 10043
+    },
+    {
+      "domain": "accounting",
+      "topic": "tax",
+      "topicName": "Taxation",
+      "documents": 8,
+      "chunks": 101,
+      "words": 31216
+    },
+    {
+      "domain": "accounting",
+      "topic": "technology",
+      "topicName": "Accounting Technology",
+      "documents": 5,
+      "chunks": 40,
+      "words": 12019
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "analysis",
+      "topicName": "Analysis Techniques",
+      "documents": 5,
+      "chunks": 46,
+      "words": 13576
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "communication",
+      "topicName": "Communication",
+      "documents": 11,
+      "chunks": 136,
+      "words": 41999
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "fundamentals",
+      "topicName": "BA Fundamentals",
+      "documents": 18,
+      "chunks": 121,
+      "words": 35946
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "org",
+      "topicName": "Organization",
+      "documents": 10,
+      "chunks": 130,
+      "words": 40964
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "process",
+      "topicName": "Business Process",
+      "documents": 15,
+      "chunks": 108,
+      "words": 33120
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "project",
+      "topicName": "Project Management",
+      "documents": 18,
+      "chunks": 156,
+      "words": 48456
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "strategy",
+      "topicName": "Business Strategy",
+      "documents": 12,
+      "chunks": 71,
+      "words": 21621
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "technology",
+      "topicName": "Technology in BA",
+      "documents": 7,
+      "chunks": 73,
+      "words": 22245
+    },
+    {
+      "domain": "business-analyst",
+      "topic": "tools",
+      "topicName": "BA Tools",
+      "documents": 14,
+      "chunks": 92,
+      "words": 27555
+    },
+    {
+      "domain": "coding",
+      "topic": "ai",
+      "topicName": "AI",
+      "documents": 2,
+      "chunks": 67,
+      "words": 21041
+    },
+    {
+      "domain": "coding",
+      "topic": "algorithms",
+      "topicName": "Algorithms",
+      "documents": 19,
+      "chunks": 359,
+      "words": 99648
+    },
+    {
+      "domain": "coding",
+      "topic": "apis",
+      "topicName": "APIs",
+      "documents": 3,
+      "chunks": 10,
+      "words": 2738
+    },
+    {
+      "domain": "coding",
+      "topic": "architecture",
+      "topicName": "Architecture",
+      "documents": 10,
+      "chunks": 43,
+      "words": 12807
+    },
+    {
+      "domain": "coding",
+      "topic": "cs-fundamentals",
+      "topicName": "CS Fundamentals",
+      "documents": 21,
+      "chunks": 225,
+      "words": 68816
+    },
+    {
+      "domain": "coding",
+      "topic": "data-formats",
+      "topicName": "Data Formats",
+      "documents": 2,
+      "chunks": 30,
+      "words": 9324
+    },
+    {
+      "domain": "coding",
+      "topic": "data-structures",
+      "topicName": "Data Structures",
+      "documents": 16,
+      "chunks": 216,
+      "words": 64004
+    },
+    {
+      "domain": "coding",
+      "topic": "databases",
+      "topicName": "Databases",
+      "documents": 22,
+      "chunks": 129,
+      "words": 40258
+    },
+    {
+      "domain": "coding",
+      "topic": "devops",
+      "topicName": "DevOps",
+      "documents": 11,
+      "chunks": 57,
+      "words": 16833
+    },
+    {
+      "domain": "coding",
+      "topic": "java",
+      "topicName": "Java",
+      "documents": 3,
+      "chunks": 33,
+      "words": 10266
+    },
+    {
+      "domain": "coding",
+      "topic": "javascript",
+      "topicName": "JavaScript",
+      "documents": 8,
+      "chunks": 61,
+      "words": 18828
+    },
+    {
+      "domain": "coding",
+      "topic": "methodology",
+      "topicName": "Methodology",
+      "documents": 5,
+      "chunks": 44,
+      "words": 12932
+    },
+    {
+      "domain": "coding",
+      "topic": "mobile",
+      "topicName": "Mobile Development",
+      "documents": 1,
+      "chunks": 17,
+      "words": 5133
+    },
+    {
+      "domain": "coding",
+      "topic": "networking",
+      "topicName": "Networking",
+      "documents": 10,
+      "chunks": 177,
+      "words": 54950
+    },
+    {
+      "domain": "coding",
+      "topic": "nodejs",
+      "topicName": "Node.js",
+      "documents": 6,
+      "chunks": 21,
+      "words": 6381
+    },
+    {
+      "domain": "coding",
+      "topic": "patterns",
+      "topicName": "Design Patterns",
+      "documents": 17,
+      "chunks": 64,
+      "words": 18784
+    },
+    {
+      "domain": "coding",
+      "topic": "principles",
+      "topicName": "Software Principles",
+      "documents": 20,
+      "chunks": 205,
+      "words": 62167
+    },
+    {
+      "domain": "coding",
+      "topic": "python",
+      "topicName": "Python",
+      "documents": 3,
+      "chunks": 45,
+      "words": 13844
+    },
+    {
+      "domain": "coding",
+      "topic": "ruby",
+      "topicName": "Ruby",
+      "documents": 1,
+      "chunks": 11,
+      "words": 3543
+    },
+    {
+      "domain": "coding",
+      "topic": "security",
+      "topicName": "Security",
+      "documents": 12,
+      "chunks": 158,
+      "words": 48660
+    },
+    {
+      "domain": "coding",
+      "topic": "systems",
+      "topicName": "Systems Programming",
+      "documents": 3,
+      "chunks": 61,
+      "words": 19103
+    },
+    {
+      "domain": "coding",
+      "topic": "testing",
+      "topicName": "Testing",
+      "documents": 4,
+      "chunks": 50,
+      "words": 15878
+    },
+    {
+      "domain": "coding",
+      "topic": "tools",
+      "topicName": "Developer Tools",
+      "documents": 6,
+      "chunks": 99,
+      "words": 30462
+    },
+    {
+      "domain": "coding",
+      "topic": "web",
+      "topicName": "Web Development",
+      "documents": 14,
+      "chunks": 123,
+      "words": 37774
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "big-data",
+      "topicName": "Big Data",
+      "documents": 5,
+      "chunks": 64,
+      "words": 19804
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "business",
+      "topicName": "Business Analytics",
+      "documents": 13,
+      "chunks": 113,
+      "words": 34674
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "fundamentals",
+      "topicName": "Data Analysis Fundamentals",
+      "documents": 20,
+      "chunks": 176,
+      "words": 53588
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "privacy",
+      "topicName": "Data Privacy",
+      "documents": 7,
+      "chunks": 105,
+      "words": 31719
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "statistics",
+      "topicName": "Statistics",
+      "documents": 30,
+      "chunks": 523,
+      "words": 142963
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "tools",
+      "topicName": "Data Tools",
+      "documents": 17,
+      "chunks": 111,
+      "words": 34034
+    },
+    {
+      "domain": "data-analyst",
+      "topic": "visualization",
+      "topicName": "Data Visualization",
+      "documents": 16,
+      "chunks": 103,
+      "words": 30418
+    },
+    {
+      "domain": "design",
+      "topic": "accessibility",
+      "topicName": "Accessibility in Design",
+      "documents": 5,
+      "chunks": 86,
+      "words": 26966
+    },
+    {
+      "domain": "design",
+      "topic": "design-systems",
+      "topicName": "Design Systems",
+      "documents": 3,
+      "chunks": 7,
+      "words": 1959
+    },
+    {
+      "domain": "design",
+      "topic": "emerging",
+      "topicName": "Emerging Design",
+      "documents": 3,
+      "chunks": 43,
+      "words": 13281
+    },
+    {
+      "domain": "design",
+      "topic": "fundamentals",
+      "topicName": "Design Fundamentals",
+      "documents": 15,
+      "chunks": 197,
+      "words": 60693
+    },
+    {
+      "domain": "design",
+      "topic": "graphic",
+      "topicName": "Graphic Design",
+      "documents": 20,
+      "chunks": 187,
+      "words": 55340
+    },
+    {
+      "domain": "design",
+      "topic": "mobile",
+      "topicName": "Mobile Design",
+      "documents": 3,
+      "chunks": 14,
+      "words": 4133
+    },
+    {
+      "domain": "design",
+      "topic": "tools",
+      "topicName": "Design Tools",
+      "documents": 7,
+      "chunks": 58,
+      "words": 17859
+    },
+    {
+      "domain": "design",
+      "topic": "ui",
+      "topicName": "UI Design",
+      "documents": 22,
+      "chunks": 157,
+      "words": 47511
+    },
+    {
+      "domain": "design",
+      "topic": "ux",
+      "topicName": "UX Design",
+      "documents": 29,
+      "chunks": 268,
+      "words": 82582
+    },
+    {
+      "domain": "design",
+      "topic": "web-design",
+      "topicName": "Web Design",
+      "documents": 3,
+      "chunks": 28,
+      "words": 8284
+    },
+    {
+      "domain": "hr",
+      "topic": "compensation",
+      "topicName": "Compensation & Benefits",
+      "documents": 12,
+      "chunks": 162,
+      "words": 49796
+    },
+    {
+      "domain": "hr",
+      "topic": "culture",
+      "topicName": "Organizational Culture",
+      "documents": 4,
+      "chunks": 55,
+      "words": 17129
+    },
+    {
+      "domain": "hr",
+      "topic": "dei",
+      "topicName": "Diversity & Inclusion",
+      "documents": 4,
+      "chunks": 96,
+      "words": 30082
+    },
+    {
+      "domain": "hr",
+      "topic": "development",
+      "topicName": "Learning & Development",
+      "documents": 13,
+      "chunks": 143,
+      "words": 44256
+    },
+    {
+      "domain": "hr",
+      "topic": "employment",
+      "topicName": "Employment",
+      "documents": 7,
+      "chunks": 70,
+      "words": 21908
+    },
+    {
+      "domain": "hr",
+      "topic": "fundamentals",
+      "topicName": "HR Fundamentals",
+      "documents": 12,
+      "chunks": 176,
+      "words": 55118
+    },
+    {
+      "domain": "hr",
+      "topic": "law",
+      "topicName": "Employment Law",
+      "documents": 18,
+      "chunks": 395,
+      "words": 123805
+    },
+    {
+      "domain": "hr",
+      "topic": "performance",
+      "topicName": "Performance Management",
+      "documents": 6,
+      "chunks": 39,
+      "words": 11707
+    },
+    {
+      "domain": "hr",
+      "topic": "recruitment",
+      "topicName": "Recruitment",
+      "documents": 11,
+      "chunks": 129,
+      "words": 40089
+    },
+    {
+      "domain": "hr",
+      "topic": "safety",
+      "topicName": "Workplace Safety",
+      "documents": 2,
+      "chunks": 52,
+      "words": 16224
+    },
+    {
+      "domain": "hr",
+      "topic": "technology",
+      "topicName": "HR Technology",
+      "documents": 2,
+      "chunks": 9,
+      "words": 2815
+    },
+    {
+      "domain": "hr",
+      "topic": "trends",
+      "topicName": "HR Trends",
+      "documents": 4,
+      "chunks": 29,
+      "words": 8842
+    },
+    {
+      "domain": "hr",
+      "topic": "wellbeing",
+      "topicName": "Employee Wellbeing",
+      "documents": 10,
+      "chunks": 143,
+      "words": 44548
+    },
+    {
+      "domain": "logistics",
+      "topic": "distribution",
+      "topicName": "Distribution",
+      "documents": 4,
+      "chunks": 30,
+      "words": 9607
+    },
+    {
+      "domain": "logistics",
+      "topic": "fundamentals",
+      "topicName": "Logistics Fundamentals",
+      "documents": 8,
+      "chunks": 119,
+      "words": 37375
+    },
+    {
+      "domain": "logistics",
+      "topic": "inventory",
+      "topicName": "Inventory",
+      "documents": 6,
+      "chunks": 41,
+      "words": 11495
+    },
+    {
+      "domain": "logistics",
+      "topic": "outsourcing",
+      "topicName": "Outsourcing",
+      "documents": 2,
+      "chunks": 11,
+      "words": 3415
+    },
+    {
+      "domain": "logistics",
+      "topic": "planning",
+      "topicName": "Supply Chain Planning",
+      "documents": 9,
+      "chunks": 93,
+      "words": 27819
+    },
+    {
+      "domain": "logistics",
+      "topic": "procurement",
+      "topicName": "Procurement",
+      "documents": 10,
+      "chunks": 80,
+      "words": 24313
+    },
+    {
+      "domain": "logistics",
+      "topic": "quality",
+      "topicName": "Quality",
+      "documents": 4,
+      "chunks": 30,
+      "words": 9173
+    },
+    {
+      "domain": "logistics",
+      "topic": "returns",
+      "topicName": "Returns & Sustainability",
+      "documents": 7,
+      "chunks": 85,
+      "words": 26793
+    },
+    {
+      "domain": "logistics",
+      "topic": "risk",
+      "topicName": "Risk Management",
+      "documents": 4,
+      "chunks": 71,
+      "words": 22176
+    },
+    {
+      "domain": "logistics",
+      "topic": "trade",
+      "topicName": "International Trade",
+      "documents": 14,
+      "chunks": 189,
+      "words": 58757
+    },
+    {
+      "domain": "logistics",
+      "topic": "transport",
+      "topicName": "Transportation",
+      "documents": 23,
+      "chunks": 256,
+      "words": 79874
+    },
+    {
+      "domain": "logistics",
+      "topic": "warehouse",
+      "topicName": "Warehousing",
+      "documents": 9,
+      "chunks": 96,
+      "words": 29877
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "computer-vision",
+      "topicName": "Computer Vision",
+      "documents": 7,
+      "chunks": 113,
+      "words": 34673
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "ethics",
+      "topicName": "AI Ethics",
+      "documents": 7,
+      "chunks": 146,
+      "words": 45985
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "fundamentals",
+      "topicName": "ML Fundamentals",
+      "documents": 20,
+      "chunks": 262,
+      "words": 75200
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "math",
+      "topicName": "Mathematics",
+      "documents": 7,
+      "chunks": 164,
+      "words": 46708
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "mlops",
+      "topicName": "MLOps",
+      "documents": 12,
+      "chunks": 70,
+      "words": 19285
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "neural-networks",
+      "topicName": "Neural Networks",
+      "documents": 20,
+      "chunks": 319,
+      "words": 84594
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "nlp",
+      "topicName": "NLP",
+      "documents": 21,
+      "chunks": 233,
+      "words": 71756
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "retrieval",
+      "topicName": "Information Retrieval",
+      "documents": 10,
+      "chunks": 85,
+      "words": 25373
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "rl",
+      "topicName": "Reinforcement Learning",
+      "documents": 3,
+      "chunks": 51,
+      "words": 13838
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "supervised",
+      "topicName": "Supervised Learning",
+      "documents": 14,
+      "chunks": 264,
+      "words": 68237
+    },
+    {
+      "domain": "machine-learning",
+      "topic": "unsupervised",
+      "topicName": "Unsupervised Learning",
+      "documents": 10,
+      "chunks": 233,
+      "words": 61694
+    },
+    {
+      "domain": "marketing",
+      "topic": "advertising",
+      "topicName": "Advertising",
+      "documents": 13,
+      "chunks": 158,
+      "words": 49502
+    },
+    {
+      "domain": "marketing",
+      "topic": "analytics",
+      "topicName": "Analytics",
+      "documents": 8,
+      "chunks": 45,
+      "words": 13589
+    },
+    {
+      "domain": "marketing",
+      "topic": "branding",
+      "topicName": "Branding",
+      "documents": 5,
+      "chunks": 78,
+      "words": 24612
+    },
+    {
+      "domain": "marketing",
+      "topic": "consumer",
+      "topicName": "Consumer Behaviour",
+      "documents": 7,
+      "chunks": 118,
+      "words": 36440
+    },
+    {
+      "domain": "marketing",
+      "topic": "content",
+      "topicName": "Content Marketing",
+      "documents": 12,
+      "chunks": 149,
+      "words": 46981
+    },
+    {
+      "domain": "marketing",
+      "topic": "crm",
+      "topicName": "CRM",
+      "documents": 9,
+      "chunks": 66,
+      "words": 19992
+    },
+    {
+      "domain": "marketing",
+      "topic": "digital",
+      "topicName": "Digital Marketing",
+      "documents": 10,
+      "chunks": 76,
+      "words": 23542
+    },
+    {
+      "domain": "marketing",
+      "topic": "ecommerce",
+      "topicName": "eCommerce",
+      "documents": 1,
+      "chunks": 17,
+      "words": 5467
+    },
+    {
+      "domain": "marketing",
+      "topic": "ethics",
+      "topicName": "Marketing Ethics",
+      "documents": 4,
+      "chunks": 85,
+      "words": 26457
+    },
+    {
+      "domain": "marketing",
+      "topic": "fundamentals",
+      "topicName": "Marketing Fundamentals",
+      "documents": 7,
+      "chunks": 81,
+      "words": 24890
+    },
+    {
+      "domain": "marketing",
+      "topic": "local-seo",
+      "topicName": "Local SEO",
+      "documents": 2,
+      "chunks": 31,
+      "words": 9487
+    },
+    {
+      "domain": "marketing",
+      "topic": "pr",
+      "topicName": "Public Relations",
+      "documents": 9,
+      "chunks": 87,
+      "words": 26912
+    },
+    {
+      "domain": "marketing",
+      "topic": "pricing",
+      "topicName": "Pricing",
+      "documents": 8,
+      "chunks": 55,
+      "words": 16700
+    },
+    {
+      "domain": "marketing",
+      "topic": "product",
+      "topicName": "Product Management",
+      "documents": 3,
+      "chunks": 27,
+      "words": 8256
+    },
+    {
+      "domain": "marketing",
+      "topic": "research",
+      "topicName": "Market Research",
+      "documents": 4,
+      "chunks": 47,
+      "words": 14522
+    },
+    {
+      "domain": "marketing",
+      "topic": "seo",
+      "topicName": "SEO",
+      "documents": 7,
+      "chunks": 60,
+      "words": 17588
+    },
+    {
+      "domain": "marketing",
+      "topic": "social",
+      "topicName": "Social Media",
+      "documents": 8,
+      "chunks": 219,
+      "words": 68448
+    },
+    {
+      "domain": "marketing",
+      "topic": "strategy",
+      "topicName": "Marketing Strategy",
+      "documents": 12,
+      "chunks": 72,
+      "words": 21742
+    },
+    {
+      "domain": "website",
+      "topic": "accessibility",
+      "topicName": "Accessibility",
+      "documents": 7,
+      "chunks": 70,
+      "words": 21480
+    },
+    {
+      "domain": "website",
+      "topic": "analytics",
+      "topicName": "Web Analytics",
+      "documents": 4,
+      "chunks": 26,
+      "words": 8014
+    },
+    {
+      "domain": "website",
+      "topic": "cms",
+      "topicName": "CMS",
+      "documents": 4,
+      "chunks": 31,
+      "words": 9671
+    },
+    {
+      "domain": "website",
+      "topic": "ecommerce",
+      "topicName": "eCommerce Web",
+      "documents": 6,
+      "chunks": 44,
+      "words": 13382
+    },
+    {
+      "domain": "website",
+      "topic": "fundamentals",
+      "topicName": "Web Fundamentals",
+      "documents": 18,
+      "chunks": 131,
+      "words": 40424
+    },
+    {
+      "domain": "website",
+      "topic": "hosting",
+      "topicName": "Hosting & Infrastructure",
+      "documents": 13,
+      "chunks": 115,
+      "words": 35364
+    },
+    {
+      "domain": "website",
+      "topic": "html-css",
+      "topicName": "HTML & CSS",
+      "documents": 11,
+      "chunks": 84,
+      "words": 25432
+    },
+    {
+      "domain": "website",
+      "topic": "javascript",
+      "topicName": "JavaScript & DOM",
+      "documents": 12,
+      "chunks": 59,
+      "words": 18030
+    },
+    {
+      "domain": "website",
+      "topic": "performance",
+      "topicName": "Performance",
+      "documents": 9,
+      "chunks": 32,
+      "words": 8985
+    },
+    {
+      "domain": "website",
+      "topic": "security",
+      "topicName": "Web Security",
+      "documents": 12,
+      "chunks": 99,
+      "words": 29754
+    },
+    {
+      "domain": "website",
+      "topic": "seo",
+      "topicName": "Web SEO",
+      "documents": 9,
+      "chunks": 47,
+      "words": 14181
+    },
+    {
+      "domain": "website",
+      "topic": "tools",
+      "topicName": "Build Tools",
+      "documents": 9,
+      "chunks": 36,
+      "words": 10700
+    }
+  ]
+}

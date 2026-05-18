@@ -1,0 +1,21 @@
+{
+  "ok": false,
+  "violations": [
+    {
+      "file": "marketing-db/audit/AuditEngine.js",
+      "issues": [
+        "PostHog",
+        "Mixpanel",
+        "analytics.track",
+        "Google Analytics",
+        "Datadog"
+      ]
+    },
+    {
+      "file": "marketing-db/local-seo/LocationPageAnalyzer.js",
+      "issues": [
+        "Google Analytics"
+      ]
+    }
+  ]
+}

@@ -1,194 +1,63 @@
-// local-agent/self-heal/SelfHealManager.js
-// Phase 24: Local Self-Healing Engine — Core Manager
-
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { join, dirname } from 'path';
-import { HealthWatcher } from './HealthWatcher.js';
-import { RecoveryPlanner } from './RecoveryPlanner.js';
-import { CacheRepair } from './CacheRepair.js';
-import { IndexRepair } from './IndexRepair.js';
-import { RuntimeRecovery } from './RuntimeRecovery.js';
+// self-heal/SelfHealManager.js — top-level coordinator for Phase 24 self-healing
+import { HealthWatcher }   from './HealthWatcher.js';
+import { buildRecoveryPlan } from './RecoveryPlanner.js';
+import { clearCache, scanCache } from './CacheRepair.js';
+import { repairIndex, verifyIndex } from './IndexRepair.js';
+import { recoverRuntime, detectRuntimeIssues } from './RuntimeRecovery.js';
 
 export class SelfHealManager {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.healDir = join(workspaceRoot, '.local-agent', 'heal');
-    this.logDir = join(this.healDir, 'logs');
-    this.stateFile = join(this.healDir, 'heal-state.json');
-    this.ensureDirs();
-    this.healthWatcher = new HealthWatcher(workspaceRoot);
-    this.recoveryPlanner = new RecoveryPlanner();
-    this.cacheRepair = new CacheRepair(workspaceRoot);
-    this.indexRepair = new IndexRepair(workspaceRoot);
-    this.runtimeRecovery = new RuntimeRecovery(workspaceRoot);
-    this.state = this.loadState();
+  constructor(workspaceRoot, { watch = false, intervalMs = 60_000 } = {}) {
+    this.root    = workspaceRoot;
+    this.watcher = new HealthWatcher(workspaceRoot, { intervalMs });
+    this._watch  = watch;
   }
 
-  ensureDirs() {
-    mkdirSync(this.healDir, { recursive: true });
-    mkdirSync(this.logDir, { recursive: true });
+  /** Start continuous health monitoring */
+  startWatch(onUnhealthy) {
+    this.watcher.on('unhealthy', (report) => {
+      if (typeof onUnhealthy === 'function') onUnhealthy(report);
+    });
+    this.watcher.start();
+    return this;
   }
 
-  loadState() {
-    if (existsSync(this.stateFile)) {
-      try { return JSON.parse(readFileSync(this.stateFile, 'utf8')); } catch { /* ignore */ }
-    }
-    return { lastHeal: null, recoveryCount: 0, recoveryHistory: [], unhealthyComponents: [] };
+  stopWatch() { this.watcher.stop(); }
+
+  /** Return full health status + recovery plan */
+  status() {
+    const health = this.watcher.getHealth();
+    const plan   = buildRecoveryPlan(this.root, health);
+    return { health, plan };
   }
 
-  saveState() {
-    try { writeFileSync(this.stateFile, JSON.stringify(this.state, null, 2)); } catch { /* ignore */ }
+  /** Run repair-index */
+  repairIndex({ dryRun = false } = {}) {
+    return repairIndex(this.root, { dryRun });
   }
 
-  async checkHealth() {
-    const healthReport = await this.healthWatcher.runHealthCheck();
-    this.state.lastHeal = new Date().toISOString();
-    this.saveState();
-    return healthReport;
+  /** Run clear-cache */
+  clearCache({ dryRun = false } = {}) {
+    return clearCache(this.root, { dryRun });
   }
 
-  async getStatus() {
-    const healthReport = await this.healthWatcher.runHealthCheck();
-    return {
-      lastHeal: this.state.lastHeal,
-      recoveryCount: this.state.recoveryCount,
-      unhealthyComponents: healthReport.components.filter(c => c.healthy === false).map(c => c.name),
-      healthReport,
-    };
+  /** Run recover-runtime */
+  recoverRuntime({ dryRun = false } = {}) {
+    return recoverRuntime(this.root, { dryRun });
   }
 
-  async heal(flags = {}) {
-    const healthReport = await this.checkHealth();
-    const planner = this.recoveryPlanner;
-    const results = [];
+  /** Run all auto-fixable recovery steps from the plan */
+  autoHeal({ dryRun = false } = {}) {
+    const { plan } = this.status();
+    const results  = [];
 
-    const components = healthReport.components.filter(c => c.healthy === false);
-
-    for (const component of components) {
-      const actions = planner.planRecovery(component, flags);
-
-      for (const action of actions) {
-        if (action.risk === 'HIGH' && !flags.forceHighRisk) {
-          results.push({ component: component.name, action: action.type, status: 'SKIPPED', reason: 'HIGH RISK — requires --force flag' });
-          continue;
-        }
-
-        try {
-          let result;
-          switch (action.type) {
-            case 'CLEAR_CACHE':
-              result = await this.cacheRepair.clearCache();
-              break;
-            case 'REPAIR_INDEX':
-              result = await this.indexRepair.repairIndex();
-              break;
-            case 'RECOVER_RUNTIME':
-              result = await this.runtimeRecovery.recover();
-              break;
-            case 'RETRY':
-              result = await this.runtimeRecovery.retryProcess(action.process);
-              break;
-            case 'RESET':
-              result = await this.runtimeRecovery.resetComponent(action.component);
-              break;
-            case 'REBUILD':
-              result = await this.indexRepair.rebuild();
-              break;
-            default:
-              result = { success: false, error: 'Unknown action type' };
-          }
-
-          const recoveryEntry = {
-            timestamp: new Date().toISOString(),
-            component: component.name,
-            action: action.type,
-            success: result.success,
-            details: result.details ?? [],
-            risk: action.risk,
-          };
-
-          this.state.recoveryHistory.unshift(recoveryEntry);
-          if (this.state.recoveryHistory.length > 100) this.state.recoveryHistory.pop();
-          if (result.success) this.state.recoveryCount++;
-          this.saveState();
-          this.logRecovery(recoveryEntry);
-
-          results.push({
-            component: component.name,
-            action: action.type,
-            status: result.success ? 'SUCCESS' : 'FAILED',
-            details: result.details ?? [],
-            error: result.error,
-          });
-        } catch (err) {
-          results.push({ component: component.name, action: action.type, status: 'ERROR', error: err.message });
-        }
-      }
+    for (const step of plan.steps.filter((s) => s.auto)) {
+      let result;
+      if (step.action === 'repair-index')      result = this.repairIndex({ dryRun });
+      else if (step.action === 'clear-cache')  result = this.clearCache({ dryRun });
+      else if (step.action === 'recover-runtime') result = this.recoverRuntime({ dryRun });
+      results.push({ step: step.action, type: step.type, result });
     }
 
-    return {
-      healthReport,
-      recoveryResults: results,
-      summary: {
-        total: results.length,
-        succeeded: results.filter(r => r.status === 'SUCCESS').length,
-        failed: results.filter(r => r.status === 'FAILED' || r.status === 'ERROR').length,
-        skipped: results.filter(r => r.status === 'SKIPPED').length,
-      },
-    };
-  }
-
-  async repairIndex() {
-    const result = await this.indexRepair.repairIndex();
-    this.logRecovery({ timestamp: new Date().toISOString(), action: 'REPAIR_INDEX', ...result });
-    return result;
-  }
-
-  async clearCache() {
-    const result = await this.cacheRepair.clearCache();
-    this.logRecovery({ timestamp: new Date().toISOString(), action: 'CLEAR_CACHE', ...result });
-    return result;
-  }
-
-  async recoverRuntime() {
-    const result = await this.runtimeRecovery.recover();
-    this.logRecovery({ timestamp: new Date().toISOString(), action: 'RECOVER_RUNTIME', ...result });
-    return result;
-  }
-
-  async rebuildIndex() {
-    const result = await this.indexRepair.rebuild();
-    this.logRecovery({ timestamp: new Date().toISOString(), action: 'REBUILD_INDEX', ...result });
-    return result;
-  }
-
-  logRecovery(entry) {
-    const logFile = join(this.logDir, `recovery-${new Date().toISOString().split('T')[0]}.jsonl`);
-    try {
-      writeFileSync(logFile, JSON.stringify(entry) + '\n', { flag: 'a' });
-    } catch { /* ignore */ }
-  }
-
-  getRecoveryHistory(limit = 50) {
-    return this.state.recoveryHistory.slice(0, limit);
-  }
-
-  getRecoveryLogs() {
-    if (!existsSync(this.logDir)) return [];
-    try {
-      const files = readdirSync(this.logDir).filter(f => f.endsWith('.jsonl')).sort().reverse();
-      const logs = [];
-      for (const file of files.slice(0, 7)) {
-        const content = readFileSync(join(this.logDir, file), 'utf8');
-        content.split('\n').filter(Boolean).forEach(line => {
-          try { logs.push(JSON.parse(line)); } catch { /* ignore */ }
-        });
-      }
-      return logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    } catch {
-      return [];
-    }
+    return { healed: results.length, results, dryRun };
   }
 }
-
-export default SelfHealManager;

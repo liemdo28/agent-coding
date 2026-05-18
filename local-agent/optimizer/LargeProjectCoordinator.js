@@ -1,120 +1,89 @@
-// local-agent/optimizer/LargeProjectCoordinator.js
-// Phase 26: Large project coordinator — orchestrates optimization for large projects
+// optimizer/LargeProjectCoordinator.js — orchestrate optimized scanning for large projects
+import { collectFiles, processInParallel } from './ParallelScanner.js';
+import { detectChanges, updateManifest }   from './IncrementalIndexer.js';
+import { LazyContextLoader }               from './LazyContextLoader.js';
+import { SmartFileCache }                  from './SmartFileCache.js';
 
-import { IncrementalIndexer } from './IncrementalIndexer.js';
-import { ParallelScanner } from './ParallelScanner.js';
-import { LazyContextLoader } from './LazyContextLoader.js';
-import { SmartFileCache } from './SmartFileCache.js';
+// Classification thresholds
+const THRESHOLDS = { small: 500, medium: 5000 }; // file counts
 
 export class LargeProjectCoordinator {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.indexer = new IncrementalIndexer(workspaceRoot);
-    this.scanner = new ParallelScanner(workspaceRoot);
-    this.contextLoader = new LazyContextLoader(workspaceRoot);
-    this.fileCache = new SmartFileCache(workspaceRoot);
-    this.lastScanStats = null;
+  constructor(workspaceRoot, opts = {}) {
+    this.root     = workspaceRoot;
+    this._cache   = new SmartFileCache(opts.cache ?? {});
+    this._loader  = new LazyContextLoader({ cache: this._cache });
   }
 
-  async scan() {
-    const startTime = Date.now();
-    const projectSize = this.detectProjectSize();
+  /**
+   * Classify project size and decide scan strategy.
+   * @param {{ extensions?: string[] }} opts
+   * @returns {{ size: 'small'|'medium'|'large', fileCount: number, strategy: string }}
+   */
+  classify(opts = {}) {
+    const files     = collectFiles(this.root, opts);
+    const fileCount = files.length;
+    const size      = fileCount <= THRESHOLDS.small  ? 'small'  :
+                      fileCount <= THRESHOLDS.medium ? 'medium' : 'large';
+    const strategy  = size === 'small'  ? 'full-scan'         :
+                      size === 'medium' ? 'incremental-scan'   : 'parallel-incremental';
+    return { size, fileCount, strategy, files };
+  }
 
-    let result;
-    if (projectSize === 'SMALL') {
-      result = await this.scanSmall();
-    } else if (projectSize === 'MEDIUM') {
-      result = await this.scanMedium();
-    } else {
-      result = await this.scanLarge();
+  /**
+   * Run an optimized incremental scan.
+   * @param {{ onProgress?: Function, concurrency?: number }} opts
+   * @returns {Promise<ScanResult>}
+   */
+  async scan(opts = {}) {
+    const t0               = Date.now();
+    const { size, files, strategy } = this.classify();
+    const { changed, unchanged, deleted } = detectChanges(this.root, files);
+
+    const results = await processInParallel(
+      changed,
+      async (f) => { return { path: f, size: (await import('fs')).statSync(f).size }; },
+      { concurrency: opts.concurrency ?? 8, onProgress: opts.onProgress }
+    );
+
+    if (!opts.dryRun) {
+      updateManifest(this.root, changed, deleted);
     }
 
-    const duration = Date.now() - startTime;
-    this.lastScanStats = {
-      ...result,
-      durationMs: duration,
-      projectSize,
-    };
-
-    return this.lastScanStats;
-  }
-
-  async scanSmall() {
-    const result = await this.scanner.scan();
+    const durationMs = Date.now() - t0;
     return {
-      ...result,
-      mode: 'full',
-      incremental: false,
+      strategy,
+      projectSize:     size,
+      totalFiles:      files.length,
+      changedFiles:    changed.length,
+      unchangedFiles:  unchanged,
+      deletedFiles:    deleted.length,
+      processedFiles:  results.filter((r) => !r.error).length,
+      errors:          results.filter((r) => r.error).length,
+      durationMs,
+      cacheStats:      this._cache.stats(),
     };
   }
 
-  async scanMedium() {
-    // Use incremental if possible
-    const indexStats = this.indexer.getIndexStats();
-    if (indexStats.lastIndexed) {
-      // Incremental scan
-      const scanResult = await this.scanner.scan();
-      const indexResult = await this.indexer.incrementalIndex(scanResult);
-      return {
-        ...scanResult,
-        mode: 'incremental',
-        incremental: true,
-        ...indexResult,
-      };
-    }
-    return this.scanSmall();
-  }
+  /** Get lazy context loader for on-demand file reads */
+  getLoader() { return this._loader; }
 
-  async scanLarge() {
-    // Always incremental for large projects
-    const scanResult = await this.scanner.scan();
-    const indexResult = await this.indexer.incrementalIndex(scanResult);
+  /** Benchmark: time a full classify + incremental detect */
+  benchmark() {
+    const t0 = Date.now();
+    const classification = this.classify();
+    const { changed } = detectChanges(this.root, classification.files);
+    const ms = Date.now() - t0;
+
     return {
-      ...scanResult,
-      mode: 'incremental',
-      incremental: true,
-      ...indexResult,
-    };
-  }
-
-  detectProjectSize() {
-    const indexStats = this.indexer.getIndexStats();
-    const fileCount = indexStats.totalFiles;
-    if (fileCount === 0) {
-      // Estimate based on directories
-      return 'MEDIUM';
-    }
-    if (fileCount < 1000) return 'SMALL';
-    if (fileCount < 10000) return 'MEDIUM';
-    return 'LARGE';
-  }
-
-  async loadContext(paths) {
-    return this.contextLoader.loadBatch(paths);
-  }
-
-  async clearCaches() {
-    this.contextLoader.clear();
-    this.fileCache.clear();
-  }
-
-  getStats() {
-    return {
-      projectSize: this.lastScanStats?.projectSize || this.detectProjectSize(),
-      lastScan: this.lastScanStats,
-      indexer: this.indexer.getIndexStats(),
-      contextLoader: this.contextLoader.getStats(),
-      fileCache: this.fileCache.getStats(),
-    };
-  }
-
-  getPerformanceTargets() {
-    return {
-      SMALL_PROJECT_SCAN_MS: 10000,
-      MEDIUM_PROJECT_SCAN_MS: 60000,
-      LARGE_MONOREPO_INCREMENTAL_MS: 300000,
+      projectSize:  classification.size,
+      totalFiles:   classification.fileCount,
+      changedFiles: changed.length,
+      benchmarkMs:  ms,
+      meetsTarget:  (
+        (classification.size === 'small'  && ms < 10_000)  ||
+        (classification.size === 'medium' && ms < 60_000)  ||
+        (classification.size === 'large'  && ms < 300_000)
+      ),
     };
   }
 }
-
-export default LargeProjectCoordinator;

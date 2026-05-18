@@ -1,207 +1,76 @@
-// local-agent/team/TeamPackExporter.js
-// Phase 28: Team pack exporter — export knowledge packs for team sharing
-
+// team/TeamPackExporter.js — export workspace knowledge packs for team sharing
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
-import { MemorySanitizer } from '../memory/MemorySanitizer.js';
+import { validateSyncTarget } from './InternalPolicyManager.js';
 
-export class TeamPackExporter {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.sanitizer = new MemorySanitizer();
-    this.packDir = join(workspaceRoot, '.local-agent', 'team-packs');
-    this.ensurePackDir();
+// Secret patterns to strip before export
+const SECRET_PATTERNS = [
+  /["']?(?:api[_-]?key|access[_-]?token|secret[_-]?key|password|passwd|auth[_-]?token)["']?\s*[:=]\s*["']?\S+/gi,
+  /Bearer\s+\S+/gi,
+  /-----BEGIN [A-Z ]+-----[\s\S]+?-----END [A-Z ]+-----/g,
+];
+
+/**
+ * Strip secrets from text content before export.
+ * @param {string} content
+ * @returns {string}
+ */
+export function sanitizeForExport(content) {
+  let out = content;
+  for (const pattern of SECRET_PATTERNS) {
+    out = out.replace(pattern, '[REDACTED]');
   }
-
-  ensurePackDir() {
-    mkdirSync(this.packDir, { recursive: true });
-  }
-
-  async exportMemoryPack(options = {}) {
-    const packId = `memory-pack-${Date.now()}`;
-    const pack = {
-      id: packId,
-      type: 'MEMORY_PACK',
-      exportedAt: new Date().toISOString(),
-      exportedBy: options.exportedBy || 'local-agent',
-      version: '1.0',
-      contents: {},
-    };
-
-    // Export project profile
-    if (options.includeProfile !== false) {
-      pack.contents.profile = this.loadProjectProfile();
-    }
-
-    // Export fix recipes
-    if (options.includeRecipes !== false) {
-      pack.contents.recipes = this.loadFixHistory();
-    }
-
-    // Export QA reports summary
-    if (options.includeQA) {
-      pack.contents.qaSummary = this.loadQASummary();
-    }
-
-    // Export coding standards
-    if (options.includeStandards) {
-      pack.contents.standards = this.loadStandards();
-    }
-
-    // Sanitize secrets
-    const sanitizedPack = this.sanitizer.sanitizePack(pack);
-
-    const packPath = join(this.packDir, `${packId}.json`);
-    writeFileSync(packPath, JSON.stringify(sanitizedPack, null, 2));
-
-    return {
-      success: true,
-      packId,
-      packPath,
-      contents: Object.keys(sanitizedPack.contents),
-      sanitized: sanitizedPack !== pack,
-    };
-  }
-
-  async exportRecipes(options = {}) {
-    const packId = `recipes-pack-${Date.now()}`;
-    const pack = {
-      id: packId,
-      type: 'RECIPES_PACK',
-      exportedAt: new Date().toISOString(),
-      exportedBy: options.exportedBy || 'local-agent',
-      version: '1.0',
-      contents: {
-        recipes: this.loadFixHistory(),
-      },
-    };
-
-    const sanitizedPack = this.sanitizer.sanitizePack(pack);
-    const packPath = join(this.packDir, `${packId}.json`);
-    writeFileSync(packPath, JSON.stringify(sanitizedPack, null, 2));
-
-    return {
-      success: true,
-      packId,
-      packPath,
-      recipeCount: sanitizedPack.contents.recipes?.length || 0,
-    };
-  }
-
-  importPack(packPath) {
-    if (!existsSync(packPath)) {
-      throw new Error(`Pack file not found: ${packPath}`);
-    }
-
-    const content = readFileSync(packPath, 'utf8');
-    const pack = JSON.parse(content);
-
-    const validation = this.validatePack(pack);
-    if (!validation.valid) {
-      throw new Error(`Invalid pack: ${validation.errors.join(', ')}`);
-    }
-
-    const imported = { success: true, packId: pack.id, type: pack.type };
-
-    // Import based on type
-    if (pack.type === 'MEMORY_PACK' && pack.contents.profile) {
-      this.importProfile(pack.contents.profile);
-      imported.profile = true;
-    }
-    if (pack.contents.recipes) {
-      imported.recipes = this.importRecipes(pack.contents.recipes);
-    }
-
-    return imported;
-  }
-
-  validatePack(pack) {
-    const errors = [];
-    if (!pack.id) errors.push('Missing pack id');
-    if (!pack.type) errors.push('Missing pack type');
-    if (!pack.exportedAt) errors.push('Missing export timestamp');
-    if (!pack.version) errors.push('Missing version');
-    if (!pack.contents) errors.push('Missing contents');
-    return { valid: errors.length === 0, errors };
-  }
-
-  loadProjectProfile() {
-    const profileFile = join(this.workspaceRoot, '.local-agent', 'project-profile.json');
-    if (existsSync(profileFile)) {
-      try { return JSON.parse(readFileSync(profileFile, 'utf8')); } catch { /* ignore */ }
-    }
-    return null;
-  }
-
-  loadFixHistory() {
-    const historyFile = join(this.workspaceRoot, '.local-agent', 'fix-history.json');
-    if (existsSync(historyFile)) {
-      try { return JSON.parse(readFileSync(historyFile, 'utf8')); } catch { /* ignore */ }
-    }
-    return [];
-  }
-
-  loadQASummary() {
-    const reportsDir = join(this.workspaceRoot, '.local-agent', 'reports');
-    if (!existsSync(reportsDir)) return null;
-    try {
-      const files = readdirSync(reportsDir).filter(f => f.startsWith('qa-report-') && f.endsWith('.json'));
-      if (files.length === 0) return null;
-      const latest = JSON.parse(readFileSync(join(reportsDir, files.sort().reverse()[0]), 'utf8'));
-      return {
-        lastReport: latest.generatedAt,
-        score: latest.qaScore,
-        buildSuccess: latest.buildSuccess,
-        testSuccess: latest.testSuccess,
-      };
-    } catch { return null; }
-  }
-
-  loadStandards() {
-    const standardsFile = join(this.workspaceRoot, '.local-agent', 'standards.json');
-    if (existsSync(standardsFile)) {
-      try { return JSON.parse(readFileSync(standardsFile, 'utf8')); } catch { /* ignore */ }
-    }
-    return null;
-  }
-
-  importProfile(profile) {
-    const profileFile = join(this.workspaceRoot, '.local-agent', 'project-profile.json');
-    try {
-      writeFileSync(profileFile, JSON.stringify(profile, null, 2));
-      return true;
-    } catch { return false; }
-  }
-
-  importRecipes(recipes) {
-    const historyFile = join(this.workspaceRoot, '.local-agent', 'fix-history.json');
-    let existing = [];
-    if (existsSync(historyFile)) {
-      try { existing = JSON.parse(readFileSync(historyFile, 'utf8')); } catch { /* ignore */ }
-    }
-    const merged = [...existing, ...recipes];
-    writeFileSync(historyFile, JSON.stringify(merged, null, 2));
-    return recipes.length;
-  }
-
-  listPacks() {
-    if (!existsSync(this.packDir)) return [];
-    try {
-      const files = readdirSync(this.packDir).filter(f => f.endsWith('.json'));
-      return files.map(f => {
-        const content = readFileSync(join(this.packDir, f), 'utf8');
-        const pack = JSON.parse(content);
-        return {
-          id: pack.id,
-          type: pack.type,
-          exportedAt: pack.exportedAt,
-          exportedBy: pack.exportedBy,
-          contents: Object.keys(pack.contents || {}),
-          size: statSync(join(this.packDir, f)).size,
-        };
-      });
-    } catch { return []; }
-  }
+  return out;
 }
 
-export default TeamPackExporter;
+/**
+ * Export a team knowledge pack (recipes, memory, policies) to a target directory.
+ * @param {string} workspaceRoot
+ * @param {string} targetDir — LAN path or NAS mount
+ * @param {{ dryRun?: boolean, includeMemory?: boolean, includeRecipes?: boolean }} opts
+ * @returns {ExportResult}
+ */
+export function exportPack(workspaceRoot, targetDir, opts = {}) {
+  const { dryRun = false, includeMemory = true, includeRecipes = true } = opts;
+
+  const check = validateSyncTarget(workspaceRoot, targetDir);
+  if (!check.allowed) throw new Error(`Export denied: ${check.reason}`);
+
+  if (!dryRun) mkdirSync(targetDir, { recursive: true });
+
+  const exported = [];
+  const errors   = [];
+
+  const exportDir = (srcDir, label) => {
+    if (!existsSync(srcDir)) return;
+    const outDir = join(targetDir, label);
+    if (!dryRun) mkdirSync(outDir, { recursive: true });
+    for (const f of readdirSync(srcDir)) {
+      const srcPath = join(srcDir, f);
+      if (!statSync(srcPath).isFile()) continue;
+      try {
+        const raw       = readFileSync(srcPath, 'utf8');
+        const sanitized = sanitizeForExport(raw);
+        if (!dryRun) writeFileSync(join(outDir, f), sanitized, 'utf8');
+        exported.push(`${label}/${f}`);
+      } catch (err) {
+        errors.push(`${label}/${f}: ${err.message}`);
+      }
+    }
+  };
+
+  if (includeMemory)  exportDir(join(workspaceRoot, '.local-agent', 'memory'),  'memory');
+  if (includeRecipes) exportDir(join(workspaceRoot, '.local-agent', 'reports'), 'reports');
+
+  // Export manifest
+  const manifest = {
+    exportedAt:    new Date().toISOString(),
+    workspaceRoot, // stripped of secrets in consuming code
+    fileCount:     exported.length,
+    includeMemory,
+    includeRecipes,
+  };
+  if (!dryRun) writeFileSync(join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+  return { exported, errors, dryRun, manifestWritten: !dryRun };
+}

@@ -60,7 +60,8 @@ export function extractImports(filePath, content) {
 function resolveFile(basePath) {
   // Try as-is first
   if (existsSync(basePath) && !basePath.endsWith('/')) {
-    return basePath;
+    // Check it's actually a file (not directory)
+    if (existsSync(basePath)) return basePath;
   }
 
   // Try with extensions

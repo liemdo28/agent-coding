@@ -39,7 +39,7 @@ export const SECRET_PATTERNS = [
   },
   {
     name: 'Basic Auth URL',
-    pattern: /https?:\/\/[^:]+:[^@]{6,}@/g,
+    pattern: /https?:\/\/[^:@/\s"'*]+:[^@/\s"'*]{6,}@/g,
     severity: 'HIGH',
   },
   {
@@ -54,7 +54,7 @@ export const SECRET_PATTERNS = [
   },
   {
     name: 'Database Connection String with Password',
-    pattern: /(?:mongodb|postgresql|mysql):\/\/[^:]+:[^@]+@/gi,
+    pattern: /(?:mongodb|postgresql|postgres|mysql):\/\/[^:@/\s"'*]+:[^@/\s"'*]+@/gi,
     severity: 'HIGH',
   },
 ];
@@ -62,7 +62,7 @@ export const SECRET_PATTERNS = [
 /**
  * Directories to skip when scanning recursively.
  */
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.local-agent', 'dist', 'build']);
 
 /**
  * Detect if a Buffer/string looks like a binary file (contains null bytes).

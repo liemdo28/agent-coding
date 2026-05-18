@@ -1,6 +1,8 @@
 // sandbox/sandbox.js - secure command runner with allowlist enforcement
 import { spawn } from 'child_process';
 import { resolve } from 'path';
+import { checkCommand } from '../security/CommandPolicy.js';
+import { log, logBlocked } from '../security/AuditLogger.js';
 
 /**
  * Normalize a command string to its base executable name.
@@ -54,20 +56,34 @@ function validateCwd(cwd, workspaceRoot) {
  */
 async function runCommand(command, args = [], options = {}) {
   const { allowedCommands, blockedCommands, timeoutMs, maxOutputBytes, workspaceRoot } = this;
+  const fullCommandStr = [command, ...args].join(' ');
 
   // --- Allowlist check ---
   if (!matchesCommandList(command, allowedCommands)) {
+    logBlocked('command_not_allowed', { command: fullCommandStr }, workspaceRoot);
     throw new Error(
       `Command not allowed: "${command}". Allowed: ${allowedCommands.join(', ')}`
     );
   }
 
   // --- Blocklist check ---
-  const fullCommandStr = [command, ...args].join(' ');
   if (matchesCommandList(command, blockedCommands) || matchesCommandList(fullCommandStr, blockedCommands)) {
+    logBlocked('command_blocklisted', { command: fullCommandStr }, workspaceRoot);
     throw new Error(
       `Command is blocked: "${command}". This command is on the security blocklist.`
     );
+  }
+
+  // --- Policy engine check ---
+  const policy = checkCommand(command, args);
+  if (!policy.allowed) {
+    logBlocked('command_policy_blocked', {
+      command: fullCommandStr,
+      reason: policy.reason,
+      destructive: policy.destructive,
+      network: policy.network,
+    }, workspaceRoot);
+    throw new Error(policy.reason);
   }
 
   // --- Path traversal check ---
@@ -76,6 +92,7 @@ async function runCommand(command, args = [], options = {}) {
     : workspaceRoot;
 
   const timeout = options.timeout ?? timeoutMs;
+  const startedAt = Date.now();
 
   const env = {
     ...process.env,
@@ -127,6 +144,14 @@ async function runCommand(command, args = [], options = {}) {
 
     child.on('close', (exitCode) => {
       clearTimeout(timeoutHandle);
+      log('INFO', 'command_completed', {
+        command: fullCommandStr,
+        cwd,
+        exitCode,
+        durationMs: Date.now() - startedAt,
+        timedOut,
+        outputTruncated,
+      }, workspaceRoot);
       resolve({
         success: exitCode === 0 && !timedOut,
         exitCode,
@@ -138,6 +163,12 @@ async function runCommand(command, args = [], options = {}) {
 
     child.on('error', (err) => {
       clearTimeout(timeoutHandle);
+      log('WARNING', 'command_spawn_error', {
+        command: fullCommandStr,
+        cwd,
+        error: err.message,
+        durationMs: Date.now() - startedAt,
+      }, workspaceRoot);
       resolve({
         success: false,
         exitCode: null,

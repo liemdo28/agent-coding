@@ -1,170 +1,87 @@
-// local-agent/self-heal/CacheRepair.js
-// Phase 24: Cache repair module — detect and repair corrupted/stale caches
+// self-heal/CacheRepair.js — detect and clear stale/corrupt cache artifacts
+import { existsSync, readdirSync, statSync, unlinkSync, rmSync } from 'fs';
+import { join } from 'path';
 
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync, unlinkSync, rmdirSync } from 'fs';
-import { join, basename } from 'path';
+const CACHE_DIRS = [
+  '.local-agent/index',
+  '.local-agent/backups',
+  '.local-agent/logs',
+];
 
-export class CacheRepair {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.cacheRoot = join(workspaceRoot, '.local-agent', 'cache');
-    this.indexCache = join(this.cacheRoot, 'index');
-    this.contextCache = join(this.cacheRoot, 'context');
-    this.modelCache = join(this.cacheRoot, 'model');
-  }
+const MAX_LOG_AGE_MS  = 7 * 24 * 3600_000;  // 7 days
+const MAX_BACKUP_AGE_MS = 30 * 24 * 3600_000; // 30 days
 
-  async repairCache() {
-    const issues = [];
-    const repaired = [];
+/**
+ * Scan for cache issues without making changes.
+ * @param {string} workspaceRoot
+ * @returns {{ issues: Array, totalStaleBytes: number }}
+ */
+export function scanCache(workspaceRoot) {
+  const issues = [];
+  let totalStaleBytes = 0;
 
-    // Check each cache directory
-    for (const cacheDir of [this.cacheRoot, this.indexCache, this.contextCache, this.modelCache]) {
-      if (!existsSync(cacheDir)) continue;
-
-      try {
-        const files = readdirSync(cacheDir);
-        for (const file of files) {
-          const filePath = join(cacheDir, file);
-          const stat = statSync(filePath);
-          
-          // Check for zero-size files (likely corrupted)
-          if (stat.size === 0) {
-            issues.push({ type: 'ZERO_SIZE', path: filePath, file });
-            try { unlinkSync(filePath); repaired.push(filePath); } catch { /* ignore */ }
-          }
-
-          // Check for oversized cache files
-          if (stat.size > 100 * 1024 * 1024) { // > 100MB
-            issues.push({ type: 'OVERSIZED', path: filePath, file, size: stat.size });
-          }
-
-          // Check for corrupted JSON cache files
-          if (file.endsWith('.json') || file.endsWith('.cache')) {
-            try {
-              const content = readFileSync(filePath, 'utf8');
-              JSON.parse(content);
-            } catch {
-              issues.push({ type: 'CORRUPTED_JSON', path: filePath, file });
-              // Backup and remove corrupted cache
-              try {
-                writeFileSync(filePath + '.broken', content, 'utf8');
-                unlinkSync(filePath);
-                repaired.push(filePath);
-              } catch { /* ignore */ }
-            }
-          }
-        }
-      } catch (err) {
-        issues.push({ type: 'DIR_ACCESS_ERROR', path: cacheDir, error: err.message });
+  // Check for oversized / stale log files
+  const logsDir = join(workspaceRoot, '.local-agent', 'logs');
+  if (existsSync(logsDir)) {
+    for (const f of readdirSync(logsDir)) {
+      const abs  = join(logsDir, f);
+      const stat = statSync(abs);
+      if (stat.isFile() && (Date.now() - stat.mtimeMs) > MAX_LOG_AGE_MS) {
+        issues.push({ type: 'stale_log', path: abs, bytes: stat.size });
+        totalStaleBytes += stat.size;
       }
     }
-
-    return { success: issues.length === 0, issues, repaired, details: [`${repaired.length} cache entries repaired`] };
   }
 
-  async clearCache() {
-    const cleared = [];
-    const errors = [];
-
-    for (const cacheDir of [this.cacheRoot, this.indexCache, this.contextCache, this.modelCache]) {
-      if (!existsSync(cacheDir)) continue;
-
-      try {
-        const files = readdirSync(cacheDir);
-        for (const file of files) {
-          if (file === '.gitkeep') continue; // Preserve gitkeep
-          const filePath = join(cacheDir, file);
-          try {
-            const stat = statSync(filePath);
-            if (stat.isDirectory()) {
-              // Recursively remove directory
-              this.rmrf(filePath);
-            } else {
-              unlinkSync(filePath);
-            }
-            cleared.push(filePath);
-          } catch (err) {
-            errors.push({ path: filePath, error: err.message });
-          }
-        }
-      } catch (err) {
-        errors.push({ path: cacheDir, error: err.message });
+  // Check for old backups
+  const backDir = join(workspaceRoot, '.local-agent', 'backups');
+  if (existsSync(backDir)) {
+    for (const f of readdirSync(backDir)) {
+      const abs  = join(backDir, f);
+      const stat = statSync(abs);
+      if (stat.isFile() && (Date.now() - stat.mtimeMs) > MAX_BACKUP_AGE_MS) {
+        issues.push({ type: 'old_backup', path: abs, bytes: stat.size });
+        totalStaleBytes += stat.size;
       }
     }
+  }
 
-    // Recreate essential cache directories
-    for (const cacheDir of [this.cacheRoot, this.indexCache, this.contextCache, this.modelCache]) {
-      try { mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
-      try { writeFileSync(join(cacheDir, '.gitkeep'), ''); } catch { /* ignore */ }
+  // Check for zero-byte index fragments
+  const idxDir = join(workspaceRoot, '.local-agent', 'index');
+  if (existsSync(idxDir)) {
+    for (const f of readdirSync(idxDir)) {
+      const abs  = join(idxDir, f);
+      const stat = statSync(abs);
+      if (stat.isFile() && stat.size === 0) {
+        issues.push({ type: 'empty_index_file', path: abs, bytes: 0 });
+      }
     }
-
-    return {
-      success: errors.length === 0,
-      clearedCount: cleared.length,
-      clearedPaths: cleared.slice(0, 20),
-      errors,
-      details: [`${cleared.length} cache entries cleared`],
-    };
   }
 
-  rmrf(dir) {
-    if (!existsSync(dir)) return;
-    try {
-      const files = readdirSync(dir);
-      for (const file of files) {
-        const filePath = join(dir, file);
-        const stat = statSync(filePath);
-        if (stat.isDirectory()) {
-          this.rmrf(filePath);
-          try { rmdirSync(filePath); } catch { /* ignore */ }
-        } else {
-          try { unlinkSync(filePath); } catch { /* ignore */ }
-        }
-      }
-      try { rmdirSync(dir); } catch { /* ignore */ }
-    } catch { /* ignore */ }
-  }
-
-  async checkCacheHealth() {
-    const report = { healthy: true, issues: [], cacheDirs: [], totalSize: 0, totalEntries: 0 };
-
-    for (const cacheDir of [this.cacheRoot, this.indexCache, this.contextCache, this.modelCache]) {
-      if (!existsSync(cacheDir)) {
-        report.cacheDirs.push({ dir: cacheDir, exists: false });
-        continue;
-      }
-
-      let dirSize = 0;
-      let entryCount = 0;
-      const dirIssues = [];
-
-      try {
-        const files = readdirSync(cacheDir);
-        for (const file of files) {
-          if (file === '.gitkeep') continue;
-          const filePath = join(cacheDir, file);
-          try {
-            const stat = statSync(filePath);
-            dirSize += stat.size;
-            entryCount++;
-            
-            if (stat.size === 0) dirIssues.push({ type: 'ZERO_SIZE', file });
-            if (stat.size > 50 * 1024 * 1024) dirIssues.push({ type: 'LARGE', file, size: stat.size });
-          } catch { /* ignore */ }
-        }
-      } catch (err) {
-        dirIssues.push({ type: 'ACCESS_ERROR', error: err.message });
-        report.healthy = false;
-      }
-
-      report.cacheDirs.push({ dir: cacheDir, exists: true, size: dirSize, entries: entryCount, issues: dirIssues });
-      report.totalSize += dirSize;
-      report.totalEntries += entryCount;
-      if (dirIssues.length > 0) report.healthy = false;
-    }
-
-    return report;
-  }
+  return { issues, totalStaleBytes };
 }
 
-export default CacheRepair;
+/**
+ * Clear identified cache issues.
+ * @param {string} workspaceRoot
+ * @param {{ dryRun?: boolean }} opts
+ * @returns {{ cleared: number, freedBytes: number, errors: string[] }}
+ */
+export function clearCache(workspaceRoot, { dryRun = false } = {}) {
+  const { issues } = scanCache(workspaceRoot);
+  let cleared    = 0;
+  let freedBytes = 0;
+  const errors   = [];
+
+  for (const issue of issues) {
+    try {
+      if (!dryRun) unlinkSync(issue.path);
+      cleared++;
+      freedBytes += issue.bytes;
+    } catch (err) {
+      errors.push(`${issue.path}: ${err.message}`);
+    }
+  }
+
+  return { cleared, freedBytes, errors, dryRun };
+}

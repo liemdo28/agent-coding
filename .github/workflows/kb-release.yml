@@ -1,0 +1,97 @@
+name: KB Release
+
+# Triggered by a tag like kb-v1.0, kb-v1.1, etc.
+# Runs on an internet-connected GitHub runner (BUILD-TIME only).
+# Target machines (offline) download the artifact from the release — no ingest needed there.
+
+on:
+  push:
+    tags:
+      - 'kb-v*'
+
+permissions:
+  contents: write   # required to create GitHub Releases and upload assets
+
+jobs:
+  build-and-release:
+    name: Ingest → Package → Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create GitHub Releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # Node 20 runners deprecated June 2026; use 22 LTS
+
+      - name: Install native build tools (required for better-sqlite3)
+        run: sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ingest KB (BUILD-TIME — requires internet)
+        run: npm run kb:ingest
+        # Idempotent: skips articles already in DB. On a fresh runner this fetches all ~1,300.
+
+      - name: Package KB artifact
+        run: node scripts/kb-package.js
+        # Outputs: dist/kb/knowledge.db.gz + dist/kb/manifest.json
+
+      - name: Read manifest
+        id: manifest
+        run: |
+          echo "docs=$(jq -r '.documents' dist/kb/manifest.json)"         >> "$GITHUB_OUTPUT"
+          echo "chunks=$(jq -r '.chunks' dist/kb/manifest.json)"          >> "$GITHUB_OUTPUT"
+          echo "words=$(jq -r '.words' dist/kb/manifest.json)"            >> "$GITHUB_OUTPUT"
+          echo "size=$(jq -r '.compressedSizeMB' dist/kb/manifest.json)"  >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        run: |
+          cat > /tmp/release-notes.md << 'NOTES_EOF'
+          ## Offline Knowledge Base — TAG_PLACEHOLDER
+
+          Pre-built SQLite database for the local-agent KB system.
+          **No internet required on target machines** — install with one command.
+
+          | Stat | Value |
+          |------|-------|
+          | Documents | DOCS_PLACEHOLDER |
+          | Chunks | CHUNKS_PLACEHOLDER |
+          | Words | WORDS_PLACEHOLDER |
+          | Compressed size | SIZE_PLACEHOLDER MB |
+          | License | CC BY-SA 4.0 (Wikipedia contributors) |
+
+          ## Install (offline machine)
+
+          ```bash
+          npm run kb:install <path-to-knowledge.db.gz>
+          npm run kb:stats
+          npm run kb:query "your question here"
+          ```
+
+          See `kb/README.md` for full instructions.
+          NOTES_EOF
+
+          sed -i \
+            -e "s|TAG_PLACEHOLDER|${{ github.ref_name }}|g" \
+            -e "s|DOCS_PLACEHOLDER|${{ steps.manifest.outputs.docs }}|g" \
+            -e "s|CHUNKS_PLACEHOLDER|${{ steps.manifest.outputs.chunks }}|g" \
+            -e "s|WORDS_PLACEHOLDER|${{ steps.manifest.outputs.words }}|g" \
+            -e "s|SIZE_PLACEHOLDER|${{ steps.manifest.outputs.size }}|g" \
+            /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "Knowledge Base ${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md \
+            --clobber \
+            dist/kb/knowledge.db.gz \
+            dist/kb/manifest.json

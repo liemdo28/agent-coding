@@ -1,92 +1,77 @@
-// local-agent/optimizer/LazyContextLoader.js
-// Phase 26: Lazy context loader — load file contents only when needed
-
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+// optimizer/LazyContextLoader.js — load file context on-demand, batch prefetch neighbors
+import { readFileSync, existsSync } from 'fs';
+import { SmartFileCache }           from './SmartFileCache.js';
 
 export class LazyContextLoader {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.loadedFiles = new Map();
-    this.accessCount = new Map();
-    this.maxLoadedFiles = 50;
+  constructor({ cache } = {}) {
+    this._cache    = cache ?? new SmartFileCache();
+    this._pending  = new Set();
+    this._prefetch = [];
   }
 
-  load(path) {
-    const key = this.normalizePath(path);
-
-    if (this.loadedFiles.has(key)) {
-      this.accessCount.set(key, (this.accessCount.get(key) || 0) + 1);
-      return this.loadedFiles.get(key);
-    }
-
-    if (!existsSync(key)) return null;
+  /**
+   * Read a file, using cache if available.
+   * @param {string} absPath
+   * @returns {string|null} content or null if unreadable
+   */
+  read(absPath) {
+    const cached = this._cache.get(absPath);
+    if (cached !== null) return cached;
 
     try {
-      const content = readFileSync(key, 'utf8');
-      this.evictIfNeeded();
-      this.loadedFiles.set(key, content);
-      this.accessCount.set(key, 1);
+      const content = readFileSync(absPath, 'utf8');
+      this._cache.set(absPath, content);
       return content;
     } catch {
       return null;
     }
   }
 
-  loadBatch(paths) {
-    const results = [];
-    for (const path of paths) {
-      results.push(this.load(path));
-    }
-    return results;
-  }
-
-  normalizePath(path) {
-    if (path.startsWith('/')) return path;
-    return join(this.workspaceRoot, path);
-  }
-
-  evictIfNeeded() {
-    if (this.loadedFiles.size < this.maxLoadedFiles) return;
-
-    // Find least accessed file
-    let minAccess = Infinity;
-    let lruKey = null;
-    for (const [key, count] of this.accessCount) {
-      if (count < minAccess) {
-        minAccess = count;
-        lruKey = key;
+  /**
+   * Queue files for background prefetch (non-blocking).
+   * @param {string[]} paths
+   */
+  prefetch(paths) {
+    for (const p of paths) {
+      if (!this._pending.has(p)) {
+        this._pending.add(p);
+        this._prefetch.push(p);
       }
     }
+    // Drain prefetch queue asynchronously
+    setImmediate(() => this._drainPrefetch());
+  }
 
-    if (lruKey) {
-      this.loadedFiles.delete(lruKey);
-      this.accessCount.delete(lruKey);
+  /**
+   * Read multiple files, returning a map of path → content.
+   * @param {string[]} paths
+   * @returns {Map<string, string>}
+   */
+  readBatch(paths) {
+    const result = new Map();
+    for (const p of paths) {
+      const content = this.read(p);
+      if (content !== null) result.set(p, content);
     }
+    return result;
   }
 
-  invalidate(path) {
-    const key = this.normalizePath(path);
-    this.loadedFiles.delete(key);
-    this.accessCount.delete(key);
-  }
+  /** Invalidate a file so it is re-read next access */
+  invalidate(path) { this._cache.invalidate(path); }
 
-  clear() {
-    this.loadedFiles.clear();
-    this.accessCount.clear();
-  }
+  stats() { return this._cache.stats(); }
 
-  getStats() {
-    return {
-      loadedFiles: this.loadedFiles.size,
-      maxLoadedFiles: this.maxLoadedFiles,
-      totalAccesses: Array.from(this.accessCount.values()).reduce((a, b) => a + b, 0),
-    };
-  }
-
-  isLoaded(path) {
-    return this.loadedFiles.has(this.normalizePath(path));
+  _drainPrefetch() {
+    const batch = this._prefetch.splice(0, 20);
+    for (const p of batch) {
+      if (existsSync(p) && this._cache.get(p) === null) {
+        try {
+          const content = readFileSync(p, 'utf8');
+          this._cache.set(p, content);
+        } catch { /* skip */ }
+      }
+      this._pending.delete(p);
+    }
+    if (this._prefetch.length > 0) setImmediate(() => this._drainPrefetch());
   }
 }
-
-export default LazyContextLoader;

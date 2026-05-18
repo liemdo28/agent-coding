@@ -1,1 +1,36 @@
-// local-agent/reasoning/DecisionComparator.js\n// Phase 25: Decision comparator — compare fix options and justify selection\n\nexport class DecisionComparator {\n  compare(fixA, fixB) {\n    return {\n      comparison: {\n        a: this.analyzeFix(fixA),\n        b: this.analyzeFix(fixB),\n      },\n      comparisonMatrix: this.buildComparisonMatrix(fixA, fixB),\n      recommendation: this.recommendFix(fixA, fixB),\n      reasoning: this.generateReasoning(fixA, fixB),\n    };\n  }\n\n  analyzeFix(fix) {\n    return {\n      risk: fix.riskLevel ?? 'UNKNOWN',\n      scope: this.estimateScope(fix),\n      reversibility: this.estimateReversibility(fix),\n      complexity: this.estimateComplexity(fix),\n      filesAffected: fix.filesChanged?.length ?? 0,\n      hasBackup: fix.hasBackup ?? false,\n      hasTests: fix.hasTests ?? false,\n      isBreaking: fix.breakingChange ?? false,\n    };\n  }\n\n  estimateScope(fix) {\n    const files = fix.filesChanged?.length ?? 0;\n    if (files <= 2) return 'MINIMAL';\n    if (files <= 5) return 'SMALL';\n    if (files <= 10) return 'MEDIUM';\n    return 'LARGE';\n  }\n\n  estimateReversibility(fix) {\n    if (fix.breakingChange) return 'LOW';\n    const files = fix.filesChanged?.length ?? 0;\n    if (files <= 3) return 'HIGH';\n    if (files <= 7) return 'MEDIUM';\n    return 'LOW';\n  }\n\n  estimateComplexity(fix) {\n    const lines = fix.linesChanged ?? 0;\n    if (lines <= 20) return 'LOW';\n    if (lines <= 100) return 'MEDIUM';\n    return 'HIGH';\n  }\n\n  buildComparisonMatrix(fixA, fixB) {\n    const criteria = [\n      { name: 'Safety', weight: 0.3, higherBetter: true },\n      { name: 'Speed', weight: 0.15, higherBetter: true },\n      { name: 'Completeness', weight: 0.2, higherBetter: true },\n      { name: 'Reversibility', weight: 0.15, higherBetter: true },\n      { name: 'Testability', weight: 0.1, higherBetter: true },\n      { name: 'Maintainability', weight: 0.1, higherBetter: true },\n    ];\n\n    const scoresA = this.scoreFix(fixA);\n    const scoresB = this.scoreFix(fixB);\n\n    return {\n      criteria,\n      scoresA,\n      scoresB,\n      weightedA: this.weightedScore(scoresA, criteria),\n      weightedB: this.weightedScore(scoresB, criteria),\n    };\n  }\n\n  scoreFix(fix) {\n    const analysis = this.analyzeFix(fix);\n    return {\n      Safety: this.riskToScore(analysis.risk),\n      Speed: analysis.scope === 'MINIMAL' || analysis.scope === 'SMALL' ? 9 : 5,\n      Completeness: fix.breakingChange ? 8 : 7,\n      Reversibility: this.reversibilityToScore(analysis.reversibility),\n      Testability: analysis.hasTests ? 9 : 5,\n      Maintainability: analysis.complexity === 'LOW' ? 9 : analysis.complexity === 'MEDIUM' ? 6 : 3,\n    };\n  }\n\n  riskToScore(risk) {\n    const map = { MINIMAL: 10, LOW: 8, MEDIUM: 6, HIGH: 3, CRITICAL: 1 };\n    return map[risk] ?? 5;\n  }\n\n  reversibilityToScore(rev) {\n    const map = { HIGH: 9, MEDIUM: 6, LOW: 3 };\n    return map[rev] ?? 5;\n  }\n\n  weightedScore(scores, criteria) {\n    return criteria.reduce((sum, c) => {\n      return sum + (scores[c.name] * c.weight);\n    }, 0);\n  }\n\n  recommendFix(fixA, fixB) {\n    const matrix = this.buildComparisonMatrix(fixA, fixB);\n    const scoreA = matrix.weightedA;\n    const scoreB = matrix.weightedB;\n\n    if (Math.abs(scoreA - scoreB) < 0.5) {\n      return {\n        winner: 'TIE',\n        preferred: null,\n        scoreDiff: Math.abs(scoreA - scoreB).toFixed(2),\n        message: 'Both options are nearly equivalent — prefer the safer option',\n        recommendation: 'A',\n      };\n    }\n\n    const winner = scoreA > scoreB ? 'A' : 'B';\n    const winnerFix = winner === 'A' ? fixA : fixB;\n    const winnerAnalysis = winner === 'A' ? matrix.scoresA : matrix.scoresB;\n\n    return {\n      winner,\n      winnerFix,\n      winnerAnalysis,\n      scoreDiff: Math.abs(scoreA - scoreB).toFixed(2),\n      message: `Option ${winner} scores higher (${Math.max(scoreA, scoreB).toFixed(1)} vs ${Math.min(scoreA, scoreB).toFixed(1)})`,\n    };\n  }\n\n  generateReasoning(fixA, fixB) {\n    const lines = [];\n    const analysisA = this.analyzeFix(fixA);\n    const analysisB = this.analyzeFix(fixB);\n    const rec = this.recommendFix(fixA, fixB);\n\n    lines.push(`## Decision Analysis`);\n    lines.push(``);\n\n    if (rec.winner === 'TIE') {\n      lines.push(`**Result: TIE** — both options are nearly equivalent.`);\n      lines.push(`Defaulting to Option A for consistency.`);\n    } else {\n      lines.push(`**Selected: Option ${rec.winner}** (score advantage: ${rec.scoreDiff})`);\n    }\n\n    lines.push(``);\n    lines.push(`### Comparison`);\n    lines.push(``);\n    lines.push(`| Criteria | Option A | Option B | Winner |`);\n    lines.push(`|---|---|---|---|`);\n\n    const matrix = this.buildComparisonMatrix(fixA, fixB);\n    const criteriaNames = ['Safety', 'Speed', 'Completeness', 'Reversibility', 'Testability', 'Maintainability'];\n    for (const name of criteriaNames) {\n      const a = matrix.scoresA[name];\n      const b = matrix.scoresB[name];\n      const winner = a > b ? 'A' : a < b ? 'B' : '=';\n      lines.push(`| ${name} | ${a} | ${b} | ${winner} |`);\n    }\n\n    lines.push(``);\n    lines.push(`### Key Differences`);\n    lines.push(``);\n\n    if (analysisA.risk !== analysisB.risk) {\n      lines.push(`- **Risk**: Option A=${analysisA.risk}, Option B=${analysisB.risk}`);\n    }\n    if (analysisA.scope !== analysisB.scope) {\n      lines.push(`- **Scope**: Option A=${analysisA.scope}, Option B=${analysisB.scope}`);\n    }\n    if (analysisA.reversibility !== analysisB.reversibility) {\n      lines.push(`- **Reversibility**: Option A=${analysisA.reversibility}, Option B=${analysisB.reversibility}`);\n    }\n    if (analysisA.isBreaking !== analysisB.isBreaking) {\n      lines.push(`- **Breaking Change**: Option A=${analysisA.isBreaking ? 'YES' : 'No'}, Option B=${analysisB.isBreaking ? 'YES' : 'No'}`);\n    }\n\n    lines.push(``);\n    lines.push(`### Recommendation`);\n    lines.push(``);\n    lines.push(rec.message);\n\n    return lines.join('\\n');\n  }\n}\n\nexport default DecisionComparator;\n
+// reasoning/DecisionComparator.js — compare strategies and select best option
+/**
+ * Compare multiple strategies and rank them by weighted score.
+ * @param {Strategy[]} strategies
+ * @param {{ priorities?: { risk?: number, effort?: number, coverage?: number } }} opts
+ * @returns {{ ranked: RankedStrategy[], winner: string }}
+ */
+export function compareStrategies(strategies, opts = {}) {
+  const weights = {
+    risk:     opts.priorities?.risk     ?? 0.5,
+    effort:   opts.priorities?.effort   ?? 0.3,
+    coverage: opts.priorities?.coverage ?? 0.2,
+  };
+
+  const riskMap   = { low: 1.0, medium: 0.6, high: 0.3 };
+  const effortMap = { low: 1.0, medium: 0.7, high: 0.4 };
+
+  const ranked = strategies.map((s) => {
+    const riskScore    = riskMap[s.risk]   ?? 0.5;
+    const effortScore  = effortMap[s.effort] ?? 0.5;
+    const coverageScore = s.id === 'comprehensive' ? 1.0 : s.id === 'balanced' ? 0.75 : 0.5;
+
+    const total = (
+      riskScore    * weights.risk +
+      effortScore  * weights.effort +
+      coverageScore * weights.coverage
+    );
+
+    return { ...s, score: +total.toFixed(3), riskScore, effortScore, coverageScore };
+  });
+
+  ranked.sort((a, b) => b.score - a.score);
+  const winner = ranked[0]?.id ?? 'balanced';
+
+  return { ranked, winner };
+}

@@ -1,86 +1,67 @@
-// local-agent/team/InternalPolicyManager.js
-// Phase 28: Internal policy manager — manage team-specific coding policies
-
+// team/InternalPolicyManager.js — manage team-internal policy rules (offline, LAN only)
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-export class InternalPolicyManager {
-  constructor(workspaceRoot) {
-    this.workspaceRoot = workspaceRoot;
-    this.policyDir = join(workspaceRoot, '.local-agent', 'policies');
-    this.ensurePolicyDir();
-  }
+const POLICY_FILE = '.local-agent/team-policy.json';
 
-  ensurePolicyDir() {
-    mkdirSync(this.policyDir, { recursive: true });
-  }
+const DEFAULT_POLICY = {
+  allowExportMemory:   true,
+  allowImportMemory:   true,
+  allowExportRecipes:  true,
+  requireAuditLog:     true,
+  sanitizeSecretsOnExport: true,
+  allowedSyncTargets:  [],  // LAN paths or NAS mount points only
+  maxExportSizeKB:     10240,
+  version:             1,
+};
 
-  getPolicies() {
-    const policies = [];
-    const files = ['naming-conventions.json', 'code-style.json', 'security-rules.json', 'qa-rules.json'];
-    for (const file of files) {
-      const path = join(this.policyDir, file);
-      if (existsSync(path)) {
-        try {
-          const content = readFileSync(path, 'utf8');
-          policies.push({ name: file.replace('.json', ''), ...JSON.parse(content) });
-        } catch { /* ignore */ }
-      }
-    }
-    return policies;
-  }
-
-  savePolicy(name, policy) {
-    const path = join(this.policyDir, `${name}.json`);
-    try {
-      writeFileSync(path, JSON.stringify(policy, null, 2));
-      return { success: true, name, path };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  }
-
-  deletePolicy(name) {
-    const path = join(this.policyDir, `${name}.json`);
-    const { unlinkSync } = require('fs');
-    if (existsSync(path)) {
-      unlinkSync(path);
-      return { success: true, name };
-    }
-    return { success: false, error: 'Policy not found' };
-  }
-
-  getPolicy(name) {
-    const path = join(this.policyDir, `${name}.json`);
-    if (!existsSync(path)) return null;
-    try {
-      return JSON.parse(readFileSync(path, 'utf8'));
-    } catch { return null; }
-  }
-
-  enforcePolicy(policyName, context) {
-    const policy = this.getPolicy(policyName);
-    if (!policy) return { enforced: false, reason: 'Policy not found' };
-
-    const violations = [];
-    if (policy.rules) {
-      for (const rule of policy.rules) {
-        const check = this.checkRule(rule, context);
-        if (!check.passed) violations.push(check);
-      }
-    }
-
-    return {
-      enforced: true,
-      policyName,
-      passed: violations.length === 0,
-      violations,
-    };
-  }
-
-  checkRule(rule, context) {
-    return { passed: true, rule: rule.name };
+/**
+ * Load the team policy.
+ * @param {string} workspaceRoot
+ * @returns {TeamPolicy}
+ */
+export function loadPolicy(workspaceRoot) {
+  const p = join(workspaceRoot, POLICY_FILE);
+  if (!existsSync(p)) return { ...DEFAULT_POLICY };
+  try {
+    const saved = JSON.parse(readFileSync(p, 'utf8'));
+    return { ...DEFAULT_POLICY, ...saved };
+  } catch {
+    return { ...DEFAULT_POLICY };
   }
 }
 
-export default InternalPolicyManager;
+/**
+ * Save team policy overrides.
+ * @param {string} workspaceRoot
+ * @param {Partial<TeamPolicy>} overrides
+ */
+export function savePolicy(workspaceRoot, overrides) {
+  const current = loadPolicy(workspaceRoot);
+  const updated = { ...current, ...overrides, updatedAt: new Date().toISOString() };
+  mkdirSync(join(workspaceRoot, '.local-agent'), { recursive: true });
+  writeFileSync(join(workspaceRoot, POLICY_FILE), JSON.stringify(updated, null, 2));
+  return updated;
+}
+
+/**
+ * Validate a sync target path against policy.
+ * Only LAN / local filesystem paths are allowed — no http(s) or cloud URLs.
+ * @param {string} workspaceRoot
+ * @param {string} targetPath
+ * @returns {{ allowed: boolean, reason?: string }}
+ */
+export function validateSyncTarget(workspaceRoot, targetPath) {
+  // Block any URL with scheme (http, ftp, s3, etc.)
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(targetPath)) {
+    return { allowed: false, reason: 'Network URLs are not allowed — use LAN path or mounted NAS only' };
+  }
+
+  const policy = loadPolicy(workspaceRoot);
+  if (policy.allowedSyncTargets.length > 0) {
+    const matched = policy.allowedSyncTargets.some((t) => targetPath.startsWith(t));
+    if (!matched) return { allowed: false, reason: 'Target not in allowedSyncTargets policy list' };
+  }
+
+  return { allowed: true };
+}
