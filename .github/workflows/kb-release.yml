@@ -42,42 +42,56 @@ jobs:
         run: node scripts/kb-package.js
         # Outputs: dist/kb/knowledge.db.gz + dist/kb/manifest.json
 
-      - name: Read manifest and create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read manifest
+        id: manifest
         run: |
-          MANIFEST=dist/kb/manifest.json
-          DOCS=$(jq -r '.documents'       $MANIFEST)
-          CHUNKS=$(jq -r '.chunks'        $MANIFEST)
-          WORDS=$(jq -r '.words'          $MANIFEST)
-          SIZE=$(jq -r '.compressedSizeMB' $MANIFEST)
-          TAG=${{ github.ref_name }}
+          echo "docs=$(jq -r '.documents' dist/kb/manifest.json)"         >> "$GITHUB_OUTPUT"
+          echo "chunks=$(jq -r '.chunks' dist/kb/manifest.json)"          >> "$GITHUB_OUTPUT"
+          echo "words=$(jq -r '.words' dist/kb/manifest.json)"            >> "$GITHUB_OUTPUT"
+          echo "size=$(jq -r '.compressedSizeMB' dist/kb/manifest.json)"  >> "$GITHUB_OUTPUT"
 
-          NOTES="## Offline Knowledge Base — ${TAG}
+      - name: Write release notes
+        run: |
+          cat > /tmp/release-notes.md << 'NOTES_EOF'
+          ## Offline Knowledge Base — TAG_PLACEHOLDER
 
           Pre-built SQLite database for the local-agent KB system.
           **No internet required on target machines** — install with one command.
 
           | Stat | Value |
           |------|-------|
-          | Documents | ${DOCS} |
-          | Chunks | ${CHUNKS} |
-          | Words | ${WORDS} |
-          | Compressed size | ${SIZE} MB |
+          | Documents | DOCS_PLACEHOLDER |
+          | Chunks | CHUNKS_PLACEHOLDER |
+          | Words | WORDS_PLACEHOLDER |
+          | Compressed size | SIZE_PLACEHOLDER MB |
           | License | CC BY-SA 4.0 (Wikipedia contributors) |
 
           ## Install (offline machine)
 
-          \`\`\`bash
+          ```bash
           npm run kb:install <path-to-knowledge.db.gz>
           npm run kb:stats
-          npm run kb:query \"your question here\"
-          \`\`\`
+          npm run kb:query "your question here"
+          ```
 
-          See \`kb/README.md\` → **DEPLOY/RUNTIME Flow** for full instructions."
+          See `kb/README.md` for full instructions.
+          NOTES_EOF
 
-          gh release create "${TAG}" \
-            --title "Knowledge Base ${TAG}" \
-            --notes "${NOTES}" \
+          sed -i \
+            -e "s|TAG_PLACEHOLDER|${{ github.ref_name }}|g" \
+            -e "s|DOCS_PLACEHOLDER|${{ steps.manifest.outputs.docs }}|g" \
+            -e "s|CHUNKS_PLACEHOLDER|${{ steps.manifest.outputs.chunks }}|g" \
+            -e "s|WORDS_PLACEHOLDER|${{ steps.manifest.outputs.words }}|g" \
+            -e "s|SIZE_PLACEHOLDER|${{ steps.manifest.outputs.size }}|g" \
+            /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "Knowledge Base ${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md \
+            --clobber \
             dist/kb/knowledge.db.gz \
             dist/kb/manifest.json
