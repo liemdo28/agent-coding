@@ -94,25 +94,35 @@ async function main() {
   const t0    = Date.now();
 
   for (const domainArg of targetDomains) {
-    let mod;
     // domainArg can be:
-    //   "coding"            → domains/coding-articles.js
-    //   "coding/2"          → domains/coding-articles-2.js
-    //   "machine-learning"  → domains/machine-learning-articles.js
-    let fileName;
+    //   "coding"            → auto-discovers all coding-articles*.js batches
+    //   "coding/2"          → domains/coding-articles-2.js (explicit batch)
+    //   "machine-learning"  → auto-discovers all machine-learning-articles*.js
+
     if (domainArg.includes('/')) {
+      // Explicit batch: coding/2 → coding-articles-2.js
       const [slug, batch] = domainArg.split('/');
-      fileName = `./domains/${slug}-articles-${batch}.js`;
+      const fileName = `./domains/${slug}-articles-${batch}.js`;
+      let mod;
+      try { mod = await import(fileName); }
+      catch { console.log(`  ${domainArg}: article list not found at ${fileName}`); continue; }
+      await ingestDomain(kb, mod, stats);
     } else {
-      fileName = `./domains/${domainArg}-articles.js`;
+      // Auto-discover: load all batch files for this domain slug in order
+      const slug = domainArg;
+      const batchFiles = [`./domains/${slug}-articles.js`];
+      // Find numbered batches: -articles-2.js through -articles-9.js
+      for (let n = 2; n <= 9; n++) {
+        const f = `./domains/${slug}-articles-${n}.js`;
+        try { await import(new URL(f, import.meta.url).href); batchFiles.push(f); } catch { break; }
+      }
+      for (const fileName of batchFiles) {
+        let mod;
+        try { mod = await import(fileName); }
+        catch { console.log(`  ${slug}: batch file not found at ${fileName}`); continue; }
+        await ingestDomain(kb, mod, stats);
+      }
     }
-    try {
-      mod = await import(fileName);
-    } catch {
-      console.log(`  ${domainArg}: article list not found at ${fileName}`);
-      continue;
-    }
-    await ingestDomain(kb, mod, stats);
   }
 
   // Rebuild TF-IDF index once after all ingestion

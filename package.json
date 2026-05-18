@@ -26,6 +26,7 @@
     "accounting:cert":    "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m",
 
     "kb:ingest":          "node scripts/kb-ingest.js",
+    "kb:ingest:mdn":      "node kb/ingest-mdn.js",
     "kb:package":         "node scripts/kb-package.js",
     "kb:install":         "node scripts/kb-install.js",
     "kb:query":           "node bin/kb.js query",

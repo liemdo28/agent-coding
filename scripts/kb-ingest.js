@@ -27,7 +27,7 @@ console.log('═'.repeat(60));
 console.log('  Knowledge Base Ingest — npm run kb:ingest');
 console.log('═'.repeat(60));
 console.log(`  DB location : ${DB_PATH}`);
-console.log(`  Source      : Wikipedia CC BY-SA 4.0 (REST API)`);
+console.log(`  Sources     : Wikipedia CC BY-SA 4.0 (REST API)`);
 console.log(`  Idempotent  : YES — safe to re-run\n`);
 
 if (existsSync(DB_PATH)) {

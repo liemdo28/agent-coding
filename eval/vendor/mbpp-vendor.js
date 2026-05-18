@@ -1,70 +1,52 @@
 /**
- * eval/vendor/mbpp-vendor.js — M1: Vendor MBPP dataset
- * =====================================================
- * Downloads and vendors the MBPP (Mostly Basic Python Problems) dataset.
- * MBPP: 974 Python programming problems, sanitized version.
+ * eval/vendor/mbpp-vendor.js — Vendor MBPP dataset
+ * =================================================
+ * MBPP: 974 Python programming problems (Google Research, CC BY 4.0).
+ * Source: https://github.com/google-research/google-research/tree/master/mbpp
  *
- * Source: pulkit1joshi/supercharging-the-bughunter repository
+ * The vendored data file is committed at:
+ *   eval/benchmarks/mbpp/data/mbpp.json
+ *
+ * This script re-vendors from upstream if the data file is absent or corrupted.
+ * Once vendored (or after git clone), eval runs FULLY OFFLINE.
  *
  * Usage:
- *   node eval/vendor/mbpp-vendor.js
+ *   node eval/vendor/mbpp-vendor.js          # re-vendor if needed
+ *   node eval/vendor/mbpp-vendor.js --force  # always re-download
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '..', 'benchmarks', 'mbpp', 'data');
-const MBPP_URL = 'https://raw.githubusercontent.com/pulkit1joshi/supercharging-the-bughunter/main/data/mbpp_sanitized.json';
+const ROOT     = dirname(dirname(fileURLToPath(import.meta.url)));
+const DATA_DIR = join(ROOT, 'benchmarks', 'mbpp', 'data');
+const OUT_FILE = join(DATA_DIR, 'mbpp.json');
+const SOURCE   = 'https://raw.githubusercontent.com/google-research/google-research/master/mbpp/mbpp.jsonl';
 
 mkdirSync(DATA_DIR, { recursive: true });
 
-async function vendorMBPP() {
-  console.log('[mbpp-vendor] Starting vendor process...');
-  console.log('[mbpp-vendor] Source: pulkit1joshi/supercharging-the-bughunter (GitHub)');
+const force = process.argv.includes('--force');
 
-  const outFile = join(DATA_DIR, 'mbpp.json');
-
-  if (existsSync(outFile)) {
-    try {
-      const data = JSON.parse(readFileSync(outFile, 'utf-8'));
-      console.log(`[mbpp-vendor] Already vendored: ${data.length} problems`);
-      return data;
-    } catch {
-      console.warn('[mbpp-vendor] Corrupted file. Re-vendoring...');
-    }
-  }
-
+if (!force && existsSync(OUT_FILE)) {
   try {
-    console.log('[mbpp-vendor] Fetching from GitHub...');
-    const response = await fetch(MBPP_URL);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    const data = JSON.parse(readFileSync(OUT_FILE, 'utf-8'));
+    if (Array.isArray(data) && data.length > 0 && data[0].task_id) {
+      console.log(`[mbpp-vendor] Already vendored: ${data.length} problems at ${OUT_FILE}`);
+      console.log('[mbpp-vendor] Eval runs offline. Use --force to re-download.');
+      process.exit(0);
     }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-      throw new Error('Expected JSON array');
-    }
-
-    writeFileSync(outFile, JSON.stringify(data, null, 2));
-    console.log(`[mbpp-vendor] ✓ Vendored ${data.length} MBPP problems`);
-    console.log(`[mbpp-vendor]   → ${outFile}`);
-
-    return data;
-  } catch (err) {
-    console.error(`[mbpp-vendor] Failed: ${err.message}`);
-    console.error('  Manual download: https://github.com/pulkit1joshi/supercharging-the-bughunter');
-    process.exit(1);
-  }
+  } catch { /* corrupted — re-vendor */ }
 }
 
-vendorMBPP().catch(err => {
-  console.error(`[mbpp-vendor] Fatal: ${err.message}`);
-  process.exit(1);
-});
+console.log('[mbpp-vendor] Downloading MBPP from GitHub (requires internet)...');
+console.log(`[mbpp-vendor] Source: ${SOURCE}`);
 
-export { vendorMBPP };
+const res  = await fetch(SOURCE);
+if (!res.ok) throw new Error(`HTTP ${res.status} ${SOURCE}`);
+const text = await res.text();
+
+const problems = text.split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
+writeFileSync(OUT_FILE, JSON.stringify(problems, null, 2));
+console.log(`[mbpp-vendor] ✓ Vendored ${problems.length} problems → ${OUT_FILE}`);
+console.log('[mbpp-vendor] Commit this file for fully offline operation.');

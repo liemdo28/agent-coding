@@ -1,97 +1,55 @@
 /**
- * eval/vendor/humaneval-vendor.js — M1: Vendor HumanEval dataset
- * ================================================================
- * Downloads and vendors the HumanEval dataset from open-source source.
- * HumanEval: 164 Python programming problems with test cases.
+ * eval/vendor/humaneval-vendor.js — Vendor HumanEval dataset
+ * ===========================================================
+ * HumanEval: 164 Python programming problems (OpenAI, MIT License).
+ * Source: https://github.com/openai/human-eval
  *
- * This script is OFFLINE-FRIENDLY: it fetches from public datasets that are
- * then cached locally. Once vendored, the benchmark runs entirely offline.
+ * The vendored data file is committed at:
+ *   eval/benchmarks/humaneval/data/humaneval.json
+ *
+ * This script re-vendors from upstream if the data file is absent or corrupted.
+ * Once vendored (or after git clone), eval runs FULLY OFFLINE.
  *
  * Usage:
- *   node eval/vendor/humaneval-vendor.js
+ *   node eval/vendor/humaneval-vendor.js          # re-vendor if needed
+ *   node eval/vendor/humaneval-vendor.js --force  # always re-download
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { gunzipSync } from 'zlib';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '..', 'benchmarks', 'humaneval', 'data');
-const HUMANEVAL_URL = 'https://github.com/openai/human-eval/raw/master/data/HumanEval.json';
+const ROOT     = dirname(dirname(fileURLToPath(import.meta.url)));
+const DATA_DIR = join(ROOT, 'benchmarks', 'humaneval', 'data');
+const OUT_FILE = join(DATA_DIR, 'humaneval.json');
+const SOURCE   = 'https://raw.githubusercontent.com/openai/human-eval/refs/heads/master/data/HumanEval.jsonl.gz';
 
 mkdirSync(DATA_DIR, { recursive: true });
 
-async function vendorHumanEval() {
-  console.log('[humaneval-vendor] Starting vendor process...');
-  console.log('[humaneval-vendor] Source: OpenAI HumanEval (GitHub)');
-  console.log('[humaneval-vendor] Note: For full offline operation, commit the data file to the repo.');
+const force = process.argv.includes('--force');
 
-  const outFile = join(DATA_DIR, 'humaneval.json');
-
-  // Check if already vendored
-  if (existsSync(outFile)) {
-    const stat = readFileSync(outFile, 'utf-8');
-    try {
-      const data = JSON.parse(stat);
-      console.log(`[humaneval-vendor] Already vendored: ${data.length} problems at ${outFile}`);
-      console.log('[humaneval-vendor] To re-vendor, delete the file first.');
-      return data;
-    } catch {
-      console.warn('[humaneval-vendor] Existing file is corrupted. Re-vendoring...');
-    }
-  }
-
+// Check if already vendored and valid
+if (!force && existsSync(OUT_FILE)) {
   try {
-    console.log('[humaneval-vendor] Fetching from GitHub...');
-    const response = await fetch(HUMANEVAL_URL);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const data = JSON.parse(readFileSync(OUT_FILE, 'utf-8'));
+    if (Array.isArray(data) && data.length > 0 && data[0].task_id) {
+      console.log(`[humaneval-vendor] Already vendored: ${data.length} problems at ${OUT_FILE}`);
+      console.log('[humaneval-vendor] Eval runs offline. Use --force to re-download.');
+      process.exit(0);
     }
-    
-    const text = await response.text();
-    const data = JSON.parse(text);
-    
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error('Invalid HumanEval data: expected non-empty array');
-    }
-    
-    // Validate structure
-    const required = ['task_id', 'prompt', 'entry_point', 'canonical_solution', 'test'];
-    for (let i = 0; i < Math.min(data.length, 3); i++) {
-      for (const field of required) {
-        if (!data[i].hasOwnProperty(field)) {
-          console.warn(`[humaneval-vendor] Warning: problem ${i} missing field "${field}"`);
-        }
-      }
-    }
-    
-    // Write vendored data
-    writeFileSync(outFile, JSON.stringify(data, null, 2));
-    
-    console.log(`[humaneval-vendor] ✓ Vendored ${data.length} HumanEval problems`);
-    console.log(`[humaneval-vendor]   → ${outFile}`);
-    console.log('[humaneval-vendor]   Commit this file to the repo for offline operation.');
-    
-    return data;
-  } catch (err) {
-    if (err.code === 'ENOTFOUND' || err.message.includes('fetch')) {
-      console.error('[humaneval-vendor] Network error. Options:');
-      console.error('  1. Fetch once online, then commit the data file');
-      console.error(`  2. Manually download from: ${HUMANEVAL_URL}`);
-      console.error(`  3. Place the file at: ${outFile}`);
-      console.error(`\n  Error: ${err.message}`);
-    } else {
-      console.error(`[humaneval-vendor] Failed: ${err.message}`);
-    }
-    process.exit(1);
-  }
+  } catch { /* corrupted — re-vendor */ }
 }
 
-// Self-run
-vendorHumanEval().catch(err => {
-  console.error(`[humaneval-vendor] Fatal: ${err.message}`);
-  process.exit(1);
-});
+console.log('[humaneval-vendor] Downloading HumanEval from GitHub (requires internet)...');
+console.log(`[humaneval-vendor] Source: ${SOURCE}`);
 
-export { vendorHumanEval };
+const res  = await fetch(SOURCE);
+if (!res.ok) throw new Error(`HTTP ${res.status} ${SOURCE}`);
+const buf  = await res.arrayBuffer();
+const text = gunzipSync(Buffer.from(buf)).toString('utf-8');
+
+const problems = text.split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
+writeFileSync(OUT_FILE, JSON.stringify(problems, null, 2));
+console.log(`[humaneval-vendor] ✓ Vendored ${problems.length} problems → ${OUT_FILE}`);
+console.log('[humaneval-vendor] Commit this file for fully offline operation.');
