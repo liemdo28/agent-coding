@@ -5,7 +5,8 @@
   "type": "module",
   "bin": {
     "local-agent": "./bin/local-agent.js",
-    "accounting": "./accounting-engine/bin/accounting.js"
+    "accounting":  "./accounting-engine/bin/accounting.js",
+    "kb":          "./bin/kb.js"
   },
   "scripts": {
     "start":            "node bin/local-agent.js",
