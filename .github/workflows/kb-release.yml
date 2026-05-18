@@ -37,13 +37,17 @@ jobs:
         run: node scripts/kb-package.js
         # Outputs: dist/kb/knowledge.db.gz + dist/kb/manifest.json
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Read manifest
         id: manifest
         run: |
-          echo "docs=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.documents)")" >> $GITHUB_OUTPUT
-          echo "chunks=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.chunks)")" >> $GITHUB_OUTPUT
-          echo "words=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.words)")" >> $GITHUB_OUTPUT
-          echo "size=$(node -e "const m=JSON.parse(require('fs').readFileSync('dist/kb/manifest.json'));console.log(m.compressedSizeMB)")" >> $GITHUB_OUTPUT
+          MANIFEST=dist/kb/manifest.json
+          echo "docs=$(jq -r '.documents' $MANIFEST)"       >> $GITHUB_OUTPUT
+          echo "chunks=$(jq -r '.chunks' $MANIFEST)"        >> $GITHUB_OUTPUT
+          echo "words=$(jq -r '.words' $MANIFEST)"          >> $GITHUB_OUTPUT
+          echo "size=$(jq -r '.compressedSizeMB' $MANIFEST)" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
