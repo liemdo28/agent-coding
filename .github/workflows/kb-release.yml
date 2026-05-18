@@ -39,53 +39,42 @@ jobs:
         run: node scripts/kb-package.js
         # Outputs: dist/kb/knowledge.db.gz + dist/kb/manifest.json
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
-      - name: Read manifest
-        id: manifest
+      - name: Read manifest and create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           MANIFEST=dist/kb/manifest.json
-          echo "docs=$(jq -r '.documents' $MANIFEST)"       >> $GITHUB_OUTPUT
-          echo "chunks=$(jq -r '.chunks' $MANIFEST)"        >> $GITHUB_OUTPUT
-          echo "words=$(jq -r '.words' $MANIFEST)"          >> $GITHUB_OUTPUT
-          echo "size=$(jq -r '.compressedSizeMB' $MANIFEST)" >> $GITHUB_OUTPUT
+          DOCS=$(jq -r '.documents'       $MANIFEST)
+          CHUNKS=$(jq -r '.chunks'        $MANIFEST)
+          WORDS=$(jq -r '.words'          $MANIFEST)
+          SIZE=$(jq -r '.compressedSizeMB' $MANIFEST)
+          TAG=${{ github.ref_name }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "Knowledge Base ${{ github.ref_name }}"
-          body: |
-            ## Offline Knowledge Base — ${{ github.ref_name }}
+          NOTES="## Offline Knowledge Base — ${TAG}
 
-            Pre-built SQLite database for the local-agent KB system.
-            **No internet required on target machines** — install with one command.
+          Pre-built SQLite database for the local-agent KB system.
+          **No internet required on target machines** — install with one command.
 
-            | Stat | Value |
-            |------|-------|
-            | Documents | ${{ steps.manifest.outputs.docs }} |
-            | Chunks | ${{ steps.manifest.outputs.chunks }} |
-            | Words | ${{ steps.manifest.outputs.words }} |
-            | Compressed size | ${{ steps.manifest.outputs.size }} MB |
-            | License | CC BY-SA 4.0 (Wikipedia contributors) |
-            | Built | ${{ github.run_started_at }} |
+          | Stat | Value |
+          |------|-------|
+          | Documents | ${DOCS} |
+          | Chunks | ${CHUNKS} |
+          | Words | ${WORDS} |
+          | Compressed size | ${SIZE} MB |
+          | License | CC BY-SA 4.0 (Wikipedia contributors) |
 
-            ## Install (offline machine)
+          ## Install (offline machine)
 
-            ```bash
-            # Transfer knowledge.db.gz to the target machine, then:
-            npm run kb:install <path-to-knowledge.db.gz>
+          \`\`\`bash
+          npm run kb:install <path-to-knowledge.db.gz>
+          npm run kb:stats
+          npm run kb:query \"your question here\"
+          \`\`\`
 
-            # Verify:
-            npm run kb:stats
-            npm run kb:query "your question here"
-            ```
+          See \`kb/README.md\` → **DEPLOY/RUNTIME Flow** for full instructions."
 
-            See `kb/README.md` → **DEPLOY/RUNTIME Flow** for full instructions.
-          files: |
-            dist/kb/knowledge.db.gz
+          gh release create "${TAG}" \
+            --title "Knowledge Base ${TAG}" \
+            --notes "${NOTES}" \
+            dist/kb/knowledge.db.gz \
             dist/kb/manifest.json
-          fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
