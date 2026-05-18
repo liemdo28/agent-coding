@@ -19,7 +19,11 @@
     "accounting:api":   "node accounting-engine/api/server.js",
     "accounting:stress":  "cd accounting-engine && node --experimental-vm-modules node_modules/.bin/jest tests/stress --runInBand",
     "accounting:verify":  "node accounting-engine/bin/accounting.js verify-ledger",
-    "accounting:cert":    "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m"
+    "accounting:cert":    "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m",
+    "kb:ingest":          "node scripts/kb-ingest.js",
+    "kb:query":           "node bin/kb.js query",
+    "kb:stats":           "node bin/kb.js stats",
+    "kb:seed":            "node bin/kb.js seed"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

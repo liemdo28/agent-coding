@@ -1,18 +1,40 @@
 // kb/pipeline/WikipediaFetcher.js — fetch articles via Wikipedia Action API (no scraping)
 // Uses extracts API: plain text, no HTML parsing needed.
 // Rate limit: max 1 req/200ms, respects User-Agent policy.
-import { createRequire } from 'module';
+// User-Agent format follows https://meta.wikimedia.org/wiki/User-Agent_policy
 
-const UA = 'local-offline-kb/1.0 (https://github.com/liemdo28/agent-coding; offline-rag-build)';
+// Wikipedia User-Agent policy requires: <client-name>/<version> (<contact>)
+const UA  = 'local-offline-kb/1.0 (https://github.com/liemdo28/agent-coding; contact: kb-build)';
 const API = 'https://en.wikipedia.org/w/api.php';
-const DELAY_MS = 220;   // ~4.5 req/s — well under Wikipedia's 200 req/s limit
+const DELAY_MS    = 220;   // ~4.5 req/s — well under Wikipedia's 200 req/s limit
+const MAX_RETRIES = 3;     // retry on transient errors (429, 5xx, network)
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function fetchJSON(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-  return res.json();
+  let lastErr;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA } });
+      if (res.status === 429) {
+        // Rate-limited — back off exponentially
+        const wait = Math.pow(2, attempt + 1) * 1000;
+        await sleep(wait);
+        continue;
+      }
+      if (res.status >= 500) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        await sleep(Math.pow(2, attempt) * 500);
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
+      return res.json();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_RETRIES) await sleep(Math.pow(2, attempt) * 500);
+    }
+  }
+  throw lastErr;
 }
 
 /**
