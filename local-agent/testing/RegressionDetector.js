@@ -1,5 +1,5 @@
 // testing/RegressionDetector.js - Detects regressions by comparing test results
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 function getBaselineDir(workspaceRoot) {
