@@ -991,6 +991,7 @@ async function main() {
         console.log(`\n  ${chalk[rcCol].bold(`Overall: ${rc}`)}`);
         console.log(`  ${chalk.gray('Report:')} ${mdPath}`);
         console.log(`  ${chalk.gray('JSON:')}   ${jsonPath}\n`);
+        if (rc === 'FAIL') process.exit(1);
       } catch (err) {
         spinner.fail(chalk.red('Security check failed'));
         die(err.message);

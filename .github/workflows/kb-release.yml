@@ -9,6 +9,9 @@ on:
     tags:
       - 'kb-v*'
 
+permissions:
+  contents: write   # required to create GitHub Releases and upload assets
+
 jobs:
   build-and-release:
     name: Ingest → Package → Release
@@ -23,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'   # Node 20 runners deprecated June 2026; use 22 LTS
 
       - name: Install native build tools (required for better-sqlite3)
         run: sudo apt-get install -y python3 make g++

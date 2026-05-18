@@ -1,4 +1,5 @@
 node_modules/
+dist/
 # Agent workspace dirs — generated at runtime, not committed
 /.local-agent/
 **/.local-agent/logs/

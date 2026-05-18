@@ -24,13 +24,6 @@ export const BLOCKED_COMMANDS = new Set([
   'nslookup',
   // External ping (can be used to detect internet reachability)
   'ping',
-  // Package managers — blocked in runtime/production context to prevent
-  // downloading remote packages during agent execution
-  'npm',
-  'yarn',
-  'pnpm',
-  'pip',
-  'pip3',
 ]);
 
 /**
@@ -53,10 +46,14 @@ export const NETWORK_PATTERNS = [
   /https?:\/\//i,                  // Inline URL in command
   /--url\s+https?:\/\//i,
   /\bnpm\s+install\b/i,
+  /\bnpm\s+(audit|publish|owner|login|logout|token|profile|whoami|ping)\b/i,
   /\byarn\s+add\b/i,
+  /\byarn\s+(install|publish|npm\s+publish)\b/i,
   /\bpnpm\s+add\b/i,
+  /\bpnpm\s+(install|publish|audit)\b/i,
   /\bpip\s+install\b/i,
   /\bpip3\s+install\b/i,
+  /\bnpx\s+[^@\s]+@(?:latest|\d)/i,
 ];
 
 /**

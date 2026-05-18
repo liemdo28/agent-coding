@@ -152,3 +152,76 @@ describe('DecisionTracker', () => {
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });
+
+describe('CommandPolicy and sandbox execution', () => {
+  test('policy permits npm run scripts but blocks network package operations', async () => {
+    const { checkCommand } = await import('../local-agent/security/CommandPolicy.js');
+
+    assert.strictEqual(checkCommand('npm', ['run', 'build']).allowed, true);
+    assert.strictEqual(checkCommand('npm', ['install']).allowed, false);
+    assert.strictEqual(checkCommand('npx', ['some-package@latest']).allowed, false);
+    assert.strictEqual(checkCommand('node', ['script.js', 'https://example.com']).allowed, false);
+  });
+
+  test('policy blocks destructive command patterns', async () => {
+    const { checkCommand } = await import('../local-agent/security/CommandPolicy.js');
+
+    const result = checkCommand('rm', ['-rf', '/']);
+    assert.strictEqual(result.allowed, false);
+    assert.strictEqual(result.destructive, true);
+  });
+
+  test('sandbox enforces command policy and writes audit events', async () => {
+    const { createSandbox } = await import('../local-agent/sandbox/sandbox.js');
+    const { getRecentEvents } = await import('../local-agent/security/AuditLogger.js');
+    const dir = tmp();
+
+    try {
+      const sandbox = createSandbox(dir, {
+        sandbox: {
+          allowedCommands: ['node', 'npm'],
+          blockedCommands: ['curl'],
+          timeoutMs: 5000,
+          maxOutputBytes: 10000,
+        },
+      });
+
+      const ok = await sandbox.runCommand(
+        'node',
+        ['-e', 'console.log("sandbox-ok")'],
+        { cwd: dir }
+      );
+      assert.strictEqual(ok.success, true);
+      assert.match(ok.stdout, /sandbox-ok/);
+
+      await assert.rejects(
+        () => sandbox.runCommand('npm', ['install'], { cwd: dir }),
+        /network-related pattern|blocked by security policy/
+      );
+
+      const events = getRecentEvents(dir, 10);
+      assert.ok(events.some((e) => e.event === 'command_completed'));
+      assert.ok(events.some((e) => e.event === 'command_policy_blocked'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('SecretScanner', () => {
+  test('basic auth URL pattern does not flag package registry URLs', async () => {
+    const { scanContent } = await import('../local-agent/security/SecretScanner.js');
+    const content = '"resolved": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.0.tgz"';
+
+    const findings = scanContent(content, 'package-lock.json');
+    assert.strictEqual(findings.some((f) => f.name === 'Basic Auth URL'), false);
+  });
+
+  test('basic auth URL pattern still flags credentialed URLs', async () => {
+    const { scanContent } = await import('../local-agent/security/SecretScanner.js');
+    const content = 'const url = "' + ['https://deploy', 'supersecret@example.com/repo.git'].join(':') + '";';
+
+    const findings = scanContent(content, 'example.js');
+    assert.ok(findings.some((f) => f.name === 'Basic Auth URL'));
+  });
+});

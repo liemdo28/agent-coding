@@ -13,6 +13,7 @@
     "dev":              "node bin/local-agent.js",
     "build":            "node scripts/build-check.js",
     "lint":             "node scripts/lint-check.js",
+    "setup:production": "bash scripts/production-setup.sh",
     "test":             "node --test tests/smoke.test.js tests/modules.test.js",
     "test:integration": "node --test tests/integration/cli.test.js",
     "ui:server":        "node local-agent/ui/backend/server.js",
