@@ -27,10 +27,11 @@
 
     "kb:ingest":          "node scripts/kb-ingest.js",
     "kb:ingest:mdn":      "node kb/ingest-mdn.js",
+    "kb:generate-stats":  "node kb/generate-stats.js",
     "kb:package":         "node scripts/kb-package.js",
     "kb:install":         "node scripts/kb-install.js",
     "kb:query":           "node bin/kb.js query",
-    "kb:stats":          "node bin/kb.js stats",
+    "kb:stats":           "node bin/kb.js stats",
     "kb:seed":            "node bin/kb.js seed",
 
     "eval:all":           "node eval/runner.js --all",
