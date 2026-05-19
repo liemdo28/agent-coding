@@ -20,7 +20,8 @@
     "security": "Bảo mật",
     "reports": "Báo cáo",
     "architecture": "Kiến trúc hệ thống",
-    "kpi": "Thống kê KPI"
+    "kpi": "Thống kê KPI",
+    "corporate": "Điều phối doanh nghiệp"
   },
   "dashboard": {
     "title": "Tổng quan hệ thống",

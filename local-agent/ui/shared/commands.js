@@ -51,7 +51,7 @@ export const COMMAND_GROUPS = [
     labelKey: 'commandCenter.groups.agent',
     commands: [
       { script: 'start',         labelKey: 'scripts.start.label',         descKey: 'scripts.start.desc',         warn: false },
-      { script: 'corp:simulate', labelKey: 'scripts.corp:simulate.label', descKey: 'scripts.corp:simulate.desc', warn: true,  estTime: '5-10 phút' },
+      { script: 'corp:simulate', labelKey: 'scripts.corp:simulate.label', descKey: 'scripts.corp:simulate.desc', warn: false, estTime: '5-10 phút', requiresInput: true, inputPrompt: 'Nhập task cần điều phối', inputPlaceholder: 'Ví dụ: Fix bug module payment, Audit bảo mật, Lên kế hoạch marketing Q3' },
     ],
   },
 ];

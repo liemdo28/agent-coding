@@ -20,7 +20,8 @@
     "security": "Security",
     "reports": "Reports",
     "architecture": "System Architecture",
-    "kpi": "KPI Charts"
+    "kpi": "KPI Charts",
+    "corporate": "Corporate Dispatches"
   },
   "dashboard": {
     "title": "System Overview",

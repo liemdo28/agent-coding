@@ -12,7 +12,8 @@ import Security       from './pages/Security.jsx';
 import CommandCenter  from './pages/CommandCenter.jsx';
 import ActivityLog    from './pages/ActivityLog.jsx';
 import Architecture   from './pages/Architecture.jsx';
-import KPICharts      from './pages/KPICharts.jsx';
+import KPICharts          from './pages/KPICharts.jsx';
+import CorporateDashboard from './pages/CorporateDashboard.jsx';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="security"         element={<Security />} />
           <Route path="architecture"     element={<Architecture />} />
           <Route path="kpi"              element={<KPICharts />} />
+          <Route path="corporate"        element={<CorporateDashboard />} />
           <Route path="*"                element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

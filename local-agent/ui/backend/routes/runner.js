@@ -111,8 +111,10 @@ router.post('/api/run', (req, res) => {
   // Append started entry
   appendActivityLog({ ts: startedAt, script, label: scriptLabel, jobId, status: 'started' });
 
-  // Spawn npm run <script>
-  const child = spawn('npm', ['run', script], {
+  // Spawn npm run <script> [args...]
+  const extraArgs = Array.isArray(req.body?.args) ? req.body.args.map(String) : [];
+  const spawnArgs = ['run', script, ...extraArgs];
+  const child = spawn('npm', spawnArgs, {
     cwd: PROJECT_ROOT,
     shell: false,
     env: { ...process.env },
@@ -479,6 +481,51 @@ router.get('/api/kpi-stats', (req, res) => {
       totalFailed,
       avgDurationMs: durationCount > 0 ? Math.round(totalDuration / durationCount) : 0,
     });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/corp-dispatches ──────────────────────────────────────────────────
+router.get('/api/corp-dispatches', (req, res) => {
+  try {
+    const dir = join(PROJECT_ROOT, '.local-agent', 'command-center');
+    if (!existsSync(dir)) {
+      return res.json({ dispatches: [], summary: { total: 0, byDivision: {}, byPriority: {}, byDevStatus: {}, byQAStatus: {} } });
+    }
+
+    const files = readdirSync(dir)
+      .filter(f => f.startsWith('dispatch-') && f.endsWith('.json'))
+      .sort()
+      .reverse()
+      .slice(0, 100);
+
+    const dispatches = [];
+    for (const file of files) {
+      try {
+        const d = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+        dispatches.push(d);
+      } catch { /* skip malformed */ }
+    }
+
+    const byDivision = {};
+    const byPriority = {};
+    const byDevStatus = {};
+    const byQAStatus = {};
+
+    for (const d of dispatches) {
+      const div       = d.company?.id             ?? 'unknown';
+      const pri       = d.task?.priority           ?? 'normal';
+      const devStatus = d.execution?.dev?.status   ?? 'unknown';
+      const qaStatus  = d.execution?.qa?.status    ?? 'unknown';
+
+      byDivision[div]        = (byDivision[div]        ?? 0) + 1;
+      byPriority[pri]        = (byPriority[pri]        ?? 0) + 1;
+      byDevStatus[devStatus] = (byDevStatus[devStatus] ?? 0) + 1;
+      byQAStatus[qaStatus]   = (byQAStatus[qaStatus]   ?? 0) + 1;
+    }
+
+    res.json({ dispatches, summary: { total: dispatches.length, byDivision, byPriority, byDevStatus, byQAStatus } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
