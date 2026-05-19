@@ -60,11 +60,13 @@ export default function Chat() {
             ]);
           }
         } else if (event === 'error') {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === agentId ? { ...m, text: `Error: ${data.message}`, error: true } : m
-            )
-          );
+          const isLLMDown = data.message?.includes('not reachable') || data.message?.includes('LLM');
+          setMessages((prev) => prev.map(m => m.id === agentId ? {
+            ...m,
+            role: isLLMDown ? 'llm-error' : 'error',
+            text: data.message,
+            error: !isLLMDown,
+          } : m));
         }
       },
       () => setStreaming(false),
@@ -101,6 +103,25 @@ export default function Chat() {
       <div className="card" style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column', padding: '16px' }}>
         <div className="chat-messages">
           {messages.map((msg) => (
+            msg.role === 'llm-error' ? (
+              <div
+                key={msg.id}
+                className="chat-message error"
+                style={{ borderColor: 'var(--red)', borderWidth: 2, borderStyle: 'solid', borderRadius: 8, padding: '12px 16px', background: 'rgba(255,59,48,0.07)' }}
+              >
+                <div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 8, fontSize: 15 }}>
+                  🔴 Không kết nối được AI
+                </div>
+                <div style={{ color: 'var(--text-muted)', marginBottom: 10, fontSize: 13 }}>
+                  Ollama chưa chạy hoặc chưa cài. Để sửa:
+                </div>
+                <ol style={{ margin: '0 0 10px 0', paddingLeft: 20, fontSize: 13, color: 'var(--text)' }}>
+                  <li style={{ marginBottom: 4 }}>Chạy lệnh: <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.12)', padding: '1px 6px', borderRadius: 4 }}>ollama serve</code></li>
+                  <li>Nếu chưa cài: xem <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.12)', padding: '1px 6px', borderRadius: 4 }}>docs/setup/local-llm.md</code></li>
+                </ol>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', opacity: 0.7 }}>{msg.text}</div>
+              </div>
+            ) : (
             <div
               key={msg.id}
               className={`chat-message ${msg.role}`}
@@ -110,6 +131,7 @@ export default function Chat() {
               {msg.role === 'agent' && <div style={{ fontSize: 11, color: 'var(--blue)', marginBottom: 4 }}>Agent</div>}
               {msg.text || (msg.role === 'agent' && streaming ? <span className="spinner" /> : '')}
             </div>
+            )
           ))}
           <div ref={bottomRef} />
         </div>

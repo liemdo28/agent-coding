@@ -203,6 +203,18 @@ export default function Dashboard() {
               {'  ·  '}{t('dashboard.memoryUsed')}: {healthData.system?.memMB ?? 0} MB
             </div>
           </div>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="card-title">AI (Local LLM)</div>
+            <div style={{ fontSize: 28, fontWeight: 700 }}>
+              {healthData.llm?.available ? '🟢' : '🔴'}
+            </div>
+            <div style={{ fontSize: 12, color: healthData.llm?.available ? 'var(--green)' : 'var(--red)' }}>
+              {healthData.llm?.available
+                ? 'AI đang chạy'
+                : <span>AI chưa chạy — <span style={{ color: 'var(--text-muted)' }}>xem docs/setup/local-llm.md</span></span>
+              }
+            </div>
+          </div>
         </div>
       )}
 

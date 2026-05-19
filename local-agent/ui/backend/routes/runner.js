@@ -367,7 +367,7 @@ router.get('/api/activity-log/export', (req, res) => {
 });
 
 // ── GET /api/health ───────────────────────────────────────────────────────────
-router.get('/api/health', (_req, res) => {
+router.get('/api/health', async (_req, res) => {
   try {
     // KB stats
     let kbDocs = 0;
@@ -414,6 +414,16 @@ router.get('/api/health', (_req, res) => {
       }
     } catch { /* ignore */ }
 
+    // Check LLM
+    let llm = { available: false, url: 'http://localhost:11434' };
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 1500);
+      const r = await fetch('http://localhost:11434/api/tags', { signal: ctrl.signal });
+      clearTimeout(timer);
+      llm = { available: r.ok, url: 'http://localhost:11434' };
+    } catch { llm = { available: false, url: 'http://localhost:11434' }; }
+
     res.json({
       success: true,
       data: {
@@ -425,6 +435,7 @@ router.get('/api/health', (_req, res) => {
         offlineGuard: true,
         hasRecentError,
         lastActivityEntry,
+        llm,
       },
     });
   } catch (err) {
