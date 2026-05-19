@@ -1,10 +1,12 @@
 // routes/runner.js — npm script runner with SSE streaming + activity log
 import { Router } from 'express';
 import { spawn } from 'child_process';
-import { existsSync, mkdirSync, appendFileSync, readFileSync, createReadStream, statSync } from 'fs';
+import { existsSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, unlinkSync, readdirSync, createReadStream, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'crypto';
+import { gzipSync } from 'zlib';
+import { ALLOWED_SCRIPTS } from '../../shared/commands.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +18,43 @@ const router = Router();
 // ── In-memory job store ────────────────────────────────────────────────────────
 const jobs = new Map();
 // Map<jobId, { script, label, pid, status, lines[], startedAt, endedAt, exitCode, listeners[] }>
+
+// Helper: path to today's activity log
+const _todayLogPath = () => {
+  const d = new Date().toISOString().slice(0, 10);
+  return join(PROJECT_ROOT, 'logs', 'activity', `activity-${d}.log`);
+};
+
+// Restore jobs from today's activity log on startup (B2)
+(function restoreJobsFromLog() {
+  try {
+    const logPath = _todayLogPath();
+    if (!existsSync(logPath)) return;
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        if (!entry.jobId || entry.jobId === 'rejected') continue;
+        if (!jobs.has(entry.jobId)) {
+          jobs.set(entry.jobId, {
+            jobId: entry.jobId, script: entry.script, label: entry.label,
+            status: entry.status === 'started' ? 'completed' : entry.status,
+            startedAt: entry.ts, endedAt: null, exitCode: entry.exitCode ?? null,
+            lines: [], listeners: [], pid: null,
+          });
+        } else {
+          // Update with latest entry for this jobId
+          const job = jobs.get(entry.jobId);
+          if (entry.status !== 'started') {
+            job.status = entry.status;
+            job.exitCode = entry.exitCode ?? job.exitCode;
+          }
+        }
+      } catch { /* skip malformed lines */ }
+    }
+    console.log(`[runner] Restored ${jobs.size} jobs from today's activity log`);
+  } catch { /* non-fatal */ }
+}());
 
 function activityLogPath() {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -43,6 +82,12 @@ router.post('/api/run', (req, res) => {
   // Basic validation — no shell injection
   if (!/^[\w:@/-]+$/.test(script)) {
     return res.status(400).json({ success: false, error: 'Invalid script name' });
+  }
+
+  // Whitelist enforcement — only known scripts allowed (Part A)
+  if (!ALLOWED_SCRIPTS.includes(script)) {
+    appendActivityLog({ ts: new Date().toISOString(), script, label: script, jobId: 'rejected', status: 'rejected', reason: 'not in whitelist' });
+    return res.status(403).json({ success: false, error: 'Lệnh không được phép', script });
   }
 
   const jobId = makeJobId();
@@ -253,9 +298,49 @@ router.get('/api/activity-log', (req, res) => {
       })
       .filter(Boolean);
 
-    res.json({ success: true, data: entries });
+    // B4: include summary stats
+    const summary = {
+      total: entries.length,
+      completed: entries.filter(e => e.status === 'completed').length,
+      failed: entries.filter(e => e.status === 'failed').length,
+      mostUsed: (() => {
+        const counts = {};
+        entries.forEach(e => { if (e.script) counts[e.script] = (counts[e.script] || 0) + 1; });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([script, count]) => ({ script, count }));
+      })(),
+    };
+
+    res.json({ success: true, data: entries, summary });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── POST /api/activity-log/rotate — compress logs older than 7 days (B4) ──────
+router.post('/activity-log/rotate', (_req, res) => {
+  try {
+    const logDir = join(PROJECT_ROOT, 'logs', 'activity');
+    if (!existsSync(logDir)) return res.json({ rotated: 0, message: '0 file(s) compressed' });
+    const files = readdirSync(logDir).filter(f => f.startsWith('activity-') && f.endsWith('.log'));
+    const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    let rotated = 0;
+    for (const file of files) {
+      const dateStr = file.replace('activity-', '').replace('.log', '');
+      if (new Date(dateStr) < cutoff) {
+        const src = join(logDir, file);
+        const dst = src + '.gz';
+        try {
+          const content = readFileSync(src);
+          const compressed = gzipSync(content);
+          writeFileSync(dst, compressed);
+          unlinkSync(src);
+          rotated++;
+        } catch { /* skip files that can't be compressed */ }
+      }
+    }
+    res.json({ rotated, message: `${rotated} file(s) compressed` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -305,6 +390,28 @@ router.get('/api/health', (_req, res) => {
     const passed = recentJobs.filter((j) => j.exitCode === 0).length;
     const failed = recentJobs.filter((j) => j.exitCode !== 0 && j.exitCode !== null).length;
 
+    // B3: lastIngest from stats.json
+    let lastIngest = null;
+    try {
+      if (existsSync(statsFile)) {
+        const kbStats = JSON.parse(readFileSync(statsFile, 'utf8'));
+        lastIngest = kbStats?.generatedAt ?? null;
+      }
+    } catch { /* ignore */ }
+
+    // B3: activity log analysis
+    let hasRecentError = false;
+    let lastActivityEntry = null;
+    try {
+      const logPath = _todayLogPath();
+      if (existsSync(logPath)) {
+        const lines = readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean).slice(-20);
+        const recent = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+        hasRecentError = recent.slice(-10).some(e => e.status === 'failed');
+        lastActivityEntry = recent[recent.length - 1] ?? null;
+      }
+    } catch { /* ignore */ }
+
     res.json({
       success: true,
       data: {
@@ -312,6 +419,10 @@ router.get('/api/health', (_req, res) => {
         tests: { pass: passed, fail: failed },
         system: { uptime: uptimeSec, memMB },
         timestamp: new Date().toISOString(),
+        lastIngest,
+        offlineGuard: true,
+        hasRecentError,
+        lastActivityEntry,
       },
     });
   } catch (err) {

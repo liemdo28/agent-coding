@@ -46,12 +46,14 @@ export default function ActivityLog() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate]               = useState(today);
   const [entries, setEntries]         = useState([]);
+  const [summary, setSummary]         = useState(null);
   const [loading, setLoading]         = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch]           = useState('');
   const [expandedId, setExpandedId]   = useState(null);
   const [jobLines, setJobLines]       = useState({}); // jobId -> lines[]
   const [hasRunning, setHasRunning]   = useState(false);
+  const [rotateMsg, setRotateMsg]     = useState(null);
   const intervalRef = useRef(null);
 
   const fetchLog = useCallback(async () => {
@@ -59,8 +61,11 @@ export default function ActivityLog() {
       const resp = await fetch(`/api/activity-log?date=${date}`);
       const data = await resp.json();
       if (data.success) {
-        setEntries(data.data ?? []);
-        const running = (data.data ?? []).some((e) => e.status === 'started' || e.status === 'running');
+        // Support both old shape (data.data = array) and new shape (data.data + data.summary)
+        const rawEntries = data.data ?? [];
+        setEntries(rawEntries);
+        setSummary(data.summary ?? null);
+        const running = rawEntries.some((e) => e.status === 'started' || e.status === 'running');
         setHasRunning(running);
       }
     } catch { /* ignore */ }
@@ -85,6 +90,18 @@ export default function ActivityLog() {
 
   function handleExport() {
     window.open(`/api/activity-log/export?date=${date}`, '_blank');
+  }
+
+  async function handleRotate() {
+    try {
+      const resp = await fetch('/api/activity-log/rotate', { method: 'POST' });
+      const data = await resp.json();
+      setRotateMsg(data.message ?? 'Done');
+      setTimeout(() => setRotateMsg(null), 4000);
+    } catch (err) {
+      setRotateMsg('Lỗi: ' + err.message);
+      setTimeout(() => setRotateMsg(null), 4000);
+    }
   }
 
   async function handleRowClick(entry) {
@@ -155,10 +172,43 @@ export default function ActivityLog() {
     <div>
       <div className="page-header">
         <h1 className="page-title">{t('activityLog.title')}</h1>
-        <button className="btn" onClick={handleExport}>
-          {t('activityLog.export')} ↓
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn" onClick={handleExport}>
+            {t('activityLog.export')} ↓
+          </button>
+          <button className="btn" onClick={handleRotate} title="Nén log cũ hơn 7 ngày">
+            Dọn dẹp log cũ
+          </button>
+          {rotateMsg && (
+            <span style={{ fontSize: 12, color: 'var(--green)', marginLeft: 4 }}>{rotateMsg}</span>
+          )}
+        </div>
       </div>
+
+      {/* B4: Summary stats strip */}
+      {summary && (
+        <div className="card" style={{ marginBottom: 12, display: 'flex', gap: 24, flexWrap: 'wrap', padding: '10px 16px' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            Tổng: <strong style={{ color: 'var(--text)' }}>{summary.total}</strong>
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            Hoàn thành: <strong style={{ color: 'var(--green)' }}>{summary.completed}</strong>
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            Lỗi: <strong style={{ color: 'var(--red)' }}>{summary.failed}</strong>
+          </span>
+          {summary.mostUsed && summary.mostUsed.length > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Dùng nhiều nhất:{' '}
+              {summary.mostUsed.slice(0, 3).map((m, i) => (
+                <span key={m.script} style={{ color: 'var(--text)', fontFamily: 'monospace' }}>
+                  {i > 0 && ', '}{m.script} ({m.count})
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="card" style={{ marginBottom: 16 }}>

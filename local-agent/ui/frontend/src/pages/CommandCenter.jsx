@@ -1,16 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { t } from '../i18n/index.js';
-import viScripts from '../i18n/vi.json';
-import enScripts from '../i18n/en.json';
-import { getLang } from '../i18n/index.js';
+import { COMMAND_GROUPS } from '../../../../shared/commands.js';
 
-// Get scripts from current lang
-function getScripts() {
-  const lang = getLang();
-  return lang === 'en' ? enScripts.scripts : viScripts.scripts;
-}
-
-const GROUP_ORDER = ['kb', 'eval', 'accounting', 'build', 'agent'];
 const GROUP_ICONS = {
   kb: '🧠',
   eval: '📊',
@@ -37,16 +28,18 @@ function lineColor(line) {
 }
 
 export default function CommandCenter() {
-  const scripts = getScripts();
-
-  // Group scripts
-  const grouped = GROUP_ORDER.map((groupKey) => ({
-    key: groupKey,
-    label: t(`commandCenter.groups.${groupKey}`),
-    icon: GROUP_ICONS[groupKey],
-    items: Object.entries(scripts)
-      .filter(([, meta]) => meta.group === groupKey)
-      .map(([scriptKey, meta]) => ({ scriptKey, ...meta })),
+  // Build grouped list from shared COMMAND_GROUPS, resolving i18n labels at render time
+  const grouped = COMMAND_GROUPS.map((group) => ({
+    key: group.id,
+    label: t(group.labelKey),
+    icon: GROUP_ICONS[group.id],
+    items: group.commands.map((cmd) => ({
+      scriptKey: cmd.script,
+      label: t(cmd.labelKey),
+      desc: t(cmd.descKey),
+      warn: cmd.warn,
+      estTime: cmd.estTime ?? null,
+    })),
   })).filter((g) => g.items.length > 0);
 
   // Job state
