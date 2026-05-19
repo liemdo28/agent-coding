@@ -36,6 +36,7 @@ import projectsRouter     from './routes/projects.js';
 import runnerRouter       from './routes/runner.js';
 import chatSessionsRouter  from './routes/chat-sessions.js';
 import allowedPathsRouter  from './routes/allowed-paths.js';
+import digitalTwinRouter   from './routes/digital-twin.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -129,6 +130,7 @@ const apiRouters = [
   runnerRouter,
   chatSessionsRouter,
   allowedPathsRouter,
+  digitalTwinRouter,
 ];
 
 for (const router of apiRouters) {

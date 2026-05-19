@@ -1,435 +1,400 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { api } from '../services/api.js';
 import { t } from '../i18n/index.js';
 
-const DIVISION_NAMES = {
-  'rnd':                   'R&D',
-  'manufacturing':         'Kỹ thuật sản xuất',
-  'it-ai':                 'Công nghệ & AI',
-  'finance':               'Tài chính',
-  'marketing-sales':       'Marketing & Sales',
-  'operations-logistics':  'Vận hành',
-  'hr-culture':            'Nhân sự',
-  'legal-compliance':      'Pháp chế',
+const TABS = [
+  { id: 'twin', label: 'Digital Twin' },
+  { id: 'companies', label: 'Companies' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'tasks', label: 'Active Tasks' },
+  { id: 'simulation', label: 'Simulation' },
+];
+
+const RISK = {
+  safe:   { label: 'Safe',   color: '#3fb950' },
+  warn:   { label: 'Warn',   color: '#d29922' },
+  alert:  { label: 'Alert',  color: '#ff8c42' },
+  danger: { label: 'Danger', color: '#f85149' },
 };
 
-const ALL_DIVISIONS = Object.keys(DIVISION_NAMES);
+const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, normal: 3, low: 4 };
 
-const PRIORITY_COLORS = {
-  critical: '#f85149',
-  high:     '#e3702d',
-  medium:   '#d4a017',
-  normal:   '#58a6ff',
-  low:      '#8b949e',
-};
-
-const STATUS_COLORS = {
-  'proposal-ready':  { bg: '#1a3a2a', text: '#3fb950', border: '#238636' },
-  'review-required': { bg: '#3a2e00', text: '#e3b341', border: '#9e6a03' },
-  'failed':          { bg: '#3a1a1a', text: '#f85149', border: '#da3633' },
-  'unknown':         { bg: '#161b22', text: '#8b949e', border: '#30363d' },
-};
-
-function statusStyle(status) {
-  return STATUS_COLORS[status] ?? STATUS_COLORS['unknown'];
+function riskMeta(band) {
+  return RISK[band] ?? RISK.safe;
 }
 
-function StatusBadge({ status }) {
-  const s = statusStyle(status);
-  return (
-    <span style={{
-      padding: '2px 8px',
-      borderRadius: 20,
-      fontSize: 11,
-      fontWeight: 600,
-      background: s.bg,
-      color: s.text,
-      border: `1px solid ${s.border}`,
-      whiteSpace: 'nowrap',
-    }}>
-      {status ?? 'unknown'}
-    </span>
-  );
+function pct(value) {
+  return `${Math.round((Number(value) || 0) * 100)}%`;
 }
 
-function PriorityBadge({ priority }) {
-  const color = PRIORITY_COLORS[priority] ?? PRIORITY_COLORS.normal;
-  return (
-    <span style={{
-      padding: '2px 8px',
-      borderRadius: 20,
-      fontSize: 11,
-      fontWeight: 600,
-      background: color + '22',
-      color: color,
-      border: `1px solid ${color}55`,
-      whiteSpace: 'nowrap',
-    }}>
-      {priority ?? 'normal'}
-    </span>
-  );
+function sortTasks(tasks, sortKey) {
+  return [...tasks].sort((a, b) => {
+    if (sortKey === 'priority') return (PRIORITY_ORDER[a.priority] ?? 5) - (PRIORITY_ORDER[b.priority] ?? 5);
+    if (sortKey === 'risk') return b.riskScore - a.riskScore;
+    if (sortKey === 'batch') return a.batch.localeCompare(b.batch);
+    return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
+  });
 }
 
-function RiskBadge({ risk }) {
-  const colorMap = { low: '#3fb950', medium: '#e3b341', high: '#f85149', critical: '#f85149' };
-  const color = colorMap[risk] ?? '#8b949e';
+function StatCard({ label, value, tone = 'blue', detail }) {
   return (
-    <span style={{ fontSize: 11, color, fontWeight: 600 }}>{risk ?? '-'}</span>
-  );
-}
-
-function SummaryCard({ label, value, color }) {
-  return (
-    <div className="card" style={{ flex: 1, minWidth: 120, textAlign: 'center', padding: '16px 12px' }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: color ?? 'var(--text)' }}>{value}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>
+    <div className={`dt-stat dt-stat-${tone}`}>
+      <div className="dt-stat-value">{value}</div>
+      <div className="dt-stat-label">{label}</div>
+      {detail && <div className="dt-stat-detail">{detail}</div>}
     </div>
   );
 }
 
-function DivisionBarChart({ byDivision }) {
-  const maxCount = Math.max(1, ...ALL_DIVISIONS.map(d => byDivision[d] ?? 0));
-  const BAR_MAX_WIDTH = 260;
-
+function RiskPill({ band, value }) {
+  const meta = riskMeta(band);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {ALL_DIVISIONS.map((div) => {
-        const count = byDivision[div] ?? 0;
-        const barWidth = count === 0 ? 0 : Math.max(6, Math.round((count / maxCount) * BAR_MAX_WIDTH));
-        // Color gradient: low=gray, medium=blue, high=green
-        const intensity = count / maxCount;
-        const r = Math.round(88  + (63  - 88)  * intensity);
-        const g = Math.round(166 + (185 - 166) * intensity);
-        const b = Math.round(255 + (80  - 255) * intensity);
-        const barColor = count === 0 ? '#30363d' : `rgb(${r},${g},${b})`;
-
-        return (
-          <div key={div} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 130, fontSize: 12, color: 'var(--text)', textAlign: 'right', flexShrink: 0 }}>
-              {DIVISION_NAMES[div]}
-            </div>
-            <div style={{ width: BAR_MAX_WIDTH, background: '#21262d', borderRadius: 4, height: 18, flexShrink: 0 }}>
-              <div style={{
-                width: barWidth,
-                height: '100%',
-                background: barColor,
-                borderRadius: 4,
-                transition: 'width 0.4s ease',
-              }} />
-            </div>
-            <div style={{ fontSize: 12, color: count > 0 ? 'var(--text)' : 'var(--text-muted)', minWidth: 20 }}>
-              {count}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    <span className="dt-risk-pill" style={{ '--risk': meta.color }}>
+      {meta.label}{value !== undefined ? ` ${pct(value)}` : ''}
+    </span>
   );
 }
 
-function PriorityPills({ byPriority }) {
-  const priorities = ['critical', 'high', 'medium', 'normal', 'low'];
+function Tooltip({ item, type }) {
+  if (!item) return null;
+  const risk = item.predictedRisk ?? item.riskScore ?? 0;
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {priorities.map((p) => {
-        const count = byPriority[p] ?? 0;
-        if (count === 0) return null;
-        return (
-          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <PriorityBadge priority={p} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{count}</span>
-          </div>
-        );
-      })}
-      {Object.values(byPriority).every(v => v === 0) && (
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+    <div className="dt-tooltip">
+      <div className="dt-tooltip-title">{item.name ?? item.title ?? item.id}</div>
+      <div>SLA risk: <strong>{pct(risk)}</strong></div>
+      {type === 'company' && (
+        <>
+          <div>Batch: {item.currentBatch}</div>
+          <div>High priority: {item.highPriorityTasks}</div>
+          <div>QA fail rate: {pct(item.qaFailRate)}</div>
+          <div>Workers: {item.workerPool}</div>
+        </>
+      )}
+      {type === 'batch' && (
+        <>
+          <div>Tasks: {item.taskCount}</div>
+          <div>High priority: {item.highPriorityTasks}</div>
+          <div>QA fail rate: {pct(item.qaFailRate)}</div>
+          <div>Worker allocation: {item.workerAllocation}</div>
+        </>
+      )}
+      {type === 'task' && (
+        <>
+          <div>Priority: {item.priority}</div>
+          <div>Batch: {item.batch}</div>
+          <div>QA: {item.qaStatus}</div>
+          <div>Rollback: {item.rollback ? 'yes' : 'no'}</div>
+        </>
       )}
     </div>
   );
 }
 
-function ExpandedRow({ dispatch }) {
-  const dev = dispatch.execution?.dev;
-  const qa  = dispatch.execution?.qa;
-
+function SimulationControls({ controls, setControls, refresh }) {
+  const set = (key, value) => setControls((prev) => ({ ...prev, [key]: Number(value) }));
   return (
-    <tr>
-      <td colSpan={7} style={{ padding: '0 16px 16px', background: '#0d1117' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, paddingTop: 12 }}>
-          {/* Dev summary */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Dev Summary
-            </div>
-            {dev?.summary ? (
-              <p style={{ fontSize: 12, color: 'var(--text)', margin: 0, lineHeight: 1.6 }}>{dev.summary}</p>
-            ) : (
-              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-            )}
-            {dev?.suggestedCommands?.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Suggested commands:</div>
-                {dev.suggestedCommands.map((cmd, i) => (
-                  <code key={i} style={{ display: 'block', fontSize: 11, color: '#58a6ff', background: '#161b22', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
-                    {cmd}
-                  </code>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* QA summary */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
-              QA Summary
-            </div>
-            {qa?.summary ? (
-              <p style={{ fontSize: 12, color: 'var(--text)', margin: 0, marginBottom: 8, lineHeight: 1.6 }}>{qa.summary}</p>
-            ) : null}
-            {qa?.auditChecklist?.length > 0 && (
-              <ul style={{ margin: 0, padding: '0 0 0 16px' }}>
-                {qa.auditChecklist.map((item, i) => (
-                  <li key={i} style={{ fontSize: 12, color: 'var(--text)', marginBottom: 2 }}>{item}</li>
-                ))}
-              </ul>
-            )}
-            {!qa?.summary && !qa?.auditChecklist?.length && (
-              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-            )}
-          </div>
-        </div>
-
-        {/* Telegram summary */}
-        {dispatch.telegramSummary && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Telegram Summary
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text)', margin: 0, lineHeight: 1.6, fontStyle: 'italic' }}>
-              {dispatch.telegramSummary}
-            </p>
-          </div>
-        )}
-      </td>
-    </tr>
+    <div className="dt-controls">
+      <label>
+        <span>Priority weighting</span>
+        <input type="range" min="0" max="100" value={controls.priorityWeight} onChange={(e) => set('priorityWeight', e.target.value)} />
+        <strong>{controls.priorityWeight}%</strong>
+      </label>
+      <label>
+        <span>Worker allocation</span>
+        <input type="range" min="16" max="512" step="8" value={controls.workerAllocation} onChange={(e) => set('workerAllocation', e.target.value)} />
+        <strong>{controls.workerAllocation}</strong>
+      </label>
+      <label>
+        <span>Batch factor</span>
+        <input type="range" min="10" max="100" value={controls.batchFactor} onChange={(e) => set('batchFactor', e.target.value)} />
+        <strong>{controls.batchFactor}%</strong>
+      </label>
+      <button className="btn btn-primary" onClick={refresh}>Run offline simulation</button>
+    </div>
   );
 }
 
-function formatTime(isoStr) {
-  if (!isoStr) return '—';
-  try {
-    const d = new Date(isoStr);
-    return d.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
-  } catch {
-    return isoStr.slice(0, 16).replace('T', ' ');
-  }
+function DigitalTwinOverlay({ data }) {
+  const [hover, setHover] = useState(null);
+  const companies = data?.companies ?? [];
+  const batches = data?.batches ?? [];
+
+  return (
+    <div className="dt-twin">
+      <div className="dt-twin-grid">
+        <section className="dt-layer">
+          <div className="dt-layer-title">Predictive SLA Alert Overlay</div>
+          <div className="dt-company-map">
+            {companies.map((company) => {
+              const meta = riskMeta(company.riskBand);
+              return (
+                <div
+                  key={company.id}
+                  className={`dt-node dt-node-${company.riskBand}`}
+                  style={{ '--risk': meta.color, '--riskScore': company.predictedRisk }}
+                  onMouseEnter={() => setHover({ type: 'company', item: company })}
+                  onMouseLeave={() => setHover(null)}
+                >
+                  <div className="dt-node-name">{company.name}</div>
+                  <div className="dt-node-meta">{company.currentBatch} · {company.workerPool} workers</div>
+                  <div className="dt-node-risk">{pct(company.predictedRisk)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="dt-layer">
+          <div className="dt-layer-title">Interactive Multi-Batch Simulation</div>
+          <div className="dt-batch-grid">
+            {batches.map((batch) => {
+              const meta = riskMeta(batch.riskBand);
+              return (
+                <div
+                  key={batch.id}
+                  className="dt-batch-card"
+                  style={{ '--risk': meta.color }}
+                  onMouseEnter={() => setHover({ type: 'batch', item: batch })}
+                  onMouseLeave={() => setHover(null)}
+                >
+                  <div className="dt-batch-head">
+                    <strong>{batch.id}</strong>
+                    <RiskPill band={batch.riskBand} value={batch.predictedRisk} />
+                  </div>
+                  <div className="dt-progress"><span style={{ width: `${batch.progress}%` }} /></div>
+                  <div className="dt-batch-metrics">
+                    <span>High: {batch.highPriorityTasks}</span>
+                    <span>QA: {pct(batch.qaFailRate)}</span>
+                    <span>Workers: {batch.workerAllocation}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+      <div className="dt-iframe-shell">
+        <iframe title="Offline Digital Twin dashboard" src="/dashboard_digital_twin_final.html" />
+        <div className="dt-iframe-fallback">
+          Offline dashboard iframe layer. Overlay above stays live from local JSON/API.
+        </div>
+      </div>
+      {hover && <Tooltip type={hover.type} item={hover.item} />}
+    </div>
+  );
+}
+
+function CompaniesTab({ data, onDropTask }) {
+  return (
+    <div className="dt-company-list">
+      {(data?.companies ?? []).map((company) => (
+        <div
+          key={company.id}
+          className="dt-company-card"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => onDropTask(e.dataTransfer.getData('text/task-id'), company.id)}
+        >
+          <div className="dt-company-card-head">
+            <div>
+              <h3>{company.name}</h3>
+              <span>{company.currentBatch} đang xử lý</span>
+            </div>
+            <RiskPill band={company.riskBand} value={company.predictedRisk} />
+          </div>
+          <div className="dt-progress"><span style={{ width: `${Math.round(company.predictedRisk * 100)}%` }} /></div>
+          <div className="dt-card-grid">
+            <span>Active tasks <strong>{company.activeTasks}</strong></span>
+            <span>High priority <strong>{company.highPriorityTasks}</strong></span>
+            <span>QA fail <strong>{pct(company.qaFailRate)}</strong></span>
+            <span>Worker pool <strong>{company.workerPool}</strong></span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectsTab({ data, onShortcut }) {
+  const companies = data?.companies ?? [];
+  const tasks = data?.tasks ?? [];
+  return (
+    <div className="dt-project-grid">
+      {(data?.projects ?? []).map((project) => (
+        <div key={project.id} className="dt-project-card">
+          <div className="dt-project-head">
+            <div>
+              <h3>{project.name}</h3>
+              <span>{project.status} · owner {project.companyId}</span>
+            </div>
+            <span className="badge badge-sandbox">{project.tasks} tasks</span>
+          </div>
+          <div className="dt-drop-columns">
+            {companies.slice(0, 4).map((company) => (
+              <div key={company.id} className="dt-drop-zone">
+                <strong>{company.name}</strong>
+                <span>Drop task here</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="dt-project-card">
+        <div className="dt-project-head">
+          <div>
+            <h3>Task drag source</h3>
+            <span>Kéo task sang Companies hoặc dùng shortcut sandbox.</span>
+          </div>
+        </div>
+        <div className="dt-task-mini-list">
+          {tasks.slice(0, 8).map((task) => (
+            <div key={task.id} className="dt-task-chip" draggable onDragStart={(e) => e.dataTransfer.setData('text/task-id', task.id)}>
+              <span>{task.title}</span>
+              <button className="btn btn-sm" onClick={() => onShortcut(task)}>Sandbox build/fix</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActiveTasksTab({ data, sortKey, setSortKey, filter, setFilter, onShortcut }) {
+  const filtered = useMemo(() => {
+    const tasks = data?.tasks ?? [];
+    return sortTasks(tasks.filter((task) => filter === 'all' || task.priority === filter || task.riskBand === filter || task.batch === filter), sortKey);
+  }, [data, filter, sortKey]);
+
+  return (
+    <div className="card dt-table-card">
+      <div className="dt-toolbar">
+        <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
+          <option value="risk">Sort by SLA risk</option>
+          <option value="priority">Sort by priority</option>
+          <option value="batch">Sort by batch</option>
+          <option value="time">Sort by time</option>
+        </select>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">All tasks</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="danger">Danger risk</option>
+          <option value="alert">Alert risk</option>
+          <option value="B1">Batch B1</option>
+          <option value="B2">Batch B2</option>
+          <option value="B3">Batch B3</option>
+          <option value="B4">Batch B4</option>
+        </select>
+      </div>
+      <div className="dt-table">
+        {filtered.map((task) => (
+          <div key={`${task.id}-${task.companyId}`} className="dt-task-row" draggable onDragStart={(e) => e.dataTransfer.setData('text/task-id', task.id)}>
+            <div>
+              <strong>{task.title}</strong>
+              <span>{task.companyId} · {task.batch} · QA {task.qaStatus}</span>
+            </div>
+            <span className={`dt-priority dt-priority-${task.priority}`}>{task.priority}</span>
+            <RiskPill band={task.riskBand} value={task.riskScore} />
+            <button className="btn btn-sm" onClick={() => onShortcut(task)}>Sandbox build/fix</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SimulationTab({ data, controls, setControls, refresh }) {
+  return (
+    <div>
+      <div className="card">
+        <div className="card-title">Slider Simulation</div>
+        <SimulationControls controls={controls} setControls={setControls} refresh={refresh} />
+      </div>
+      <DigitalTwinOverlay data={data} />
+    </div>
+  );
 }
 
 export default function CorporateDashboard() {
-  const [data, setData]             = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null); // dispatchId
+  const [activeTab, setActiveTab] = useState('twin');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [controls, setControls] = useState({ priorityWeight: 62, workerAllocation: 192, batchFactor: 48 });
+  const [sortKey, setSortKey] = useState('risk');
+  const [filter, setFilter] = useState('all');
+  const [notice, setNotice] = useState('');
 
-  const fetchData = useCallback(async () => {
+  const refresh = useCallback(async () => {
     try {
-      const resp = await fetch('/api/corp-dispatches');
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
+      const json = await api.post('/simulation', controls);
       setData(json);
       setError(null);
     } catch (e) {
       setError(e.message);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [controls]);
 
-  useEffect(() => {
-    fetchData();
-    const timer = setInterval(fetchData, 15000);
-    return () => clearInterval(timer);
-  }, [fetchData]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  // Derived summary stats
-  const summary = data?.summary ?? { total: 0, byDivision: {}, byPriority: {}, byDevStatus: {}, byQAStatus: {} };
-  const dispatches = data?.dispatches ?? [];
+  const assignTask = async (taskId, companyId) => {
+    if (!taskId || !companyId) return;
+    await api.post('/task', { taskId, companyId });
+    setNotice(`Assigned ${taskId} -> ${companyId}`);
+    refresh();
+  };
 
-  const divisionsActive = Object.values(summary.byDivision).filter(v => v > 0).length;
-  const highPriority = (summary.byPriority?.critical ?? 0) + (summary.byPriority?.high ?? 0);
-  const qaIssues = summary.byQAStatus?.['review-required'] ?? 0;
+  const runShortcut = async (task) => {
+    await api.post('/execution', { taskId: task.id, companyId: task.companyId, action: 'sandbox-build-fix' });
+    setNotice(`Queued sandbox build/fix for ${task.title}`);
+    refresh();
+  };
 
-  const toggleRow = (id) => setExpandedRow(prev => prev === id ? null : id);
+  const summary = data?.summary ?? { totalProjects: 0, activeTasks: 0, totalWorkers: 0, systemHealth: 'PASS', qaWarnings: 0, rollbacks: 0 };
 
   return (
-    <div>
+    <div className="dt-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">🏢 {t('nav.corporate')}</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-            Theo dõi và quản lý các dispatch điều phối doanh nghiệp
-          </p>
+          <h1 className="page-title">{t('nav.corporate')} · Digital Twin v3.0</h1>
+          <p className="dt-subtitle">Predictive SLA overlay, multi-batch simulation, sandbox shortcuts và local API offline.</p>
         </div>
-        <button
-          className="btn"
-          onClick={fetchData}
-          style={{ fontSize: 12, padding: '4px 12px' }}
-          disabled={loading}
-        >
-          {loading ? t('common.loading') : t('common.refresh')}
-        </button>
+        <button className="btn" onClick={refresh}>Refresh</button>
       </div>
 
-      {error && (
-        <div style={{ background: '#3a1a1a', border: '1px solid #da3633', borderRadius: 6, padding: '10px 14px', marginBottom: 16, color: '#f85149', fontSize: 13 }}>
-          Lỗi tải dữ liệu: {error}
-        </div>
-      )}
+      {error && <div className="dt-alert dt-alert-danger">Lỗi tải Digital Twin: {error}</div>}
+      {notice && <div className="dt-alert dt-alert-info">{notice}</div>}
 
-      {/* Summary cards */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <SummaryCard label="Tổng dispatch" value={summary.total} color="#58a6ff" />
-        <SummaryCard label="Phòng ban hoạt động" value={divisionsActive} color="#3fb950" />
-        <SummaryCard label="Ưu tiên cao" value={highPriority} color="#e3702d" />
-        <SummaryCard label="QA cần xem xét" value={qaIssues} color="#e3b341" />
+      <div className="dt-stats">
+        <StatCard label="Projects" value={summary.totalProjects} />
+        <StatCard label="Active tasks" value={summary.activeTasks} tone="green" />
+        <StatCard label="Total workers" value={summary.totalWorkers} tone="purple" />
+        <StatCard label="System health" value={summary.systemHealth} tone={summary.systemHealth === 'FAIL' ? 'red' : summary.systemHealth === 'WARN' ? 'yellow' : 'green'} detail={`${summary.qaWarnings} QA warnings · ${summary.rollbacks} rollbacks`} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
-        {/* Division bar chart */}
-        <div className="card">
-          <div className="card-title" style={{ marginBottom: 16 }}>Phân bổ theo phòng ban</div>
-          <DivisionBarChart byDivision={summary.byDivision} />
-        </div>
-
-        {/* Priority distribution */}
-        <div className="card">
-          <div className="card-title" style={{ marginBottom: 16 }}>Phân bổ theo độ ưu tiên</div>
-          <PriorityPills byPriority={summary.byPriority} />
-
-          <div style={{ marginTop: 20 }}>
-            <div className="card-title" style={{ marginBottom: 12, fontSize: 13 }}>Trạng thái Dev</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(summary.byDevStatus ?? {}).map(([status, count]) => (
-                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <StatusBadge status={status} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{count}</span>
-                </div>
-              ))}
-              {Object.keys(summary.byDevStatus ?? {}).length === 0 && (
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
-              )}
-            </div>
-          </div>
-
-          <div style={{ marginTop: 16 }}>
-            <div className="card-title" style={{ marginBottom: 12, fontSize: 13 }}>Trạng thái QA</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(summary.byQAStatus ?? {}).map(([status, count]) => (
-                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <StatusBadge status={status} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{count}</span>
-                </div>
-              ))}
-              {Object.keys(summary.byQAStatus ?? {}).length === 0 && (
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
-              )}
-            </div>
-          </div>
+      <div className="dt-topline">
+        <SimulationControls controls={controls} setControls={setControls} refresh={refresh} />
+        <div className="dt-notifications">
+          {(data?.alerts ?? []).slice(0, 4).map((alert, index) => (
+            <span key={`${alert.message}-${index}`} className={`dt-notification dt-notification-${alert.severity}`}>{alert.message}</span>
+          ))}
+          {(data?.alerts ?? []).length === 0 && <span className="dt-notification dt-notification-safe">No SLA warnings</span>}
         </div>
       </div>
 
-      {/* Dispatch table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-          <div className="card-title" style={{ margin: 0 }}>Danh sách Dispatch</div>
-        </div>
-
-        {dispatches.length === 0 ? (
-          <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
-            <div style={{ fontSize: 14, marginBottom: 8 }}>Chưa có dispatch nào.</div>
-            <div style={{ fontSize: 13 }}>
-              Dùng <strong>Giao task cho Corporate Agent</strong> trong Trung tâm lệnh.
-            </div>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: '#161b22' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Thời gian</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Task</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Phòng ban</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Loại</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Dev</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>QA</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Risk</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dispatches.map((d) => {
-                  const isExpanded = expandedRow === d.dispatchId;
-                  const divId = d.company?.id ?? 'unknown';
-                  return (
-                    <React.Fragment key={d.dispatchId}>
-                      <tr
-                        onClick={() => toggleRow(d.dispatchId)}
-                        style={{
-                          borderBottom: '1px solid var(--border)',
-                          cursor: 'pointer',
-                          background: isExpanded ? '#161b22' : 'transparent',
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = '#0d1117'; }}
-                        onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <td style={{ padding: '10px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 12 }}>
-                          {formatTime(d.task?.createdAt)}
-                        </td>
-                        <td style={{ padding: '10px 16px', color: 'var(--text)', maxWidth: 240 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ color: isExpanded ? '#58a6ff' : 'var(--text-muted)', fontSize: 10 }}>
-                              {isExpanded ? '▼' : '▶'}
-                            </span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {d.task?.raw ?? d.dispatchId}
-                            </span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: 12, color: 'var(--text)' }}>
-                            {DIVISION_NAMES[divId] ?? divId}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                            {d.task?.type ?? '—'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 16px' }}>
-                          <StatusBadge status={d.execution?.dev?.status} />
-                        </td>
-                        <td style={{ padding: '10px 16px' }}>
-                          <StatusBadge status={d.execution?.qa?.status} />
-                        </td>
-                        <td style={{ padding: '10px 16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <RiskBadge risk={d.execution?.dev?.riskLevel} />
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && <ExpandedRow dispatch={d} />}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="dt-tabs">
+        {TABS.map((tab) => (
+          <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>
-        Tự động làm mới mỗi 15 giây · {summary.total} dispatch · {new Date().toLocaleTimeString('vi-VN')}
-      </div>
+      {activeTab === 'twin' && <DigitalTwinOverlay data={data} />}
+      {activeTab === 'companies' && <CompaniesTab data={data} onDropTask={assignTask} />}
+      {activeTab === 'projects' && <ProjectsTab data={data} onShortcut={runShortcut} />}
+      {activeTab === 'tasks' && <ActiveTasksTab data={data} sortKey={sortKey} setSortKey={setSortKey} filter={filter} setFilter={setFilter} onShortcut={runShortcut} />}
+      {activeTab === 'simulation' && <SimulationTab data={data} controls={controls} setControls={setControls} refresh={refresh} />}
+
+      <div className="dt-footer">Offline API: /task · /execution · /analytics · /simulation · Updated {data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('vi-VN') : '-'}</div>
     </div>
   );
 }
