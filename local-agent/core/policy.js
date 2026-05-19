@@ -208,3 +208,57 @@ export function assertPathInWorkspace(filePath, workspaceRoot) {
     }
   }
 }
+
+/**
+ * Check whether a file path falls inside the workspace root OR any explicitly
+ * allowed extra path.  Returns true / false — does NOT throw.
+ *
+ * @param {string}   filePath     - Absolute or relative path to check
+ * @param {string}   workspaceRoot
+ * @param {string[]} [allowedPaths=[]]  - Extra roots from config.allowedPaths
+ */
+export function isPathAllowed(filePath, workspaceRoot, allowedPaths = []) {
+  const abs = resolve(filePath);
+  // Check forbidden patterns first — no exceptions, ever
+  for (const pattern of FORBIDDEN_PATH_PATTERNS) {
+    if (pattern.test(abs)) return false;
+  }
+  const roots = [resolve(workspaceRoot), ...allowedPaths.map((p) => resolve(p))];
+  return roots.some((r) => abs.startsWith(r + '/') || abs === r);
+}
+
+/**
+ * Validate a candidate path before it is stored in allowedPaths.
+ * Returns { ok: true } or { ok: false, reason: string }.
+ *
+ * Rules:
+ *  1. Must be absolute
+ *  2. Must not match FORBIDDEN_PATH_PATTERNS
+ *  3. Depth ≥ 3 components (prevents adding "/" or "/Users" etc.)
+ *  4. Must not be a parent of or equal to sensitive system paths
+ */
+export function validateAllowedPath(rawPath) {
+  let abs;
+  try { abs = resolve(rawPath); } catch { return { ok: false, reason: 'Đường dẫn không hợp lệ' }; }
+
+  if (!abs.startsWith('/')) {
+    return { ok: false, reason: 'Phải là đường dẫn tuyệt đối (bắt đầu bằng /)' };
+  }
+  const depth = abs.split('/').filter(Boolean).length;
+  if (depth < 3) {
+    return { ok: false, reason: 'Đường dẫn quá ngắn — phải ít nhất 3 cấp (vd /Users/tên/project)' };
+  }
+  for (const pattern of FORBIDDEN_PATH_PATTERNS) {
+    if (pattern.test(abs + '/') || pattern.test(abs)) {
+      return { ok: false, reason: `Đường dẫn này bị cấm theo policy bảo mật: ${abs}` };
+    }
+  }
+  // Also block paths that are parents of sensitive dirs
+  const SENSITIVE = ['/etc', '/root', '/sys', '/proc', '/dev', '/boot'];
+  for (const s of SENSITIVE) {
+    if (s.startsWith(abs) || abs === s) {
+      return { ok: false, reason: `Không thể thêm thư mục hệ thống: ${abs}` };
+    }
+  }
+  return { ok: true, abs };
+}

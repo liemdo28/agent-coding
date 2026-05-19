@@ -3,6 +3,7 @@
   "offline": true,
   "telemetry": false,
   "cloudSync": false,
+  "allowedPaths": [],
   "llm": {
     "provider": "ollama",
     "baseUrl": "http://localhost:11434",

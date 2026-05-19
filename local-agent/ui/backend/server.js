@@ -34,7 +34,8 @@ import memoryRouter    from './routes/memory.js';
 import agentRouter        from './routes/agent.js';
 import projectsRouter     from './routes/projects.js';
 import runnerRouter       from './routes/runner.js';
-import chatSessionsRouter from './routes/chat-sessions.js';
+import chatSessionsRouter  from './routes/chat-sessions.js';
+import allowedPathsRouter  from './routes/allowed-paths.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -127,6 +128,7 @@ const apiRouters = [
   projectsRouter,
   runnerRouter,
   chatSessionsRouter,
+  allowedPathsRouter,
 ];
 
 for (const router of apiRouters) {

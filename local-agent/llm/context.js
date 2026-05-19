@@ -1,5 +1,5 @@
 // llm/context.js - Context builder: assembles relevant project snippets for a prompt
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, resolve, extname, basename } from 'path';
 import { assertPathInWorkspace } from '../core/policy.js';
 
@@ -49,11 +49,57 @@ function tokenBudget(maxTokens) {
  * @param {object} config - Agent config
  * @returns {object} context
  */
+// ── Cross-path project scanner ────────────────────────────────────────────────
+
+const PROJECT_MARKERS = ['.git', 'package.json', 'pyproject.toml', 'Cargo.toml', 'go.mod'];
+
+function scanProjectsInDir(dir, maxDepth = 2) {
+  const results = [];
+  function walk(d, depth) {
+    if (depth > maxDepth) return;
+    let entries;
+    try { entries = readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith('.')) continue;
+      const sub = join(d, e.name);
+      if (PROJECT_MARKERS.some((m) => existsSync(join(sub, m)))) {
+        results.push({ name: e.name, path: sub });
+      } else {
+        walk(sub, depth + 1);
+      }
+    }
+  }
+  walk(dir, 0);
+  return results;
+}
+
+const PROJECTS_QUERY = /project|thư mục|bao nhiêu|danh sách|liệt kê|folder|workspace/i;
+
+function buildAllowedPathsContext(task, workspaceRoot, allowedPaths = []) {
+  if (!PROJECTS_QUERY.test(task)) return null;
+  const allRoots = [workspaceRoot, ...allowedPaths];
+  const allProjects = [];
+  for (const root of allRoots) {
+    const found = scanProjectsInDir(root);
+    allProjects.push(...found);
+  }
+  if (allProjects.length === 0) return null;
+  const lines = [`## Danh sách project được phép truy cập (${allProjects.length} project):`];
+  for (const p of allProjects) {
+    lines.push(`- ${p.name}  →  ${p.path}`);
+  }
+  lines.push(`\nThư mục gốc được phép: ${allRoots.join(', ')}`);
+  return lines.join('\n');
+}
+
+// ── Main context builder ──────────────────────────────────────────────────────
+
 export function buildContext(task, workspaceRoot, config) {
   const root       = resolve(workspaceRoot);
   const maxChars   = tokenBudget(config?.llm?.maxTokens ?? 4096) * 0.6; // leave 40% for answer
   const mapPath    = join(root, '.local-agent', 'project-map.json');
   const summaryPath= join(root, '.local-agent', 'project-summary.md');
+  const allowedPaths = (config?.allowedPaths ?? []).map((p) => resolve(p));
 
   // Load project map
   let projectMap = null;
@@ -68,11 +114,14 @@ export function buildContext(task, workspaceRoot, config) {
   }
 
   if (!projectMap) {
+    // Even without a project map, we can still answer questions about allowed paths
+    const pathsCtx = buildAllowedPathsContext(task, root, allowedPaths);
     return {
       task,
       projectSummary: '',
       relevantFiles: [],
       snippets: [],
+      allowedPathsContext: pathsCtx ?? undefined,
       constraints: { offlineOnly: true, noInternet: true },
       warning: 'No project scan data found. Run `local-agent scan` first.',
     };
@@ -141,11 +190,14 @@ export function buildContext(task, workspaceRoot, config) {
     relevantFiles.push(file.path);
   }
 
+  const pathsCtx = buildAllowedPathsContext(task, root, allowedPaths);
+
   return {
     task,
     projectSummary,
     relevantFiles,
     snippets,
+    allowedPathsContext: pathsCtx ?? undefined,
     constraints: { offlineOnly: true, noInternet: true },
     meta: {
       framework:      projectMap.frameworks?.[0] ?? 'unknown',
@@ -191,6 +243,10 @@ export function renderContextPrompt(context) {
       const note = s.truncated ? ' (truncated)' : '';
       lines.push(`### ${s.path}${note}\n\`\`\`${s.ext.replace('.', '')}\n${s.content}\n\`\`\`\n`);
     }
+  }
+
+  if (context.allowedPathsContext) {
+    lines.push(context.allowedPathsContext + '\n');
   }
 
   // Language anchor — models tend to follow the most recent instruction;
