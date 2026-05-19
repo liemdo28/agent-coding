@@ -8,21 +8,20 @@ import { initLogger, logger } from '../../../core/logger.js';
 import { runPolicyChecks } from '../../../core/policy.js';
 import { LocalLLMAdapter } from '../../../llm/LocalLLMAdapter.js';
 import { buildContext, renderContextPrompt } from '../../../llm/context.js';
+import { buildPersonaPrompt } from '../../../llm/persona/index.js';
 
 const router = Router();
 
-const SYSTEM_PROMPT = `You are a local offline AI coding agent.
-
-STRICT RULES — you must follow all of them:
-1. Only use the project context provided below. Do not invent files or functions.
-2. Do NOT suggest any internet-dependent solutions unless explicitly marked optional.
-3. Do NOT request or reference external APIs, cloud services, or CDNs.
-4. Do NOT expose, repeat, or output any secrets, passwords, or API keys you see in the context.
-5. Produce only practical, locally-runnable commands and code.
-6. If you cannot answer from the provided context, say so clearly — do not hallucinate.
-7. Prefer local alternatives (local packages, local tools) over remote ones.
-8. Keep answers concise and actionable.
-9. IMPORTANT: Patches cannot be applied from chat. If you suggest code changes, instruct the user to apply them via the Patches page.`;
+const SYSTEM_PROMPT = buildPersonaPrompt('vi') + `QUYỀN HẠN KỸ THUẬT — tuân thủ tuyệt đối:
+1. Chỉ dùng ngữ cảnh project được cung cấp bên dưới. Không bịa file hoặc function.
+2. KHÔNG đề xuất giải pháp cần internet, trừ khi được đánh dấu tùy chọn.
+3. KHÔNG tham chiếu API bên ngoài, cloud service, hay CDN.
+4. KHÔNG lộ, lặp lại, hay in ra bất kỳ secret, password, hay API key nào.
+5. Chỉ đưa ra lệnh và code chạy được trên máy local.
+6. Nếu không trả lời được từ ngữ cảnh → nói thẳng, không hallucinate.
+7. Ưu tiên giải pháp local (package local, tool local) hơn remote.
+8. Câu trả lời ngắn gọn và có thể hành động ngay.
+9. QUAN TRỌNG: Không thể áp patch từ chat. Nếu đề xuất thay đổi code → hướng dẫn sếp dùng trang Patches.`;
 
 // POST /agent/ask  — SSE streaming response
 router.post('/agent/ask', async (req, res) => {
