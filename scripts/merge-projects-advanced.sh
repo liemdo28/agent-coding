@@ -14,6 +14,7 @@ MERGE_GIT_HISTORY=0
 VERIFY=1
 FIX_PYTHON=0
 NPM_INSTALL=0
+SYNC_REGISTRY=0
 SOURCE_PATHS=()
 
 usage() {
@@ -31,11 +32,15 @@ Options:
   --no-verify            Skip Python/Node verification.
   --fix-python           Run autopep8 on Python files when available. Requires --apply.
   --npm-install          Run npm ci/install before Node checks. Default avoids dependency churn.
+  --sync-registry        After each copy/move, update ~/.local-agent-global/projects.json so any
+                         registry entry pointing at the old source path is retargeted to the new
+                         destination. Prevents stale + duplicate registry entries across devs.
   -h, --help             Show this help.
 
 Examples:
   scripts/merge-projects-advanced.sh --source /Users/dev1/Workspace --source /Users/dev2/Projects
   scripts/merge-projects-advanced.sh --apply --source ~/Workspace --target ~/Projects
+  scripts/merge-projects-advanced.sh --apply --sync-registry --source ~/old-workspace --target ~/Projects
 USAGE
 }
 
@@ -65,6 +70,7 @@ while [[ $# -gt 0 ]]; do
     --no-verify) VERIFY=0; shift ;;
     --fix-python) FIX_PYTHON=1; shift ;;
     --npm-install) NPM_INSTALL=1; shift ;;
+    --sync-registry) SYNC_REGISTRY=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1" ;;
   esac
@@ -141,6 +147,35 @@ merge_git_repo() {
   fi
 }
 
+sync_registry_entry() {
+  # Update (or dry-run preview) a registry entry's root path.
+  # $1 = old_path, $2 = new_path
+  local old_path="$1"
+  local new_path="$2"
+
+  # Locate registry-sync.mjs relative to this script
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local sync_script="$script_dir/registry-sync.mjs"
+
+  if [[ ! -f "$sync_script" ]]; then
+    warn "registry-sync.mjs not found at $sync_script — skipping registry sync for $old_path"
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    warn "node not found — cannot sync registry entry for $old_path"
+    return 0
+  fi
+
+  if [[ "$APPLY" == "1" ]]; then
+    node "$sync_script" --old-path "$old_path" --new-path "$new_path" || \
+      warn "Registry sync failed for $old_path → $new_path (non-fatal)"
+  else
+    node "$sync_script" --dry-run --old-path "$old_path" --new-path "$new_path" || true
+  fi
+}
+
 verify_python() {
   local project="$1"
   mapfile -d '' py_files < <(find "$project" -type f -name '*.py' -not -path '*/.venv/*' -not -path '*/node_modules/*' -print0)
@@ -184,20 +219,31 @@ for source_root in "${SOURCE_PATHS[@]}"; do
     log "Processing $project"
     backup_project "$project" "$name"
 
+    # Track effective destination for registry sync
+    effective_dest="$dest"
+
     if [[ -d "$dest/.git" && -d "$project/.git" ]]; then
       merge_git_repo "$project" "$dest" "$name"
+      # dest already holds the project; registry entry should point there
     elif [[ -e "$dest" ]]; then
       incoming="$TARGET_PATH/${name}.incoming.$(date +%Y%m%d%H%M%S)"
       warn "Destination exists and cannot be history-merged; copying to $incoming"
       copy_project "$project" "$incoming"
+      effective_dest="$incoming"
     else
       copy_project "$project" "$dest"
+    fi
+
+    # Update registry: old source path → effective destination
+    if [[ "$SYNC_REGISTRY" == "1" ]]; then
+      sync_registry_entry "$project" "$effective_dest"
     fi
 
     if [[ "$DELETE_SOURCES" == "1" ]]; then
       trash="$source_root/.merged-trash"
       run mkdir -p "$trash"
       run mv "$project" "$trash/$name"
+      # If sources deleted, registry must point at dest (already done above)
     fi
   done
 done
