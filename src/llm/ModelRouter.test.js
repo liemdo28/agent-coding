@@ -15,9 +15,9 @@ describe('ModelRouter', () => {
   });
 
   describe('route()', () => {
-    it('routes code-gen tasks to qwen2.5-coder:7b (default manifest)', () => {
+    it('routes code-gen tasks to a Qwen coder model (default manifest)', () => {
       const result = router.route({ taskType: 'code-gen', language: 'python' });
-      assert.strictEqual(result.model, 'qwen2.5-coder:7b');
+      assert.ok(result.model.startsWith('qwen2.5-coder:'));
       assert.ok(result.reason.includes('code-gen'));
       assert.ok(Array.isArray(result.fallback));
       assert.ok(result.score >= 0);

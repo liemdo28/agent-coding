@@ -3,7 +3,7 @@
  * Run with: node --test src/eval/EvalRunner.test.js
  */
 
-import { describe, it } from 'node:test';
+import { before, describe, it } from 'node:test';
 import assert from 'node:assert';
 import { EvalRunner } from './EvalRunner.js';
 

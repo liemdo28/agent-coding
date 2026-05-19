@@ -121,6 +121,17 @@ export class TreeSitterAdapter {
     const lang = this._normalizeLanguage(result.language);
     const tree = result.tree;
 
+    if (Array.isArray(tree.symbols)) {
+      return tree.symbols.map(symbol => ({
+        ...symbol,
+        location: {
+          row: symbol.location?.row || 0,
+          column: symbol.location?.column || 0,
+          byteOffset: symbol.location?.byteOffset || 0,
+        },
+      }));
+    }
+
     /** @type {Symbol[]} */
     const symbols = [];
 

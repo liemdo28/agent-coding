@@ -257,7 +257,7 @@ export class EvalRunner {
       const trimmed = line.trim();
 
       // TODO marker check
-      if (/^[^#]*\bTODO\b/.test(trimmed) && !trimmed.startsWith('//')) {
+      if (/\bTODO\b/i.test(trimmed)) {
         violations.push({ rule: 'no-todo', message: 'TODO comment found in code', severity: 'warn', line: i + 1 });
       }
 
