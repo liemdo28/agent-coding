@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { t } from '../i18n/index.js';
 

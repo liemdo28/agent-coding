@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/Simulation.jsx
 // Slider controls + corp:simulate integration.
 // Sliders affect the task description sent to corp:simulate.

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/ActiveTasks.jsx
 // Live view of all jobs (running, recent, failed) from the runner.
 // Data source: GET /api/jobs  (live poll every 3s)

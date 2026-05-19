@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/ProjectExplorer.jsx
 // Shows all projects discovered across PROJECT_ROOT + allowedPaths.
 // Data source: GET /api/allowed-paths/projects

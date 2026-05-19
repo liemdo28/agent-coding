@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from 'react';
 import { getLang, setLang, availableLangs } from '../i18n/index.js';
 

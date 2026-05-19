@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api.js';
 import { t } from '../i18n/index.js';

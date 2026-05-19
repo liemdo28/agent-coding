@@ -1,22 +1,23 @@
+// @ts-nocheck
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout             from './components/Layout.jsx';
-import Dashboard          from './pages/Dashboard.jsx';
-import Scanner            from './pages/Scanner.jsx';
-import Chat               from './pages/Chat.jsx';
-import Patches            from './pages/Patches.jsx';
-import QA                 from './pages/QA.jsx';
-import Reports            from './pages/Reports.jsx';
-import Memory             from './pages/Memory.jsx';
-import Security           from './pages/Security.jsx';
-import CommandCenter      from './pages/CommandCenter.jsx';
-import ActivityLog        from './pages/ActivityLog.jsx';
-import Architecture       from './pages/Architecture.jsx';
-import KPICharts          from './pages/KPICharts.jsx';
-import CorporateDashboard from './pages/CorporateDashboard.jsx';
-import ProjectExplorer    from './pages/ProjectExplorer.jsx';
-import ActiveTasks        from './pages/ActiveTasks.jsx';
-import Simulation         from './pages/Simulation.jsx';
+import Layout             from './components/Layout.tsx';
+import Dashboard          from './pages/Dashboard.tsx';
+import Scanner            from './pages/Scanner.tsx';
+import Chat               from './pages/Chat.tsx';
+import Patches            from './pages/Patches.tsx';
+import QA                 from './pages/QA.tsx';
+import Reports            from './pages/Reports.tsx';
+import Memory             from './pages/Memory.tsx';
+import Security           from './pages/Security.tsx';
+import CommandCenter      from './pages/CommandCenter.tsx';
+import ActivityLog        from './pages/ActivityLog.tsx';
+import Architecture       from './pages/Architecture.tsx';
+import KPICharts          from './pages/KPICharts.tsx';
+import CorporateDashboard from './pages/CorporateDashboard.tsx';
+import ProjectExplorer    from './pages/ProjectExplorer.tsx';
+import ActiveTasks        from './pages/ActiveTasks.tsx';
+import Simulation         from './pages/Simulation.tsx';
 
 export default function App() {
   return (
