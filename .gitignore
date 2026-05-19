@@ -12,6 +12,8 @@ dist/
 **/.local-agent/*.db
 # Model benchmark cache
 **/.local-agent/model-benchmarks.json
+# Dashboard generator output — regenerate with: python3 prototypes/gen_dashboard_interactive.py
+/.super-agent-fullauto-kpi/
 *.log
 !sample-logs/*.log
 logs/activity/
