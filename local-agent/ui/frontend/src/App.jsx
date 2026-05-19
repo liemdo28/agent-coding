@@ -1,19 +1,22 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout         from './components/Layout.jsx';
-import Dashboard      from './pages/Dashboard.jsx';
-import Scanner        from './pages/Scanner.jsx';
-import Chat           from './pages/Chat.jsx';
-import Patches        from './pages/Patches.jsx';
-import QA             from './pages/QA.jsx';
-import Reports        from './pages/Reports.jsx';
-import Memory         from './pages/Memory.jsx';
-import Security       from './pages/Security.jsx';
-import CommandCenter  from './pages/CommandCenter.jsx';
-import ActivityLog    from './pages/ActivityLog.jsx';
-import Architecture   from './pages/Architecture.jsx';
+import Layout             from './components/Layout.jsx';
+import Dashboard          from './pages/Dashboard.jsx';
+import Scanner            from './pages/Scanner.jsx';
+import Chat               from './pages/Chat.jsx';
+import Patches            from './pages/Patches.jsx';
+import QA                 from './pages/QA.jsx';
+import Reports            from './pages/Reports.jsx';
+import Memory             from './pages/Memory.jsx';
+import Security           from './pages/Security.jsx';
+import CommandCenter      from './pages/CommandCenter.jsx';
+import ActivityLog        from './pages/ActivityLog.jsx';
+import Architecture       from './pages/Architecture.jsx';
 import KPICharts          from './pages/KPICharts.jsx';
 import CorporateDashboard from './pages/CorporateDashboard.jsx';
+import ProjectExplorer    from './pages/ProjectExplorer.jsx';
+import ActiveTasks        from './pages/ActiveTasks.jsx';
+import Simulation         from './pages/Simulation.jsx';
 
 export default function App() {
   return (
@@ -33,6 +36,9 @@ export default function App() {
           <Route path="architecture"     element={<Architecture />} />
           <Route path="kpi"              element={<KPICharts />} />
           <Route path="corporate"        element={<CorporateDashboard />} />
+          <Route path="projects"         element={<ProjectExplorer />} />
+          <Route path="active-tasks"     element={<ActiveTasks />} />
+          <Route path="simulation"       element={<Simulation />} />
           <Route path="*"                element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
