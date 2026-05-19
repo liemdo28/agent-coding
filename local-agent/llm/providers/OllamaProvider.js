@@ -5,7 +5,7 @@ export class OllamaProvider {
   constructor(config) {
     assertLocalUrl(config.baseUrl);
     this.baseUrl = config.baseUrl.replace(/\/$/, '');
-    this.model   = config.model ?? 'qwen2.5-coder:7b';
+    this.model   = config.model ?? 'qwen2.5:7b';
     this.timeout = config.timeoutMs ?? 120000;
   }
 

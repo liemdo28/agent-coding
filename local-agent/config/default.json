@@ -6,14 +6,14 @@
   "llm": {
     "provider": "ollama",
     "baseUrl": "http://localhost:11434",
-    "model": "qwen2.5-coder:7b",
+    "model": "qwen2.5:7b",
     "offlineOnly": true,
     "streamingEnabled": true,
     "maxTokens": 4096,
     "contextWindow": 8192,
     "retryAttempts": 3,
     "retryDelayMs": 1000,
-    "fallbackModel": "qwen2.5-coder:1.5b"
+    "fallbackModel": "qwen2.5:3b"
   },
   "scanner": {
     "maxFileSizeBytes": 1048576,
