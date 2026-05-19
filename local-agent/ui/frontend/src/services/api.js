@@ -20,6 +20,17 @@ export const api = {
     });
   },
 
+  patch(path, body) {
+    return fetch(BASE + path, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    }).then((r) => {
+      if (!r.ok) return r.json().then((e) => { throw new Error(e.error ?? r.statusText); });
+      return r.json();
+    });
+  },
+
   delete(path) {
     return fetch(BASE + path, { method: 'DELETE' }).then((r) => {
       if (!r.ok) return r.json().then((e) => { throw new Error(e.error ?? r.statusText); });

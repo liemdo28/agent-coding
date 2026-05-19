@@ -31,9 +31,10 @@ import qaRouter        from './routes/qa.js';
 import reportsRouter   from './routes/reports.js';
 import policyRouter    from './routes/policy.js';
 import memoryRouter    from './routes/memory.js';
-import agentRouter     from './routes/agent.js';
-import projectsRouter  from './routes/projects.js';
-import runnerRouter    from './routes/runner.js';
+import agentRouter        from './routes/agent.js';
+import projectsRouter     from './routes/projects.js';
+import runnerRouter       from './routes/runner.js';
+import chatSessionsRouter from './routes/chat-sessions.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -125,6 +126,7 @@ const apiRouters = [
   agentRouter,
   projectsRouter,
   runnerRouter,
+  chatSessionsRouter,
 ];
 
 for (const router of apiRouters) {
