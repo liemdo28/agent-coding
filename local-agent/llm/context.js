@@ -83,6 +83,27 @@ export function buildContext(task, workspaceRoot, config) {
     .split(/\W+/)
     .filter((t) => t.length > 2);
 
+  // Skip code context for short casual messages (greetings, simple questions)
+  // These don't benefit from file snippets and the extra tokens slow inference.
+  const CASUAL_PATTERNS = /^(chào|hi|hello|xin chào|oke|ok|cảm ơn|thanks|tạm biệt|bye|giới thiệu|bạn là ai|em là ai)/i;
+  const isCasual = task.trim().split(/\s+/).length <= 6 && CASUAL_PATTERNS.test(task.trim());
+
+  if (isCasual) {
+    return {
+      task,
+      projectSummary: projectSummary.slice(0, 500), // just a brief summary
+      relevantFiles: [],
+      snippets: [],
+      constraints: { offlineOnly: true, noInternet: true },
+      meta: projectMap.frameworks ? {
+        framework: projectMap.frameworks?.[0] ?? 'unknown',
+        language: projectMap.languages?.[0] ?? 'unknown',
+        packageManager: projectMap.packageManager ?? 'unknown',
+        commands: projectMap.commands ?? {},
+      } : undefined,
+    };
+  }
+
   // Score and sort files
   const scoredFiles = (projectMap.files ?? [])
     .filter((f) => !isForbiddenFile(f.path))
@@ -171,6 +192,10 @@ export function renderContextPrompt(context) {
       lines.push(`### ${s.path}${note}\n\`\`\`${s.ext.replace('.', '')}\n${s.content}\n\`\`\`\n`);
     }
   }
+
+  // Language anchor — models tend to follow the most recent instruction;
+  // repeating here after the context prevents English drift in code-focused models.
+  lines.push('\n---\nTRẢ LỜI BẰNG TIẾNG VIỆT. Xưng "em", gọi người dùng là "sếp".');
 
   return lines.join('\n');
 }
