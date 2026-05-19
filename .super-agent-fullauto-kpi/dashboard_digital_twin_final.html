@@ -1,0 +1,3053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Twin Final — Full Autonomous Corporate Agent v2.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --border:    #30363d;
+  --text:      #c9d1d9;
+  --text-dim:  #8b949e;
+  --accent:    #58a6ff;
+  --danger:    #ff1744;
+  --warn:      #ff6d00;
+  --safe:      #00e676;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', 'SF Pro Display', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 { color: #f0f6fc; margin-bottom: 0.5em; }
+h1 { font-size: 1.6em; border-bottom: 2px solid var(--accent); padding-bottom: 0.3em; }
+h2 { font-size: 1.2em; margin-top: 1.5em; color: var(--accent); }
+
+.header-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.header-badge {
+  background: #ff174422;
+  border: 1px solid #ff1744;
+  color: #ff1744;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.header-stat .val { font-size: 18px; font-weight: 700; color: var(--accent); }
+.header-stat .lbl { font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
+
+.container { max-width: 1600px; margin: 0 auto; padding: 16px 24px; }
+
+/* ── KPI Table ── */
+#kpi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 0.5em;
+}
+#kpi-table thead th {
+  background: var(--surface);
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 8px 6px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+#kpi-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+#kpi-table tbody tr:hover {
+  background: #1f2937;
+  cursor: pointer;
+}
+#kpi-table td {
+  padding: 6px 6px;
+  text-align: center;
+}
+
+/* Risk classes */
+.risk-safe   { background: #c8e6c9;   color: #1b5e20; font-weight: 600; }
+.risk-warn   { background: #fff9c4;   color: #5d4037; font-weight: 600; }
+.risk-alert  { background: #ffccbc;  color: #bf360c; font-weight: 600; }
+.risk-danger { background: #ffcdd2; color: #b71c1c; font-weight: 700; }
+
+/* Priority row highlight */
+.prio-critical td { background: #ff174418 !important; }
+.prio-high     td { background: #ff6d0012 !important; }
+.prio-medium   td { background: #fdd83510 !important; }
+
+.prio-critical {
+  color: #ff1744;
+  font-weight: 700;
+}
+.prio-high     { color: #ff6d00;     font-weight: 600; }
+
+/* Risk bar */
+.risk-bar-container {
+  background: #21262d;
+  border-radius: 4px;
+  height: 16px;
+  position: relative;
+  overflow: hidden;
+  width: 80px;
+  margin: 0 auto;
+}
+.risk-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s;
+}
+.bar-safe   { background: linear-gradient(90deg, #00e676, #69f0ae); }
+.bar-warn   { background: linear-gradient(90deg, #ff6d00, #ff9e80); }
+.bar-danger { background: linear-gradient(90deg, #ff1744, #ff8a80); }
+.risk-label {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  line-height: 16px;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 0 2px #000;
+}
+
+/* ── Batch cards ── */
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 0.5em;
+}
+.batch-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.batch-card:hover { transform: translateY(-2px); }
+.batch-card h4 { color: var(--accent); margin-bottom: 8px; font-size: 13px; }
+.batch-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+}
+.batch-stat label { color: var(--text-dim); }
+.batch-stat span  { font-weight: 600; }
+.batch-safe   .batch-stat span { color: var(--safe); }
+.batch-warn   .batch-stat span { color: var(--warn); }
+.batch-danger .batch-stat span { color: var(--danger); }
+
+.batch-risk-bar {
+  background: #21262d;
+  border-radius: 4px;
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.batch-risk-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--safe);
+  transition: width 0.5s;
+}
+.batch-safe   .batch-risk-fill { background: var(--safe); }
+.batch-warn   .batch-risk-fill { background: var(--warn); }
+.batch-danger .batch-risk-fill { background: var(--danger); }
+.batch-risk-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: block;
+}
+
+/* ── Analytics grid ── */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 0.5em;
+}
+.stat-card {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-title  { font-size: 11px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; }
+.stat-value  { font-size: 28px; font-weight: 800; color: var(--accent); margin: 4px 0; }
+.stat-sub    { font-size: 11px; color: var(--text-dim); }
+
+/* ── Mermaid chart ── */
+.mermaid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin-top: 0.5em;
+}
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 0.5em;
+  font-size: 12px;
+  align-items: center;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #333;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+}
+
+/* ── Scrollable table wrapper ── */
+.table-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.table-scroll::-webkit-scrollbar { width: 6px; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Header Bar -->
+<div class="header-bar">
+  <h1 style="margin:0; border:none; padding:0;">🏢 Digital Twin Final — Corporate Agent v2.0</h1>
+  <span class="header-badge">⚡ 100+ Companies</span>
+  <span class="header-badge">👷 512 Workers</span>
+  <div class="header-stat">
+    <span class="val">100</span>
+    <span class="lbl">Companies</span>
+  </div>
+  <div class="header-stat">
+    <span class="val">2156</span>
+    <span class="lbl">Total Tasks</span>
+  </div>
+  <div class="header-stat">
+    <span class="val" style="color:#ff1744;">417</span>
+    <span class="lbl">High Priority</span>
+  </div>
+  <div class="header-stat">
+    <span class="val" style="color:#ff1744;">459</span>
+    <span class="lbl">QA Fail</span>
+  </div>
+  <div class="header-stat">
+    <span class="val" style="color:#ff6d00;">325</span>
+    <span class="lbl">Rollback</span>
+  </div>
+  <div class="header-stat">
+    <span class="val">2026-05-19 14:38</span>
+    <span class="lbl">Generated</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Analytics Panel -->
+  <h2>📈 Analytics Overview</h2>
+  <div class="analytics-grid">
+        <div class="stat-card" style="border-left:4px solid #1565c0;">
+          <div class="stat-title">Total Executions</div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-sub"></div>
+        </div>
+        
+        <div class="stat-card" style="border-left:4px solid #2e7d32;">
+          <div class="stat-title">Success Rate</div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-sub"></div>
+        </div>
+        
+        <div class="stat-card" style="border-left:4px solid #6a1b9a;">
+          <div class="stat-title">Avg Duration (s)</div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-sub"></div>
+        </div>
+        
+        <div class="stat-card" style="border-left:4px solid #e65100;">
+          <div class="stat-title">Companies</div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-sub"></div>
+        </div>
+        </div>
+
+  <!-- Multi-Batch Simulation Overlay -->
+  <h2>🔄 Multi-Batch Simulation Overlay (8 Batches)</h2>
+  <div class="batch-grid">
+        <div class="batch-card batch-safe">
+          <h4>Batch 1</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>291</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>354</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>10.4%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>3.4%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>13.9%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:39.2%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 39.2</span>
+        </div>
+        
+        <div class="batch-card batch-safe">
+          <h4>Batch 2</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>284</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>352</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>29.9%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>10.4%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>2.3%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:7.2%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 7.2</span>
+        </div>
+        
+        <div class="batch-card batch-warn">
+          <h4>Batch 3</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>293</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>130</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>16.4%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>9.5%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>14.9%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:60.9%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 60.9</span>
+        </div>
+        
+        <div class="batch-card batch-safe">
+          <h4>Batch 4</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>255</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>148</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>17.1%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>13.7%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>8.0%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:38.6%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 38.6</span>
+        </div>
+        
+        <div class="batch-card batch-warn">
+          <h4>Batch 5</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>275</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>477</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>9.7%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>9.6%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>1.4%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:47.0%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 47.0</span>
+        </div>
+        
+        <div class="batch-card batch-danger">
+          <h4>Batch 6</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>234</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>414</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>10.4%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>12.3%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>12.9%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:88.1%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 88.1</span>
+        </div>
+        
+        <div class="batch-card batch-danger">
+          <h4>Batch 7</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>250</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>309</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>20.9%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>10.6%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>0.4%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:93.9%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 93.9</span>
+        </div>
+        
+        <div class="batch-card batch-danger">
+          <h4>Batch 8</h4>
+          <div class="batch-stat">
+            <label>Tasks</label><span>274</span>
+          </div>
+          <div class="batch-stat">
+            <label>Workers</label><span>209</span>
+          </div>
+          <div class="batch-stat">
+            <label>QA Fail%</label>
+            <span>27.0%</span>
+          </div>
+          <div class="batch-stat">
+            <label>Rollback%</label>
+            <span>2.0%</span>
+          </div>
+          <div class="batch-stat">
+            <label>SLA Breach%</label>
+            <span>5.9%</span>
+          </div>
+          <div class="batch-risk-bar">
+            <div class="batch-risk-fill" style="width:75.0%;"></div>
+          </div>
+          <span class="batch-risk-label">Risk: 75.0</span>
+        </div>
+        </div>
+
+  <!-- Priority + Risk Color Legend -->
+  <div class="legend">
+    <span style="color:var(--text-dim); font-weight:600;">Priority:</span>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#ff1744;"></div>
+      <span>Critical</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#ff6d00;"></div>
+      <span>High</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#fdd835;"></div>
+      <span>Medium</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#76ff03;"></div>
+      <span>Normal</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#00e676;"></div>
+      <span>Low</span>
+    </div>
+    <span style="color:var(--text-dim); font-weight:600; margin-left:8px;">Risk:</span>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#c8e6c9;"></div>
+      <span>Safe</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#fff9c4;"></div>
+      <span>Warning</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#ffccbc;"></div>
+      <span>Alert</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#ffcdd2;"></div>
+      <span>Danger</span>
+    </div>
+  </div>
+
+  <!-- KPI Summary Table -->
+  <h2>📋 KPI Summary Table — 100 Companies</h2>
+  <div class="table-scroll">
+    
+    <table id="kpi-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Company</th>
+          <th>Total Tasks</th>
+          <th>Workers</th>
+          <th>High Priority</th>
+          <th>QA Fail %</th>
+          <th>Rollback %</th>
+          <th>SLA Breach %</th>
+          <th>Risk Score</th>
+          <th>Batch</th>
+        </tr>
+      </thead>
+      <tbody>
+    
+        <tr class="prio-medium" title="Company: Company_001\nTotal Tasks: 35\nWorkers: 35\nHigh Priority: 7\nQA Fail: 8 (22.9%)\nRollback: 4 (11.4%)\nSLA Breach: 2 (5.7%)\nRisk Score: 17">
+          <td>1</td>
+          <td><strong>Company_001</strong></td>
+          <td>35</td>
+          <td>35</td>
+          <td class="prio-medium">7</td>
+          <td class="risk-alert">22.9%</td>
+          <td class="risk-alert">11.4%</td>
+          <td class="risk-warn">5.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_002\nTotal Tasks: 11\nWorkers: 11\nHigh Priority: 2\nQA Fail: 4 (36.4%)\nRollback: 1 (9.1%)\nSLA Breach: 0 (0.0%)\nRisk Score: 20">
+          <td>2</td>
+          <td><strong>Company_002</strong></td>
+          <td>11</td>
+          <td>11</td>
+          <td class="prio-medium">2</td>
+          <td class="risk-danger">36.4%</td>
+          <td class="risk-warn">9.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_003\nTotal Tasks: 11\nWorkers: 11\nHigh Priority: 1\nQA Fail: 1 (9.1%)\nRollback: 2 (18.2%)\nSLA Breach: 2 (18.2%)\nRisk Score: 11">
+          <td>3</td>
+          <td><strong>Company_003</strong></td>
+          <td>11</td>
+          <td>11</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-safe">9.1%</td>
+          <td class="risk-alert">18.2%</td>
+          <td class="risk-alert">18.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-high" title="Company: Company_004\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 4\nQA Fail: 1 (11.1%)\nRollback: 2 (22.2%)\nSLA Breach: 0 (0.0%)\nRisk Score: 25">
+          <td>4</td>
+          <td><strong>Company_004</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-high">4</td>
+          <td class="risk-warn">11.1%</td>
+          <td class="risk-danger">22.2%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:25%;"></div>
+              <span class="risk-label">25</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_005\nTotal Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 0 (0.0%)\nRollback: 2 (25.0%)\nSLA Breach: 2 (25.0%)\nRisk Score: 12">
+          <td>5</td>
+          <td><strong>Company_005</strong></td>
+          <td>8</td>
+          <td>8</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">25.0%</td>
+          <td class="risk-danger">25.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:12%;"></div>
+              <span class="risk-label">12</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_006\nTotal Tasks: 39\nWorkers: 39\nHigh Priority: 5\nQA Fail: 11 (28.2%)\nRollback: 3 (7.7%)\nSLA Breach: 2 (5.1%)\nRisk Score: 15">
+          <td>6</td>
+          <td><strong>Company_006</strong></td>
+          <td>39</td>
+          <td>39</td>
+          <td class="prio-normal">5</td>
+          <td class="risk-alert">28.2%</td>
+          <td class="risk-warn">7.7%</td>
+          <td class="risk-warn">5.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_007\nTotal Tasks: 10\nWorkers: 10\nHigh Priority: 1\nQA Fail: 3 (30.0%)\nRollback: 0 (0.0%)\nSLA Breach: 1 (10.0%)\nRisk Score: 14">
+          <td>7</td>
+          <td><strong>Company_007</strong></td>
+          <td>10</td>
+          <td>10</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-danger">30.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-alert">10.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_008\nTotal Tasks: 35\nWorkers: 35\nHigh Priority: 9\nQA Fail: 10 (28.6%)\nRollback: 5 (14.3%)\nSLA Breach: 3 (8.6%)\nRisk Score: 22">
+          <td>8</td>
+          <td><strong>Company_008</strong></td>
+          <td>35</td>
+          <td>35</td>
+          <td class="prio-medium">9</td>
+          <td class="risk-alert">28.6%</td>
+          <td class="risk-alert">14.3%</td>
+          <td class="risk-warn">8.6%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:22%;"></div>
+              <span class="risk-label">22</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_009\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 3 (17.6%)\nRollback: 1 (5.9%)\nSLA Breach: 2 (11.8%)\nRisk Score: 14">
+          <td>9</td>
+          <td><strong>Company_009</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-warn">17.6%</td>
+          <td class="risk-warn">5.9%</td>
+          <td class="risk-alert">11.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_010\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 6 (35.3%)\nRollback: 2 (11.8%)\nSLA Breach: 1 (5.9%)\nRisk Score: 20">
+          <td>10</td>
+          <td><strong>Company_010</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-danger">35.3%</td>
+          <td class="risk-alert">11.8%</td>
+          <td class="risk-warn">5.9%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_011\nTotal Tasks: 31\nWorkers: 31\nHigh Priority: 9\nQA Fail: 8 (25.8%)\nRollback: 4 (12.9%)\nSLA Breach: 0 (0.0%)\nRisk Score: 21">
+          <td>11</td>
+          <td><strong>Company_011</strong></td>
+          <td>31</td>
+          <td>31</td>
+          <td class="prio-medium">9</td>
+          <td class="risk-alert">25.8%</td>
+          <td class="risk-alert">12.9%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:21%;"></div>
+              <span class="risk-label">21</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_012\nTotal Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 1 (12.5%)\nRollback: 3 (37.5%)\nSLA Breach: 0 (0.0%)\nRisk Score: 16">
+          <td>12</td>
+          <td><strong>Company_012</strong></td>
+          <td>8</td>
+          <td>8</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-warn">12.5%</td>
+          <td class="risk-danger">37.5%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_013\nTotal Tasks: 11\nWorkers: 11\nHigh Priority: 3\nQA Fail: 2 (18.2%)\nRollback: 1 (9.1%)\nSLA Breach: 2 (18.2%)\nRisk Score: 20">
+          <td>13</td>
+          <td><strong>Company_013</strong></td>
+          <td>11</td>
+          <td>11</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-warn">18.2%</td>
+          <td class="risk-warn">9.1%</td>
+          <td class="risk-alert">18.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_014\nTotal Tasks: 5\nWorkers: 5\nHigh Priority: 1\nQA Fail: 0 (0.0%)\nRollback: 3 (60.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 20">
+          <td>14</td>
+          <td><strong>Company_014</strong></td>
+          <td>5</td>
+          <td>5</td>
+          <td class="prio-medium">1</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">60.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_015\nTotal Tasks: 15\nWorkers: 15\nHigh Priority: 1\nQA Fail: 5 (33.3%)\nRollback: 3 (20.0%)\nSLA Breach: 1 (6.7%)\nRisk Score: 17">
+          <td>15</td>
+          <td><strong>Company_015</strong></td>
+          <td>15</td>
+          <td>15</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-danger">20.0%</td>
+          <td class="risk-warn">6.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_016\nTotal Tasks: 15\nWorkers: 15\nHigh Priority: 4\nQA Fail: 2 (13.3%)\nRollback: 2 (13.3%)\nSLA Breach: 3 (20.0%)\nRisk Score: 19">
+          <td>16</td>
+          <td><strong>Company_016</strong></td>
+          <td>15</td>
+          <td>15</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-warn">13.3%</td>
+          <td class="risk-alert">13.3%</td>
+          <td class="risk-danger">20.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_017\nTotal Tasks: 25\nWorkers: 25\nHigh Priority: 6\nQA Fail: 5 (20.0%)\nRollback: 4 (16.0%)\nSLA Breach: 2 (8.0%)\nRisk Score: 19">
+          <td>17</td>
+          <td><strong>Company_017</strong></td>
+          <td>25</td>
+          <td>25</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-alert">20.0%</td>
+          <td class="risk-alert">16.0%</td>
+          <td class="risk-warn">8.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_018\nTotal Tasks: 11\nWorkers: 11\nHigh Priority: 2\nQA Fail: 1 (9.1%)\nRollback: 0 (0.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 10">
+          <td>18</td>
+          <td><strong>Company_018</strong></td>
+          <td>11</td>
+          <td>11</td>
+          <td class="prio-medium">2</td>
+          <td class="risk-safe">9.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:10%;"></div>
+              <span class="risk-label">10</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_019\nTotal Tasks: 13\nWorkers: 13\nHigh Priority: 0\nQA Fail: 0 (0.0%)\nRollback: 3 (23.1%)\nSLA Breach: 1 (7.7%)\nRisk Score: 5">
+          <td>19</td>
+          <td><strong>Company_019</strong></td>
+          <td>13</td>
+          <td>13</td>
+          <td class="prio-normal">0</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">23.1%</td>
+          <td class="risk-warn">7.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:5%;"></div>
+              <span class="risk-label">5</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_020\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 5\nQA Fail: 6 (21.4%)\nRollback: 4 (14.3%)\nSLA Breach: 0 (0.0%)\nRisk Score: 16">
+          <td>20</td>
+          <td><strong>Company_020</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-alert">21.4%</td>
+          <td class="risk-alert">14.3%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_021\nTotal Tasks: 33\nWorkers: 33\nHigh Priority: 5\nQA Fail: 4 (12.1%)\nRollback: 4 (12.1%)\nSLA Breach: 2 (6.1%)\nRisk Score: 12">
+          <td>21</td>
+          <td><strong>Company_021</strong></td>
+          <td>33</td>
+          <td>33</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-warn">12.1%</td>
+          <td class="risk-alert">12.1%</td>
+          <td class="risk-warn">6.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:12%;"></div>
+              <span class="risk-label">12</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_022\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 3\nQA Fail: 7 (25.0%)\nRollback: 4 (14.3%)\nSLA Breach: 5 (17.9%)\nRisk Score: 16">
+          <td>22</td>
+          <td><strong>Company_022</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-normal">3</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-alert">14.3%</td>
+          <td class="risk-alert">17.9%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_023\nTotal Tasks: 24\nWorkers: 24\nHigh Priority: 4\nQA Fail: 8 (33.3%)\nRollback: 1 (4.2%)\nSLA Breach: 1 (4.2%)\nRisk Score: 17">
+          <td>23</td>
+          <td><strong>Company_023</strong></td>
+          <td>24</td>
+          <td>24</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-safe">4.2%</td>
+          <td class="risk-safe">4.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_024\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 6\nQA Fail: 6 (21.4%)\nRollback: 5 (17.9%)\nSLA Breach: 2 (7.1%)\nRisk Score: 19">
+          <td>24</td>
+          <td><strong>Company_024</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-alert">21.4%</td>
+          <td class="risk-alert">17.9%</td>
+          <td class="risk-warn">7.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_025\nTotal Tasks: 36\nWorkers: 36\nHigh Priority: 9\nQA Fail: 7 (19.4%)\nRollback: 5 (13.9%)\nSLA Breach: 3 (8.3%)\nRisk Score: 19">
+          <td>25</td>
+          <td><strong>Company_025</strong></td>
+          <td>36</td>
+          <td>36</td>
+          <td class="prio-medium">9</td>
+          <td class="risk-warn">19.4%</td>
+          <td class="risk-alert">13.9%</td>
+          <td class="risk-warn">8.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_026\nTotal Tasks: 12\nWorkers: 12\nHigh Priority: 1\nQA Fail: 3 (25.0%)\nRollback: 1 (8.3%)\nSLA Breach: 0 (0.0%)\nRisk Score: 12">
+          <td>26</td>
+          <td><strong>Company_026</strong></td>
+          <td>12</td>
+          <td>12</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-warn">8.3%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:12%;"></div>
+              <span class="risk-label">12</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_027\nTotal Tasks: 25\nWorkers: 25\nHigh Priority: 5\nQA Fail: 4 (16.0%)\nRollback: 3 (12.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 15">
+          <td>27</td>
+          <td><strong>Company_027</strong></td>
+          <td>25</td>
+          <td>25</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-warn">16.0%</td>
+          <td class="risk-alert">12.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_028\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 4\nQA Fail: 6 (21.4%)\nRollback: 6 (21.4%)\nSLA Breach: 5 (17.9%)\nRisk Score: 18">
+          <td>28</td>
+          <td><strong>Company_028</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-normal">4</td>
+          <td class="risk-alert">21.4%</td>
+          <td class="risk-danger">21.4%</td>
+          <td class="risk-alert">17.9%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_029\nTotal Tasks: 27\nWorkers: 27\nHigh Priority: 8\nQA Fail: 9 (33.3%)\nRollback: 6 (22.2%)\nSLA Breach: 2 (7.4%)\nRisk Score: 27">
+          <td>29</td>
+          <td><strong>Company_029</strong></td>
+          <td>27</td>
+          <td>27</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-danger">22.2%</td>
+          <td class="risk-warn">7.4%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:27%;"></div>
+              <span class="risk-label">27</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_030\nTotal Tasks: 35\nWorkers: 35\nHigh Priority: 10\nQA Fail: 7 (20.0%)\nRollback: 9 (25.7%)\nSLA Breach: 4 (11.4%)\nRisk Score: 23">
+          <td>30</td>
+          <td><strong>Company_030</strong></td>
+          <td>35</td>
+          <td>35</td>
+          <td class="prio-medium">10</td>
+          <td class="risk-alert">20.0%</td>
+          <td class="risk-danger">25.7%</td>
+          <td class="risk-alert">11.4%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:23%;"></div>
+              <span class="risk-label">23</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_031\nTotal Tasks: 15\nWorkers: 15\nHigh Priority: 3\nQA Fail: 5 (33.3%)\nRollback: 4 (26.7%)\nSLA Breach: 1 (6.7%)\nRisk Score: 24">
+          <td>31</td>
+          <td><strong>Company_031</strong></td>
+          <td>15</td>
+          <td>15</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-danger">26.7%</td>
+          <td class="risk-warn">6.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:24%;"></div>
+              <span class="risk-label">24</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_032\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 6\nQA Fail: 4 (14.3%)\nRollback: 5 (17.9%)\nSLA Breach: 4 (14.3%)\nRisk Score: 17">
+          <td>32</td>
+          <td><strong>Company_032</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-warn">14.3%</td>
+          <td class="risk-alert">17.9%</td>
+          <td class="risk-alert">14.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_033\nTotal Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 2 (25.0%)\nRollback: 0 (0.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 12">
+          <td>33</td>
+          <td><strong>Company_033</strong></td>
+          <td>8</td>
+          <td>8</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:12%;"></div>
+              <span class="risk-label">12</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_034\nTotal Tasks: 5\nWorkers: 5\nHigh Priority: 0\nQA Fail: 0 (0.0%)\nRollback: 2 (40.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 8">
+          <td>34</td>
+          <td><strong>Company_034</strong></td>
+          <td>5</td>
+          <td>5</td>
+          <td class="prio-normal">0</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">40.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:8%;"></div>
+              <span class="risk-label">8</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_035\nTotal Tasks: 32\nWorkers: 32\nHigh Priority: 9\nQA Fail: 3 (9.4%)\nRollback: 4 (12.5%)\nSLA Breach: 5 (15.6%)\nRisk Score: 18">
+          <td>35</td>
+          <td><strong>Company_035</strong></td>
+          <td>32</td>
+          <td>32</td>
+          <td class="prio-medium">9</td>
+          <td class="risk-safe">9.4%</td>
+          <td class="risk-alert">12.5%</td>
+          <td class="risk-alert">15.6%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_036\nTotal Tasks: 38\nWorkers: 38\nHigh Priority: 11\nQA Fail: 11 (28.9%)\nRollback: 6 (15.8%)\nSLA Breach: 10 (26.3%)\nRisk Score: 26">
+          <td>36</td>
+          <td><strong>Company_036</strong></td>
+          <td>38</td>
+          <td>38</td>
+          <td class="prio-medium">11</td>
+          <td class="risk-alert">28.9%</td>
+          <td class="risk-alert">15.8%</td>
+          <td class="risk-danger">26.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:26%;"></div>
+              <span class="risk-label">26</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_037\nTotal Tasks: 34\nWorkers: 34\nHigh Priority: 8\nQA Fail: 8 (23.5%)\nRollback: 6 (17.6%)\nSLA Breach: 3 (8.8%)\nRisk Score: 20">
+          <td>37</td>
+          <td><strong>Company_037</strong></td>
+          <td>34</td>
+          <td>34</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-alert">23.5%</td>
+          <td class="risk-alert">17.6%</td>
+          <td class="risk-warn">8.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_038\nTotal Tasks: 34\nWorkers: 34\nHigh Priority: 7\nQA Fail: 7 (20.6%)\nRollback: 6 (17.6%)\nSLA Breach: 3 (8.8%)\nRisk Score: 18">
+          <td>38</td>
+          <td><strong>Company_038</strong></td>
+          <td>34</td>
+          <td>34</td>
+          <td class="prio-medium">7</td>
+          <td class="risk-alert">20.6%</td>
+          <td class="risk-alert">17.6%</td>
+          <td class="risk-warn">8.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_039\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 0\nQA Fail: 2 (22.2%)\nRollback: 1 (11.1%)\nSLA Breach: 0 (0.0%)\nRisk Score: 8">
+          <td>39</td>
+          <td><strong>Company_039</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-normal">0</td>
+          <td class="risk-alert">22.2%</td>
+          <td class="risk-alert">11.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:8%;"></div>
+              <span class="risk-label">8</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_040\nTotal Tasks: 27\nWorkers: 27\nHigh Priority: 2\nQA Fail: 5 (18.5%)\nRollback: 3 (11.1%)\nSLA Breach: 1 (3.7%)\nRisk Score: 11">
+          <td>40</td>
+          <td><strong>Company_040</strong></td>
+          <td>27</td>
+          <td>27</td>
+          <td class="prio-normal">2</td>
+          <td class="risk-warn">18.5%</td>
+          <td class="risk-alert">11.1%</td>
+          <td class="risk-safe">3.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_041\nTotal Tasks: 13\nWorkers: 13\nHigh Priority: 2\nQA Fail: 3 (23.1%)\nRollback: 1 (7.7%)\nSLA Breach: 2 (15.4%)\nRisk Score: 16">
+          <td>41</td>
+          <td><strong>Company_041</strong></td>
+          <td>13</td>
+          <td>13</td>
+          <td class="prio-medium">2</td>
+          <td class="risk-alert">23.1%</td>
+          <td class="risk-warn">7.7%</td>
+          <td class="risk-alert">15.4%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_042\nTotal Tasks: 24\nWorkers: 24\nHigh Priority: 6\nQA Fail: 7 (29.2%)\nRollback: 2 (8.3%)\nSLA Breach: 5 (20.8%)\nRisk Score: 22">
+          <td>42</td>
+          <td><strong>Company_042</strong></td>
+          <td>24</td>
+          <td>24</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-alert">29.2%</td>
+          <td class="risk-warn">8.3%</td>
+          <td class="risk-danger">20.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:22%;"></div>
+              <span class="risk-label">22</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_043\nTotal Tasks: 12\nWorkers: 12\nHigh Priority: 0\nQA Fail: 4 (33.3%)\nRollback: 2 (16.7%)\nSLA Breach: 1 (8.3%)\nRisk Score: 14">
+          <td>43</td>
+          <td><strong>Company_043</strong></td>
+          <td>12</td>
+          <td>12</td>
+          <td class="prio-normal">0</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-alert">16.7%</td>
+          <td class="risk-warn">8.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-high" title="Company: Company_044\nTotal Tasks: 10\nWorkers: 10\nHigh Priority: 3\nQA Fail: 2 (20.0%)\nRollback: 0 (0.0%)\nSLA Breach: 1 (10.0%)\nRisk Score: 19">
+          <td>44</td>
+          <td><strong>Company_044</strong></td>
+          <td>10</td>
+          <td>10</td>
+          <td class="prio-high">3</td>
+          <td class="risk-alert">20.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-alert">10.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_045\nTotal Tasks: 33\nWorkers: 33\nHigh Priority: 9\nQA Fail: 8 (24.2%)\nRollback: 6 (18.2%)\nSLA Breach: 3 (9.1%)\nRisk Score: 22">
+          <td>45</td>
+          <td><strong>Company_045</strong></td>
+          <td>33</td>
+          <td>33</td>
+          <td class="prio-medium">9</td>
+          <td class="risk-alert">24.2%</td>
+          <td class="risk-alert">18.2%</td>
+          <td class="risk-warn">9.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:22%;"></div>
+              <span class="risk-label">22</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_046\nTotal Tasks: 40\nWorkers: 40\nHigh Priority: 10\nQA Fail: 11 (27.5%)\nRollback: 3 (7.5%)\nSLA Breach: 4 (10.0%)\nRisk Score: 20">
+          <td>46</td>
+          <td><strong>Company_046</strong></td>
+          <td>40</td>
+          <td>40</td>
+          <td class="prio-medium">10</td>
+          <td class="risk-alert">27.5%</td>
+          <td class="risk-warn">7.5%</td>
+          <td class="risk-alert">10.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_047\nTotal Tasks: 29\nWorkers: 29\nHigh Priority: 5\nQA Fail: 6 (20.7%)\nRollback: 3 (10.3%)\nSLA Breach: 4 (13.8%)\nRisk Score: 16">
+          <td>47</td>
+          <td><strong>Company_047</strong></td>
+          <td>29</td>
+          <td>29</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-alert">20.7%</td>
+          <td class="risk-alert">10.3%</td>
+          <td class="risk-alert">13.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_048\nTotal Tasks: 10\nWorkers: 10\nHigh Priority: 1\nQA Fail: 3 (30.0%)\nRollback: 2 (20.0%)\nSLA Breach: 1 (10.0%)\nRisk Score: 18">
+          <td>48</td>
+          <td><strong>Company_048</strong></td>
+          <td>10</td>
+          <td>10</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-danger">30.0%</td>
+          <td class="risk-danger">20.0%</td>
+          <td class="risk-alert">10.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-high" title="Company: Company_049\nTotal Tasks: 22\nWorkers: 22\nHigh Priority: 7\nQA Fail: 2 (9.1%)\nRollback: 5 (22.7%)\nSLA Breach: 1 (4.5%)\nRisk Score: 20">
+          <td>49</td>
+          <td><strong>Company_049</strong></td>
+          <td>22</td>
+          <td>22</td>
+          <td class="prio-high">7</td>
+          <td class="risk-safe">9.1%</td>
+          <td class="risk-danger">22.7%</td>
+          <td class="risk-safe">4.5%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_050\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 4 (23.5%)\nRollback: 4 (23.5%)\nSLA Breach: 0 (0.0%)\nRisk Score: 18">
+          <td>50</td>
+          <td><strong>Company_050</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-alert">23.5%</td>
+          <td class="risk-danger">23.5%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-critical" title="Company: Company_051\nTotal Tasks: 12\nWorkers: 12\nHigh Priority: 7\nQA Fail: 4 (33.3%)\nRollback: 2 (16.7%)\nSLA Breach: 1 (8.3%)\nRisk Score: 37">
+          <td>51</td>
+          <td><strong>Company_051</strong></td>
+          <td>12</td>
+          <td>12</td>
+          <td class="prio-critical">7</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-alert">16.7%</td>
+          <td class="risk-warn">8.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-warn"
+                   style="width:37%;"></div>
+              <span class="risk-label">37</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_052\nTotal Tasks: 19\nWorkers: 19\nHigh Priority: 1\nQA Fail: 2 (10.5%)\nRollback: 5 (26.3%)\nSLA Breach: 3 (15.8%)\nRisk Score: 12">
+          <td>52</td>
+          <td><strong>Company_052</strong></td>
+          <td>19</td>
+          <td>19</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-warn">10.5%</td>
+          <td class="risk-danger">26.3%</td>
+          <td class="risk-alert">15.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:12%;"></div>
+              <span class="risk-label">12</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_053\nTotal Tasks: 34\nWorkers: 34\nHigh Priority: 5\nQA Fail: 7 (20.6%)\nRollback: 6 (17.6%)\nSLA Breach: 3 (8.8%)\nRisk Score: 16">
+          <td>53</td>
+          <td><strong>Company_053</strong></td>
+          <td>34</td>
+          <td>34</td>
+          <td class="prio-normal">5</td>
+          <td class="risk-alert">20.6%</td>
+          <td class="risk-alert">17.6%</td>
+          <td class="risk-warn">8.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_054\nTotal Tasks: 31\nWorkers: 31\nHigh Priority: 1\nQA Fail: 7 (22.6%)\nRollback: 4 (12.9%)\nSLA Breach: 3 (9.7%)\nRisk Score: 11">
+          <td>54</td>
+          <td><strong>Company_054</strong></td>
+          <td>31</td>
+          <td>31</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">22.6%</td>
+          <td class="risk-alert">12.9%</td>
+          <td class="risk-warn">9.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_055\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 2 (22.2%)\nRollback: 1 (11.1%)\nSLA Breach: 1 (11.1%)\nRisk Score: 14">
+          <td>55</td>
+          <td><strong>Company_055</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">22.2%</td>
+          <td class="risk-alert">11.1%</td>
+          <td class="risk-alert">11.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_056\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 4\nQA Fail: 0 (0.0%)\nRollback: 3 (17.6%)\nSLA Breach: 2 (11.8%)\nRisk Score: 14">
+          <td>56</td>
+          <td><strong>Company_056</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-alert">17.6%</td>
+          <td class="risk-alert">11.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_057\nTotal Tasks: 31\nWorkers: 31\nHigh Priority: 8\nQA Fail: 4 (12.9%)\nRollback: 2 (6.5%)\nSLA Breach: 6 (19.4%)\nRisk Score: 17">
+          <td>57</td>
+          <td><strong>Company_057</strong></td>
+          <td>31</td>
+          <td>31</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-warn">12.9%</td>
+          <td class="risk-warn">6.5%</td>
+          <td class="risk-alert">19.4%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_058\nTotal Tasks: 18\nWorkers: 18\nHigh Priority: 5\nQA Fail: 4 (22.2%)\nRollback: 2 (11.1%)\nSLA Breach: 5 (27.8%)\nRisk Score: 22">
+          <td>58</td>
+          <td><strong>Company_058</strong></td>
+          <td>18</td>
+          <td>18</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-alert">22.2%</td>
+          <td class="risk-alert">11.1%</td>
+          <td class="risk-danger">27.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:22%;"></div>
+              <span class="risk-label">22</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_059\nTotal Tasks: 29\nWorkers: 29\nHigh Priority: 6\nQA Fail: 5 (17.2%)\nRollback: 5 (17.2%)\nSLA Breach: 4 (13.8%)\nRisk Score: 18">
+          <td>59</td>
+          <td><strong>Company_059</strong></td>
+          <td>29</td>
+          <td>29</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-warn">17.2%</td>
+          <td class="risk-alert">17.2%</td>
+          <td class="risk-alert">13.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_060\nTotal Tasks: 31\nWorkers: 31\nHigh Priority: 6\nQA Fail: 5 (16.1%)\nRollback: 5 (16.1%)\nSLA Breach: 2 (6.5%)\nRisk Score: 16">
+          <td>60</td>
+          <td><strong>Company_060</strong></td>
+          <td>31</td>
+          <td>31</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-warn">16.1%</td>
+          <td class="risk-alert">16.1%</td>
+          <td class="risk-warn">6.5%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_061\nTotal Tasks: 28\nWorkers: 28\nHigh Priority: 4\nQA Fail: 4 (14.3%)\nRollback: 7 (25.0%)\nSLA Breach: 2 (7.1%)\nRisk Score: 15">
+          <td>61</td>
+          <td><strong>Company_061</strong></td>
+          <td>28</td>
+          <td>28</td>
+          <td class="prio-normal">4</td>
+          <td class="risk-warn">14.3%</td>
+          <td class="risk-danger">25.0%</td>
+          <td class="risk-warn">7.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_062\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 2 (22.2%)\nRollback: 1 (11.1%)\nSLA Breach: 0 (0.0%)\nRisk Score: 13">
+          <td>62</td>
+          <td><strong>Company_062</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">22.2%</td>
+          <td class="risk-alert">11.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:13%;"></div>
+              <span class="risk-label">13</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-high" title="Company: Company_063\nTotal Tasks: 18\nWorkers: 18\nHigh Priority: 7\nQA Fail: 3 (16.7%)\nRollback: 1 (5.6%)\nSLA Breach: 1 (5.6%)\nRisk Score: 22">
+          <td>63</td>
+          <td><strong>Company_063</strong></td>
+          <td>18</td>
+          <td>18</td>
+          <td class="prio-high">7</td>
+          <td class="risk-warn">16.7%</td>
+          <td class="risk-warn">5.6%</td>
+          <td class="risk-warn">5.6%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:22%;"></div>
+              <span class="risk-label">22</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_064\nTotal Tasks: 26\nWorkers: 26\nHigh Priority: 6\nQA Fail: 9 (34.6%)\nRollback: 4 (15.4%)\nSLA Breach: 2 (7.7%)\nRisk Score: 23">
+          <td>64</td>
+          <td><strong>Company_064</strong></td>
+          <td>26</td>
+          <td>26</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-danger">34.6%</td>
+          <td class="risk-alert">15.4%</td>
+          <td class="risk-warn">7.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:23%;"></div>
+              <span class="risk-label">23</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_065\nTotal Tasks: 15\nWorkers: 15\nHigh Priority: 1\nQA Fail: 0 (0.0%)\nRollback: 3 (20.0%)\nSLA Breach: 1 (6.7%)\nRisk Score: 7">
+          <td>65</td>
+          <td><strong>Company_065</strong></td>
+          <td>15</td>
+          <td>15</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">20.0%</td>
+          <td class="risk-warn">6.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:7%;"></div>
+              <span class="risk-label">7</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_066\nTotal Tasks: 37\nWorkers: 37\nHigh Priority: 6\nQA Fail: 11 (29.7%)\nRollback: 4 (10.8%)\nSLA Breach: 3 (8.1%)\nRisk Score: 18">
+          <td>66</td>
+          <td><strong>Company_066</strong></td>
+          <td>37</td>
+          <td>37</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-alert">29.7%</td>
+          <td class="risk-alert">10.8%</td>
+          <td class="risk-warn">8.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_067\nTotal Tasks: 6\nWorkers: 6\nHigh Priority: 1\nQA Fail: 1 (16.7%)\nRollback: 1 (16.7%)\nSLA Breach: 0 (0.0%)\nRisk Score: 15">
+          <td>67</td>
+          <td><strong>Company_067</strong></td>
+          <td>6</td>
+          <td>6</td>
+          <td class="prio-medium">1</td>
+          <td class="risk-warn">16.7%</td>
+          <td class="risk-alert">16.7%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_068\nTotal Tasks: 16\nWorkers: 16\nHigh Priority: 1\nQA Fail: 3 (18.8%)\nRollback: 2 (12.5%)\nSLA Breach: 1 (6.2%)\nRisk Score: 11">
+          <td>68</td>
+          <td><strong>Company_068</strong></td>
+          <td>16</td>
+          <td>16</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-warn">18.8%</td>
+          <td class="risk-alert">12.5%</td>
+          <td class="risk-warn">6.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_069\nTotal Tasks: 31\nWorkers: 31\nHigh Priority: 5\nQA Fail: 3 (9.7%)\nRollback: 3 (9.7%)\nSLA Breach: 1 (3.2%)\nRisk Score: 11">
+          <td>69</td>
+          <td><strong>Company_069</strong></td>
+          <td>31</td>
+          <td>31</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-safe">9.7%</td>
+          <td class="risk-warn">9.7%</td>
+          <td class="risk-safe">3.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_070\nTotal Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 0 (0.0%)\nRollback: 0 (0.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 5">
+          <td>70</td>
+          <td><strong>Company_070</strong></td>
+          <td>8</td>
+          <td>8</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:5%;"></div>
+              <span class="risk-label">5</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_071\nTotal Tasks: 13\nWorkers: 13\nHigh Priority: 3\nQA Fail: 2 (15.4%)\nRollback: 1 (7.7%)\nSLA Breach: 1 (7.7%)\nRisk Score: 16">
+          <td>71</td>
+          <td><strong>Company_071</strong></td>
+          <td>13</td>
+          <td>13</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-warn">15.4%</td>
+          <td class="risk-warn">7.7%</td>
+          <td class="risk-warn">7.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_072\nTotal Tasks: 26\nWorkers: 26\nHigh Priority: 3\nQA Fail: 5 (19.2%)\nRollback: 2 (7.7%)\nSLA Breach: 4 (15.4%)\nRisk Score: 13">
+          <td>72</td>
+          <td><strong>Company_072</strong></td>
+          <td>26</td>
+          <td>26</td>
+          <td class="prio-normal">3</td>
+          <td class="risk-warn">19.2%</td>
+          <td class="risk-warn">7.7%</td>
+          <td class="risk-alert">15.4%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:13%;"></div>
+              <span class="risk-label">13</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_073\nTotal Tasks: 11\nWorkers: 11\nHigh Priority: 1\nQA Fail: 3 (27.3%)\nRollback: 1 (9.1%)\nSLA Breach: 0 (0.0%)\nRisk Score: 13">
+          <td>73</td>
+          <td><strong>Company_073</strong></td>
+          <td>11</td>
+          <td>11</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-alert">27.3%</td>
+          <td class="risk-warn">9.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:13%;"></div>
+              <span class="risk-label">13</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_074\nTotal Tasks: 24\nWorkers: 24\nHigh Priority: 0\nQA Fail: 7 (29.2%)\nRollback: 3 (12.5%)\nSLA Breach: 0 (0.0%)\nRisk Score: 11">
+          <td>74</td>
+          <td><strong>Company_074</strong></td>
+          <td>24</td>
+          <td>24</td>
+          <td class="prio-normal">0</td>
+          <td class="risk-alert">29.2%</td>
+          <td class="risk-alert">12.5%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:11%;"></div>
+              <span class="risk-label">11</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_075\nTotal Tasks: 14\nWorkers: 14\nHigh Priority: 2\nQA Fail: 0 (0.0%)\nRollback: 1 (7.1%)\nSLA Breach: 0 (0.0%)\nRisk Score: 7">
+          <td>75</td>
+          <td><strong>Company_075</strong></td>
+          <td>14</td>
+          <td>14</td>
+          <td class="prio-normal">2</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-warn">7.1%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:7%;"></div>
+              <span class="risk-label">7</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_076\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 3 (33.3%)\nRollback: 0 (0.0%)\nSLA Breach: 0 (0.0%)\nRisk Score: 14">
+          <td>76</td>
+          <td><strong>Company_076</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_077\nTotal Tasks: 18\nWorkers: 18\nHigh Priority: 4\nQA Fail: 2 (11.1%)\nRollback: 5 (27.8%)\nSLA Breach: 3 (16.7%)\nRisk Score: 19">
+          <td>77</td>
+          <td><strong>Company_077</strong></td>
+          <td>18</td>
+          <td>18</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-warn">11.1%</td>
+          <td class="risk-danger">27.8%</td>
+          <td class="risk-alert">16.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_078\nTotal Tasks: 5\nWorkers: 5\nHigh Priority: 1\nQA Fail: 0 (0.0%)\nRollback: 0 (0.0%)\nSLA Breach: 1 (20.0%)\nRisk Score: 10">
+          <td>78</td>
+          <td><strong>Company_078</strong></td>
+          <td>5</td>
+          <td>5</td>
+          <td class="prio-medium">1</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-danger">20.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:10%;"></div>
+              <span class="risk-label">10</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_079\nTotal Tasks: 23\nWorkers: 23\nHigh Priority: 5\nQA Fail: 6 (26.1%)\nRollback: 2 (8.7%)\nSLA Breach: 2 (8.7%)\nRisk Score: 19">
+          <td>79</td>
+          <td><strong>Company_079</strong></td>
+          <td>23</td>
+          <td>23</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-alert">26.1%</td>
+          <td class="risk-warn">8.7%</td>
+          <td class="risk-warn">8.7%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_080\nTotal Tasks: 37\nWorkers: 37\nHigh Priority: 7\nQA Fail: 9 (24.3%)\nRollback: 6 (16.2%)\nSLA Breach: 4 (10.8%)\nRisk Score: 19">
+          <td>80</td>
+          <td><strong>Company_080</strong></td>
+          <td>37</td>
+          <td>37</td>
+          <td class="prio-medium">7</td>
+          <td class="risk-alert">24.3%</td>
+          <td class="risk-alert">16.2%</td>
+          <td class="risk-alert">10.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_081\nTotal Tasks: 7\nWorkers: 7\nHigh Priority: 2\nQA Fail: 3 (42.9%)\nRollback: 1 (14.3%)\nSLA Breach: 0 (0.0%)\nRisk Score: 27">
+          <td>81</td>
+          <td><strong>Company_081</strong></td>
+          <td>7</td>
+          <td>7</td>
+          <td class="prio-medium">2</td>
+          <td class="risk-danger">42.9%</td>
+          <td class="risk-alert">14.3%</td>
+          <td class="risk-safe">0.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:27%;"></div>
+              <span class="risk-label">27</span>
+            </div>
+          </td>
+          <td>Batch 5</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_082\nTotal Tasks: 18\nWorkers: 18\nHigh Priority: 5\nQA Fail: 7 (38.9%)\nRollback: 3 (16.7%)\nSLA Breach: 4 (22.2%)\nRisk Score: 28">
+          <td>82</td>
+          <td><strong>Company_082</strong></td>
+          <td>18</td>
+          <td>18</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-danger">38.9%</td>
+          <td class="risk-alert">16.7%</td>
+          <td class="risk-danger">22.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:28%;"></div>
+              <span class="risk-label">28</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-high" title="Company: Company_083\nTotal Tasks: 19\nWorkers: 19\nHigh Priority: 6\nQA Fail: 3 (15.8%)\nRollback: 5 (26.3%)\nSLA Breach: 3 (15.8%)\nRisk Score: 24">
+          <td>83</td>
+          <td><strong>Company_083</strong></td>
+          <td>19</td>
+          <td>19</td>
+          <td class="prio-high">6</td>
+          <td class="risk-warn">15.8%</td>
+          <td class="risk-danger">26.3%</td>
+          <td class="risk-alert">15.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:24%;"></div>
+              <span class="risk-label">24</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_084\nTotal Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 4 (44.4%)\nRollback: 2 (22.2%)\nSLA Breach: 1 (11.1%)\nRisk Score: 23">
+          <td>84</td>
+          <td><strong>Company_084</strong></td>
+          <td>9</td>
+          <td>9</td>
+          <td class="prio-normal">1</td>
+          <td class="risk-danger">44.4%</td>
+          <td class="risk-danger">22.2%</td>
+          <td class="risk-alert">11.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:23%;"></div>
+              <span class="risk-label">23</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_085\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 5\nQA Fail: 5 (29.4%)\nRollback: 5 (29.4%)\nSLA Breach: 2 (11.8%)\nRisk Score: 27">
+          <td>85</td>
+          <td><strong>Company_085</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-alert">29.4%</td>
+          <td class="risk-danger">29.4%</td>
+          <td class="risk-alert">11.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:27%;"></div>
+              <span class="risk-label">27</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_086\nTotal Tasks: 21\nWorkers: 21\nHigh Priority: 5\nQA Fail: 4 (19.0%)\nRollback: 3 (14.3%)\nSLA Breach: 1 (4.8%)\nRisk Score: 18">
+          <td>86</td>
+          <td><strong>Company_086</strong></td>
+          <td>21</td>
+          <td>21</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-warn">19.0%</td>
+          <td class="risk-alert">14.3%</td>
+          <td class="risk-safe">4.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_087\nTotal Tasks: 32\nWorkers: 32\nHigh Priority: 8\nQA Fail: 6 (18.8%)\nRollback: 4 (12.5%)\nSLA Breach: 2 (6.2%)\nRisk Score: 18">
+          <td>87</td>
+          <td><strong>Company_087</strong></td>
+          <td>32</td>
+          <td>32</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-warn">18.8%</td>
+          <td class="risk-alert">12.5%</td>
+          <td class="risk-warn">6.2%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 2</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_088\nTotal Tasks: 40\nWorkers: 40\nHigh Priority: 8\nQA Fail: 10 (25.0%)\nRollback: 7 (17.5%)\nSLA Breach: 3 (7.5%)\nRisk Score: 19">
+          <td>88</td>
+          <td><strong>Company_088</strong></td>
+          <td>40</td>
+          <td>40</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-alert">17.5%</td>
+          <td class="risk-warn">7.5%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_089\nTotal Tasks: 38\nWorkers: 38\nHigh Priority: 8\nQA Fail: 4 (10.5%)\nRollback: 11 (28.9%)\nSLA Breach: 3 (7.9%)\nRisk Score: 18">
+          <td>89</td>
+          <td><strong>Company_089</strong></td>
+          <td>38</td>
+          <td>38</td>
+          <td class="prio-medium">8</td>
+          <td class="risk-warn">10.5%</td>
+          <td class="risk-danger">28.9%</td>
+          <td class="risk-warn">7.9%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:18%;"></div>
+              <span class="risk-label">18</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_090\nTotal Tasks: 26\nWorkers: 26\nHigh Priority: 5\nQA Fail: 4 (15.4%)\nRollback: 5 (19.2%)\nSLA Breach: 3 (11.5%)\nRisk Score: 17">
+          <td>90</td>
+          <td><strong>Company_090</strong></td>
+          <td>26</td>
+          <td>26</td>
+          <td class="prio-medium">5</td>
+          <td class="risk-warn">15.4%</td>
+          <td class="risk-alert">19.2%</td>
+          <td class="risk-alert">11.5%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:17%;"></div>
+              <span class="risk-label">17</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_091\nTotal Tasks: 16\nWorkers: 16\nHigh Priority: 4\nQA Fail: 4 (25.0%)\nRollback: 3 (18.8%)\nSLA Breach: 4 (25.0%)\nRisk Score: 23">
+          <td>91</td>
+          <td><strong>Company_091</strong></td>
+          <td>16</td>
+          <td>16</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-alert">18.8%</td>
+          <td class="risk-danger">25.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:23%;"></div>
+              <span class="risk-label">23</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_092\nTotal Tasks: 24\nWorkers: 24\nHigh Priority: 3\nQA Fail: 9 (37.5%)\nRollback: 3 (12.5%)\nSLA Breach: 2 (8.3%)\nRisk Score: 19">
+          <td>92</td>
+          <td><strong>Company_092</strong></td>
+          <td>24</td>
+          <td>24</td>
+          <td class="prio-normal">3</td>
+          <td class="risk-danger">37.5%</td>
+          <td class="risk-alert">12.5%</td>
+          <td class="risk-warn">8.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_093\nTotal Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 5 (29.4%)\nRollback: 2 (11.8%)\nSLA Breach: 3 (17.6%)\nRisk Score: 20">
+          <td>93</td>
+          <td><strong>Company_093</strong></td>
+          <td>17</td>
+          <td>17</td>
+          <td class="prio-medium">3</td>
+          <td class="risk-alert">29.4%</td>
+          <td class="risk-alert">11.8%</td>
+          <td class="risk-alert">17.6%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_094\nTotal Tasks: 36\nWorkers: 36\nHigh Priority: 6\nQA Fail: 9 (25.0%)\nRollback: 1 (2.8%)\nSLA Breach: 4 (11.1%)\nRisk Score: 15">
+          <td>94</td>
+          <td><strong>Company_094</strong></td>
+          <td>36</td>
+          <td>36</td>
+          <td class="prio-medium">6</td>
+          <td class="risk-alert">25.0%</td>
+          <td class="risk-safe">2.8%</td>
+          <td class="risk-alert">11.1%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_095\nTotal Tasks: 23\nWorkers: 23\nHigh Priority: 4\nQA Fail: 3 (13.0%)\nRollback: 3 (13.0%)\nSLA Breach: 3 (13.0%)\nRisk Score: 14">
+          <td>95</td>
+          <td><strong>Company_095</strong></td>
+          <td>23</td>
+          <td>23</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-warn">13.0%</td>
+          <td class="risk-alert">13.0%</td>
+          <td class="risk-alert">13.0%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:14%;"></div>
+              <span class="risk-label">14</span>
+            </div>
+          </td>
+          <td>Batch 1</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_096\nTotal Tasks: 29\nWorkers: 29\nHigh Priority: 7\nQA Fail: 4 (13.8%)\nRollback: 3 (10.3%)\nSLA Breach: 2 (6.9%)\nRisk Score: 16">
+          <td>96</td>
+          <td><strong>Company_096</strong></td>
+          <td>29</td>
+          <td>29</td>
+          <td class="prio-medium">7</td>
+          <td class="risk-warn">13.8%</td>
+          <td class="risk-alert">10.3%</td>
+          <td class="risk-warn">6.9%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:16%;"></div>
+              <span class="risk-label">16</span>
+            </div>
+          </td>
+          <td>Batch 8</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_097\nTotal Tasks: 16\nWorkers: 16\nHigh Priority: 4\nQA Fail: 2 (12.5%)\nRollback: 0 (0.0%)\nSLA Breach: 3 (18.8%)\nRisk Score: 15">
+          <td>97</td>
+          <td><strong>Company_097</strong></td>
+          <td>16</td>
+          <td>16</td>
+          <td class="prio-medium">4</td>
+          <td class="risk-warn">12.5%</td>
+          <td class="risk-safe">0.0%</td>
+          <td class="risk-alert">18.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:15%;"></div>
+              <span class="risk-label">15</span>
+            </div>
+          </td>
+          <td>Batch 4</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_098\nTotal Tasks: 24\nWorkers: 24\nHigh Priority: 2\nQA Fail: 7 (29.2%)\nRollback: 8 (33.3%)\nSLA Breach: 3 (12.5%)\nRisk Score: 20">
+          <td>98</td>
+          <td><strong>Company_098</strong></td>
+          <td>24</td>
+          <td>24</td>
+          <td class="prio-normal">2</td>
+          <td class="risk-alert">29.2%</td>
+          <td class="risk-danger">33.3%</td>
+          <td class="risk-alert">12.5%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 7</td>
+        </tr>
+        
+        <tr class="prio-medium" title="Company: Company_099\nTotal Tasks: 35\nWorkers: 35\nHigh Priority: 7\nQA Fail: 7 (20.0%)\nRollback: 8 (22.9%)\nSLA Breach: 5 (14.3%)\nRisk Score: 19">
+          <td>99</td>
+          <td><strong>Company_099</strong></td>
+          <td>35</td>
+          <td>35</td>
+          <td class="prio-medium">7</td>
+          <td class="risk-alert">20.0%</td>
+          <td class="risk-danger">22.9%</td>
+          <td class="risk-alert">14.3%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:19%;"></div>
+              <span class="risk-label">19</span>
+            </div>
+          </td>
+          <td>Batch 3</td>
+        </tr>
+        
+        <tr class="prio-normal" title="Company: Company_100\nTotal Tasks: 34\nWorkers: 34\nHigh Priority: 4\nQA Fail: 11 (32.4%)\nRollback: 8 (23.5%)\nSLA Breach: 4 (11.8%)\nRisk Score: 20">
+          <td>100</td>
+          <td><strong>Company_100</strong></td>
+          <td>34</td>
+          <td>34</td>
+          <td class="prio-normal">4</td>
+          <td class="risk-danger">32.4%</td>
+          <td class="risk-danger">23.5%</td>
+          <td class="risk-alert">11.8%</td>
+          <td>
+            <div class="risk-bar-container">
+              <div class="risk-bar bar-safe"
+                   style="width:20%;"></div>
+              <span class="risk-label">20</span>
+            </div>
+          </td>
+          <td>Batch 6</td>
+        </tr>
+        </tbody></table>
+  </div>
+
+  <!-- Interactive Mermaid Flow -->
+  <h2>🔀 Task Flow & Worker Allocation (Mermaid + Tooltip)</h2>
+  <div style="color:var(--text-dim); font-size:12px; margin-bottom:8px;">
+    Hover over company nodes for task details. Color reflects high-priority ratio.
+  </div>
+  <div class="mermaid">
+flowchart TB
+    subgraph INPUT[📥 Task Input]
+        I1[(DB)]
+        I2[(Telegram)]
+        I3[(CLI)]
+    end
+    INPUT --> DECISION
+    DECISION{{Decision Engine}}
+    DECISION --> PRIORITY
+    PRIORITY["📊 Predictive Priority & Company Assignment"]
+    PRIORITY --> ALLOC["👷 Dynamic Worker Allocation"]
+    ALLOC["👷 Dynamic Worker Allocation — Pool: 512 workers"]
+    Company_001["<b>Company_001</b><br/>Tasks:35 | Workers:35<br/>HP:7 | QAF:8 | RB:4<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_001
+    Company_001 --> QA
+    style Company_001 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_001 "#Company_001" "Tasks: 35\nWorkers: 35\nHigh Priority: 7\nQA Fail: 8\nRollback: 4\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_002["<b>Company_002</b><br/>Tasks:11 | Workers:11<br/>HP:2 | QAF:4 | RB:1<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_002
+    Company_002 --> QA
+    style Company_002 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_002 "#Company_002" "Tasks: 11\nWorkers: 11\nHigh Priority: 2\nQA Fail: 4\nRollback: 1\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_003["<b>Company_003</b><br/>Tasks:11 | Workers:11<br/>HP:1 | QAF:1 | RB:2<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_003
+    Company_003 --> QA
+    style Company_003 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_003 "#Company_003" "Tasks: 11\nWorkers: 11\nHigh Priority: 1\nQA Fail: 1\nRollback: 2\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_004["<b>Company_004</b><br/>Tasks:9 | Workers:9<br/>HP:4 | QAF:1 | RB:2<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_004
+    Company_004 --> QA
+    style Company_004 fill:#ff6d00,stroke:#333,stroke-width:2px
+    click Company_004 "#Company_004" "Tasks: 9\nWorkers: 9\nHigh Priority: 4\nQA Fail: 1\nRollback: 2\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_005["<b>Company_005</b><br/>Tasks:8 | Workers:8<br/>HP:1 | QAF:0 | RB:2<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_005
+    Company_005 --> QA
+    style Company_005 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_005 "#Company_005" "Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 0\nRollback: 2\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_006["<b>Company_006</b><br/>Tasks:39 | Workers:39<br/>HP:5 | QAF:11 | RB:3<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_006
+    Company_006 --> QA
+    style Company_006 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_006 "#Company_006" "Tasks: 39\nWorkers: 39\nHigh Priority: 5\nQA Fail: 11\nRollback: 3\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_007["<b>Company_007</b><br/>Tasks:10 | Workers:10<br/>HP:1 | QAF:3 | RB:0<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_007
+    Company_007 --> QA
+    style Company_007 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_007 "#Company_007" "Tasks: 10\nWorkers: 10\nHigh Priority: 1\nQA Fail: 3\nRollback: 0\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_008["<b>Company_008</b><br/>Tasks:35 | Workers:35<br/>HP:9 | QAF:10 | RB:5<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_008
+    Company_008 --> QA
+    style Company_008 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_008 "#Company_008" "Tasks: 35\nWorkers: 35\nHigh Priority: 9\nQA Fail: 10\nRollback: 5\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_009["<b>Company_009</b><br/>Tasks:17 | Workers:17<br/>HP:3 | QAF:3 | RB:1<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_009
+    Company_009 --> QA
+    style Company_009 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_009 "#Company_009" "Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 3\nRollback: 1\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_010["<b>Company_010</b><br/>Tasks:17 | Workers:17<br/>HP:3 | QAF:6 | RB:2<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_010
+    Company_010 --> QA
+    style Company_010 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_010 "#Company_010" "Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 6\nRollback: 2\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_011["<b>Company_011</b><br/>Tasks:31 | Workers:31<br/>HP:9 | QAF:8 | RB:4<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_011
+    Company_011 --> QA
+    style Company_011 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_011 "#Company_011" "Tasks: 31\nWorkers: 31\nHigh Priority: 9\nQA Fail: 8\nRollback: 4\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_012["<b>Company_012</b><br/>Tasks:8 | Workers:8<br/>HP:1 | QAF:1 | RB:3<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_012
+    Company_012 --> QA
+    style Company_012 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_012 "#Company_012" "Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 1\nRollback: 3\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_013["<b>Company_013</b><br/>Tasks:11 | Workers:11<br/>HP:3 | QAF:2 | RB:1<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_013
+    Company_013 --> QA
+    style Company_013 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_013 "#Company_013" "Tasks: 11\nWorkers: 11\nHigh Priority: 3\nQA Fail: 2\nRollback: 1\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_014["<b>Company_014</b><br/>Tasks:5 | Workers:5<br/>HP:1 | QAF:0 | RB:3<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_014
+    Company_014 --> QA
+    style Company_014 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_014 "#Company_014" "Tasks: 5\nWorkers: 5\nHigh Priority: 1\nQA Fail: 0\nRollback: 3\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_015["<b>Company_015</b><br/>Tasks:15 | Workers:15<br/>HP:1 | QAF:5 | RB:3<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_015
+    Company_015 --> QA
+    style Company_015 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_015 "#Company_015" "Tasks: 15\nWorkers: 15\nHigh Priority: 1\nQA Fail: 5\nRollback: 3\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_016["<b>Company_016</b><br/>Tasks:15 | Workers:15<br/>HP:4 | QAF:2 | RB:2<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_016
+    Company_016 --> QA
+    style Company_016 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_016 "#Company_016" "Tasks: 15\nWorkers: 15\nHigh Priority: 4\nQA Fail: 2\nRollback: 2\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_017["<b>Company_017</b><br/>Tasks:25 | Workers:25<br/>HP:6 | QAF:5 | RB:4<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_017
+    Company_017 --> QA
+    style Company_017 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_017 "#Company_017" "Tasks: 25\nWorkers: 25\nHigh Priority: 6\nQA Fail: 5\nRollback: 4\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_018["<b>Company_018</b><br/>Tasks:11 | Workers:11<br/>HP:2 | QAF:1 | RB:0<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_018
+    Company_018 --> QA
+    style Company_018 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_018 "#Company_018" "Tasks: 11\nWorkers: 11\nHigh Priority: 2\nQA Fail: 1\nRollback: 0\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_019["<b>Company_019</b><br/>Tasks:13 | Workers:13<br/>HP:0 | QAF:0 | RB:3<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_019
+    Company_019 --> QA
+    style Company_019 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_019 "#Company_019" "Tasks: 13\nWorkers: 13\nHigh Priority: 0\nQA Fail: 0\nRollback: 3\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_020["<b>Company_020</b><br/>Tasks:28 | Workers:28<br/>HP:5 | QAF:6 | RB:4<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_020
+    Company_020 --> QA
+    style Company_020 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_020 "#Company_020" "Tasks: 28\nWorkers: 28\nHigh Priority: 5\nQA Fail: 6\nRollback: 4\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_021["<b>Company_021</b><br/>Tasks:33 | Workers:33<br/>HP:5 | QAF:4 | RB:4<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_021
+    Company_021 --> QA
+    style Company_021 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_021 "#Company_021" "Tasks: 33\nWorkers: 33\nHigh Priority: 5\nQA Fail: 4\nRollback: 4\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_022["<b>Company_022</b><br/>Tasks:28 | Workers:28<br/>HP:3 | QAF:7 | RB:4<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_022
+    Company_022 --> QA
+    style Company_022 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_022 "#Company_022" "Tasks: 28\nWorkers: 28\nHigh Priority: 3\nQA Fail: 7\nRollback: 4\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_023["<b>Company_023</b><br/>Tasks:24 | Workers:24<br/>HP:4 | QAF:8 | RB:1<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_023
+    Company_023 --> QA
+    style Company_023 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_023 "#Company_023" "Tasks: 24\nWorkers: 24\nHigh Priority: 4\nQA Fail: 8\nRollback: 1\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_024["<b>Company_024</b><br/>Tasks:28 | Workers:28<br/>HP:6 | QAF:6 | RB:5<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_024
+    Company_024 --> QA
+    style Company_024 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_024 "#Company_024" "Tasks: 28\nWorkers: 28\nHigh Priority: 6\nQA Fail: 6\nRollback: 5\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_025["<b>Company_025</b><br/>Tasks:36 | Workers:36<br/>HP:9 | QAF:7 | RB:5<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_025
+    Company_025 --> QA
+    style Company_025 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_025 "#Company_025" "Tasks: 36\nWorkers: 36\nHigh Priority: 9\nQA Fail: 7\nRollback: 5\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_026["<b>Company_026</b><br/>Tasks:12 | Workers:12<br/>HP:1 | QAF:3 | RB:1<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_026
+    Company_026 --> QA
+    style Company_026 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_026 "#Company_026" "Tasks: 12\nWorkers: 12\nHigh Priority: 1\nQA Fail: 3\nRollback: 1\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_027["<b>Company_027</b><br/>Tasks:25 | Workers:25<br/>HP:5 | QAF:4 | RB:3<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_027
+    Company_027 --> QA
+    style Company_027 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_027 "#Company_027" "Tasks: 25\nWorkers: 25\nHigh Priority: 5\nQA Fail: 4\nRollback: 3\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_028["<b>Company_028</b><br/>Tasks:28 | Workers:28<br/>HP:4 | QAF:6 | RB:6<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_028
+    Company_028 --> QA
+    style Company_028 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_028 "#Company_028" "Tasks: 28\nWorkers: 28\nHigh Priority: 4\nQA Fail: 6\nRollback: 6\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_029["<b>Company_029</b><br/>Tasks:27 | Workers:27<br/>HP:8 | QAF:9 | RB:6<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_029
+    Company_029 --> QA
+    style Company_029 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_029 "#Company_029" "Tasks: 27\nWorkers: 27\nHigh Priority: 8\nQA Fail: 9\nRollback: 6\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_030["<b>Company_030</b><br/>Tasks:35 | Workers:35<br/>HP:10 | QAF:7 | RB:9<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_030
+    Company_030 --> QA
+    style Company_030 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_030 "#Company_030" "Tasks: 35\nWorkers: 35\nHigh Priority: 10\nQA Fail: 7\nRollback: 9\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_031["<b>Company_031</b><br/>Tasks:15 | Workers:15<br/>HP:3 | QAF:5 | RB:4<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_031
+    Company_031 --> QA
+    style Company_031 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_031 "#Company_031" "Tasks: 15\nWorkers: 15\nHigh Priority: 3\nQA Fail: 5\nRollback: 4\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_032["<b>Company_032</b><br/>Tasks:28 | Workers:28<br/>HP:6 | QAF:4 | RB:5<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_032
+    Company_032 --> QA
+    style Company_032 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_032 "#Company_032" "Tasks: 28\nWorkers: 28\nHigh Priority: 6\nQA Fail: 4\nRollback: 5\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_033["<b>Company_033</b><br/>Tasks:8 | Workers:8<br/>HP:1 | QAF:2 | RB:0<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_033
+    Company_033 --> QA
+    style Company_033 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_033 "#Company_033" "Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 2\nRollback: 0\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_034["<b>Company_034</b><br/>Tasks:5 | Workers:5<br/>HP:0 | QAF:0 | RB:2<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_034
+    Company_034 --> QA
+    style Company_034 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_034 "#Company_034" "Tasks: 5\nWorkers: 5\nHigh Priority: 0\nQA Fail: 0\nRollback: 2\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_035["<b>Company_035</b><br/>Tasks:32 | Workers:32<br/>HP:9 | QAF:3 | RB:4<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_035
+    Company_035 --> QA
+    style Company_035 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_035 "#Company_035" "Tasks: 32\nWorkers: 32\nHigh Priority: 9\nQA Fail: 3\nRollback: 4\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_036["<b>Company_036</b><br/>Tasks:38 | Workers:38<br/>HP:11 | QAF:11 | RB:6<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_036
+    Company_036 --> QA
+    style Company_036 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_036 "#Company_036" "Tasks: 38\nWorkers: 38\nHigh Priority: 11\nQA Fail: 11\nRollback: 6\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_037["<b>Company_037</b><br/>Tasks:34 | Workers:34<br/>HP:8 | QAF:8 | RB:6<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_037
+    Company_037 --> QA
+    style Company_037 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_037 "#Company_037" "Tasks: 34\nWorkers: 34\nHigh Priority: 8\nQA Fail: 8\nRollback: 6\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_038["<b>Company_038</b><br/>Tasks:34 | Workers:34<br/>HP:7 | QAF:7 | RB:6<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_038
+    Company_038 --> QA
+    style Company_038 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_038 "#Company_038" "Tasks: 34\nWorkers: 34\nHigh Priority: 7\nQA Fail: 7\nRollback: 6\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_039["<b>Company_039</b><br/>Tasks:9 | Workers:9<br/>HP:0 | QAF:2 | RB:1<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_039
+    Company_039 --> QA
+    style Company_039 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_039 "#Company_039" "Tasks: 9\nWorkers: 9\nHigh Priority: 0\nQA Fail: 2\nRollback: 1\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_040["<b>Company_040</b><br/>Tasks:27 | Workers:27<br/>HP:2 | QAF:5 | RB:3<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_040
+    Company_040 --> QA
+    style Company_040 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_040 "#Company_040" "Tasks: 27\nWorkers: 27\nHigh Priority: 2\nQA Fail: 5\nRollback: 3\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_041["<b>Company_041</b><br/>Tasks:13 | Workers:13<br/>HP:2 | QAF:3 | RB:1<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_041
+    Company_041 --> QA
+    style Company_041 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_041 "#Company_041" "Tasks: 13\nWorkers: 13\nHigh Priority: 2\nQA Fail: 3\nRollback: 1\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_042["<b>Company_042</b><br/>Tasks:24 | Workers:24<br/>HP:6 | QAF:7 | RB:2<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_042
+    Company_042 --> QA
+    style Company_042 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_042 "#Company_042" "Tasks: 24\nWorkers: 24\nHigh Priority: 6\nQA Fail: 7\nRollback: 2\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_043["<b>Company_043</b><br/>Tasks:12 | Workers:12<br/>HP:0 | QAF:4 | RB:2<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_043
+    Company_043 --> QA
+    style Company_043 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_043 "#Company_043" "Tasks: 12\nWorkers: 12\nHigh Priority: 0\nQA Fail: 4\nRollback: 2\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_044["<b>Company_044</b><br/>Tasks:10 | Workers:10<br/>HP:3 | QAF:2 | RB:0<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_044
+    Company_044 --> QA
+    style Company_044 fill:#ff6d00,stroke:#333,stroke-width:2px
+    click Company_044 "#Company_044" "Tasks: 10\nWorkers: 10\nHigh Priority: 3\nQA Fail: 2\nRollback: 0\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_045["<b>Company_045</b><br/>Tasks:33 | Workers:33<br/>HP:9 | QAF:8 | RB:6<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_045
+    Company_045 --> QA
+    style Company_045 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_045 "#Company_045" "Tasks: 33\nWorkers: 33\nHigh Priority: 9\nQA Fail: 8\nRollback: 6\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_046["<b>Company_046</b><br/>Tasks:40 | Workers:40<br/>HP:10 | QAF:11 | RB:3<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_046
+    Company_046 --> QA
+    style Company_046 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_046 "#Company_046" "Tasks: 40\nWorkers: 40\nHigh Priority: 10\nQA Fail: 11\nRollback: 3\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_047["<b>Company_047</b><br/>Tasks:29 | Workers:29<br/>HP:5 | QAF:6 | RB:3<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_047
+    Company_047 --> QA
+    style Company_047 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_047 "#Company_047" "Tasks: 29\nWorkers: 29\nHigh Priority: 5\nQA Fail: 6\nRollback: 3\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_048["<b>Company_048</b><br/>Tasks:10 | Workers:10<br/>HP:1 | QAF:3 | RB:2<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_048
+    Company_048 --> QA
+    style Company_048 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_048 "#Company_048" "Tasks: 10\nWorkers: 10\nHigh Priority: 1\nQA Fail: 3\nRollback: 2\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_049["<b>Company_049</b><br/>Tasks:22 | Workers:22<br/>HP:7 | QAF:2 | RB:5<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_049
+    Company_049 --> QA
+    style Company_049 fill:#ff6d00,stroke:#333,stroke-width:2px
+    click Company_049 "#Company_049" "Tasks: 22\nWorkers: 22\nHigh Priority: 7\nQA Fail: 2\nRollback: 5\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_050["<b>Company_050</b><br/>Tasks:17 | Workers:17<br/>HP:3 | QAF:4 | RB:4<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_050
+    Company_050 --> QA
+    style Company_050 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_050 "#Company_050" "Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 4\nRollback: 4\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_051["<b>Company_051</b><br/>Tasks:12 | Workers:12<br/>HP:7 | QAF:4 | RB:2<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_051
+    Company_051 --> QA
+    style Company_051 fill:#ff1744,stroke:#333,stroke-width:2px
+    click Company_051 "#Company_051" "Tasks: 12\nWorkers: 12\nHigh Priority: 7\nQA Fail: 4\nRollback: 2\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_052["<b>Company_052</b><br/>Tasks:19 | Workers:19<br/>HP:1 | QAF:2 | RB:5<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_052
+    Company_052 --> QA
+    style Company_052 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_052 "#Company_052" "Tasks: 19\nWorkers: 19\nHigh Priority: 1\nQA Fail: 2\nRollback: 5\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_053["<b>Company_053</b><br/>Tasks:34 | Workers:34<br/>HP:5 | QAF:7 | RB:6<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_053
+    Company_053 --> QA
+    style Company_053 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_053 "#Company_053" "Tasks: 34\nWorkers: 34\nHigh Priority: 5\nQA Fail: 7\nRollback: 6\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_054["<b>Company_054</b><br/>Tasks:31 | Workers:31<br/>HP:1 | QAF:7 | RB:4<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_054
+    Company_054 --> QA
+    style Company_054 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_054 "#Company_054" "Tasks: 31\nWorkers: 31\nHigh Priority: 1\nQA Fail: 7\nRollback: 4\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_055["<b>Company_055</b><br/>Tasks:9 | Workers:9<br/>HP:1 | QAF:2 | RB:1<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_055
+    Company_055 --> QA
+    style Company_055 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_055 "#Company_055" "Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 2\nRollback: 1\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_056["<b>Company_056</b><br/>Tasks:17 | Workers:17<br/>HP:4 | QAF:0 | RB:3<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_056
+    Company_056 --> QA
+    style Company_056 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_056 "#Company_056" "Tasks: 17\nWorkers: 17\nHigh Priority: 4\nQA Fail: 0\nRollback: 3\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_057["<b>Company_057</b><br/>Tasks:31 | Workers:31<br/>HP:8 | QAF:4 | RB:2<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_057
+    Company_057 --> QA
+    style Company_057 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_057 "#Company_057" "Tasks: 31\nWorkers: 31\nHigh Priority: 8\nQA Fail: 4\nRollback: 2\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_058["<b>Company_058</b><br/>Tasks:18 | Workers:18<br/>HP:5 | QAF:4 | RB:2<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_058
+    Company_058 --> QA
+    style Company_058 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_058 "#Company_058" "Tasks: 18\nWorkers: 18\nHigh Priority: 5\nQA Fail: 4\nRollback: 2\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_059["<b>Company_059</b><br/>Tasks:29 | Workers:29<br/>HP:6 | QAF:5 | RB:5<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_059
+    Company_059 --> QA
+    style Company_059 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_059 "#Company_059" "Tasks: 29\nWorkers: 29\nHigh Priority: 6\nQA Fail: 5\nRollback: 5\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_060["<b>Company_060</b><br/>Tasks:31 | Workers:31<br/>HP:6 | QAF:5 | RB:5<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_060
+    Company_060 --> QA
+    style Company_060 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_060 "#Company_060" "Tasks: 31\nWorkers: 31\nHigh Priority: 6\nQA Fail: 5\nRollback: 5\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_061["<b>Company_061</b><br/>Tasks:28 | Workers:28<br/>HP:4 | QAF:4 | RB:7<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_061
+    Company_061 --> QA
+    style Company_061 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_061 "#Company_061" "Tasks: 28\nWorkers: 28\nHigh Priority: 4\nQA Fail: 4\nRollback: 7\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_062["<b>Company_062</b><br/>Tasks:9 | Workers:9<br/>HP:1 | QAF:2 | RB:1<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_062
+    Company_062 --> QA
+    style Company_062 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_062 "#Company_062" "Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 2\nRollback: 1\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_063["<b>Company_063</b><br/>Tasks:18 | Workers:18<br/>HP:7 | QAF:3 | RB:1<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_063
+    Company_063 --> QA
+    style Company_063 fill:#ff6d00,stroke:#333,stroke-width:2px
+    click Company_063 "#Company_063" "Tasks: 18\nWorkers: 18\nHigh Priority: 7\nQA Fail: 3\nRollback: 1\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_064["<b>Company_064</b><br/>Tasks:26 | Workers:26<br/>HP:6 | QAF:9 | RB:4<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_064
+    Company_064 --> QA
+    style Company_064 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_064 "#Company_064" "Tasks: 26\nWorkers: 26\nHigh Priority: 6\nQA Fail: 9\nRollback: 4\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_065["<b>Company_065</b><br/>Tasks:15 | Workers:15<br/>HP:1 | QAF:0 | RB:3<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_065
+    Company_065 --> QA
+    style Company_065 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_065 "#Company_065" "Tasks: 15\nWorkers: 15\nHigh Priority: 1\nQA Fail: 0\nRollback: 3\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_066["<b>Company_066</b><br/>Tasks:37 | Workers:37<br/>HP:6 | QAF:11 | RB:4<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_066
+    Company_066 --> QA
+    style Company_066 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_066 "#Company_066" "Tasks: 37\nWorkers: 37\nHigh Priority: 6\nQA Fail: 11\nRollback: 4\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_067["<b>Company_067</b><br/>Tasks:6 | Workers:6<br/>HP:1 | QAF:1 | RB:1<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_067
+    Company_067 --> QA
+    style Company_067 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_067 "#Company_067" "Tasks: 6\nWorkers: 6\nHigh Priority: 1\nQA Fail: 1\nRollback: 1\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_068["<b>Company_068</b><br/>Tasks:16 | Workers:16<br/>HP:1 | QAF:3 | RB:2<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_068
+    Company_068 --> QA
+    style Company_068 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_068 "#Company_068" "Tasks: 16\nWorkers: 16\nHigh Priority: 1\nQA Fail: 3\nRollback: 2\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_069["<b>Company_069</b><br/>Tasks:31 | Workers:31<br/>HP:5 | QAF:3 | RB:3<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_069
+    Company_069 --> QA
+    style Company_069 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_069 "#Company_069" "Tasks: 31\nWorkers: 31\nHigh Priority: 5\nQA Fail: 3\nRollback: 3\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_070["<b>Company_070</b><br/>Tasks:8 | Workers:8<br/>HP:1 | QAF:0 | RB:0<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_070
+    Company_070 --> QA
+    style Company_070 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_070 "#Company_070" "Tasks: 8\nWorkers: 8\nHigh Priority: 1\nQA Fail: 0\nRollback: 0\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_071["<b>Company_071</b><br/>Tasks:13 | Workers:13<br/>HP:3 | QAF:2 | RB:1<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_071
+    Company_071 --> QA
+    style Company_071 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_071 "#Company_071" "Tasks: 13\nWorkers: 13\nHigh Priority: 3\nQA Fail: 2\nRollback: 1\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_072["<b>Company_072</b><br/>Tasks:26 | Workers:26<br/>HP:3 | QAF:5 | RB:2<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_072
+    Company_072 --> QA
+    style Company_072 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_072 "#Company_072" "Tasks: 26\nWorkers: 26\nHigh Priority: 3\nQA Fail: 5\nRollback: 2\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_073["<b>Company_073</b><br/>Tasks:11 | Workers:11<br/>HP:1 | QAF:3 | RB:1<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_073
+    Company_073 --> QA
+    style Company_073 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_073 "#Company_073" "Tasks: 11\nWorkers: 11\nHigh Priority: 1\nQA Fail: 3\nRollback: 1\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_074["<b>Company_074</b><br/>Tasks:24 | Workers:24<br/>HP:0 | QAF:7 | RB:3<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_074
+    Company_074 --> QA
+    style Company_074 fill:#00e676,stroke:#333,stroke-width:2px
+    click Company_074 "#Company_074" "Tasks: 24\nWorkers: 24\nHigh Priority: 0\nQA Fail: 7\nRollback: 3\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_075["<b>Company_075</b><br/>Tasks:14 | Workers:14<br/>HP:2 | QAF:0 | RB:1<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_075
+    Company_075 --> QA
+    style Company_075 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_075 "#Company_075" "Tasks: 14\nWorkers: 14\nHigh Priority: 2\nQA Fail: 0\nRollback: 1\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_076["<b>Company_076</b><br/>Tasks:9 | Workers:9<br/>HP:1 | QAF:3 | RB:0<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_076
+    Company_076 --> QA
+    style Company_076 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_076 "#Company_076" "Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 3\nRollback: 0\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    Company_077["<b>Company_077</b><br/>Tasks:18 | Workers:18<br/>HP:4 | QAF:2 | RB:5<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_077
+    Company_077 --> QA
+    style Company_077 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_077 "#Company_077" "Tasks: 18\nWorkers: 18\nHigh Priority: 4\nQA Fail: 2\nRollback: 5\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_078["<b>Company_078</b><br/>Tasks:5 | Workers:5<br/>HP:1 | QAF:0 | RB:0<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_078
+    Company_078 --> QA
+    style Company_078 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_078 "#Company_078" "Tasks: 5\nWorkers: 5\nHigh Priority: 1\nQA Fail: 0\nRollback: 0\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_079["<b>Company_079</b><br/>Tasks:23 | Workers:23<br/>HP:5 | QAF:6 | RB:2<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_079
+    Company_079 --> QA
+    style Company_079 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_079 "#Company_079" "Tasks: 23\nWorkers: 23\nHigh Priority: 5\nQA Fail: 6\nRollback: 2\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_080["<b>Company_080</b><br/>Tasks:37 | Workers:37<br/>HP:7 | QAF:9 | RB:6<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_080
+    Company_080 --> QA
+    style Company_080 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_080 "#Company_080" "Tasks: 37\nWorkers: 37\nHigh Priority: 7\nQA Fail: 9\nRollback: 6\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_081["<b>Company_081</b><br/>Tasks:7 | Workers:7<br/>HP:2 | QAF:3 | RB:1<br/>Batch:5 | Risk:47.0"]:::prio
+    ALLOC --> Company_081
+    Company_081 --> QA
+    style Company_081 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_081 "#Company_081" "Tasks: 7\nWorkers: 7\nHigh Priority: 2\nQA Fail: 3\nRollback: 1\nBatch: 5\nPredicted SLA Breach: 1.4%\nRisk Score: 47.0"
+    Company_082["<b>Company_082</b><br/>Tasks:18 | Workers:18<br/>HP:5 | QAF:7 | RB:3<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_082
+    Company_082 --> QA
+    style Company_082 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_082 "#Company_082" "Tasks: 18\nWorkers: 18\nHigh Priority: 5\nQA Fail: 7\nRollback: 3\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_083["<b>Company_083</b><br/>Tasks:19 | Workers:19<br/>HP:6 | QAF:3 | RB:5<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_083
+    Company_083 --> QA
+    style Company_083 fill:#ff6d00,stroke:#333,stroke-width:2px
+    click Company_083 "#Company_083" "Tasks: 19\nWorkers: 19\nHigh Priority: 6\nQA Fail: 3\nRollback: 5\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_084["<b>Company_084</b><br/>Tasks:9 | Workers:9<br/>HP:1 | QAF:4 | RB:2<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_084
+    Company_084 --> QA
+    style Company_084 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_084 "#Company_084" "Tasks: 9\nWorkers: 9\nHigh Priority: 1\nQA Fail: 4\nRollback: 2\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_085["<b>Company_085</b><br/>Tasks:17 | Workers:17<br/>HP:5 | QAF:5 | RB:5<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_085
+    Company_085 --> QA
+    style Company_085 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_085 "#Company_085" "Tasks: 17\nWorkers: 17\nHigh Priority: 5\nQA Fail: 5\nRollback: 5\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_086["<b>Company_086</b><br/>Tasks:21 | Workers:21<br/>HP:5 | QAF:4 | RB:3<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_086
+    Company_086 --> QA
+    style Company_086 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_086 "#Company_086" "Tasks: 21\nWorkers: 21\nHigh Priority: 5\nQA Fail: 4\nRollback: 3\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_087["<b>Company_087</b><br/>Tasks:32 | Workers:32<br/>HP:8 | QAF:6 | RB:4<br/>Batch:2 | Risk:7.2"]:::prio
+    ALLOC --> Company_087
+    Company_087 --> QA
+    style Company_087 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_087 "#Company_087" "Tasks: 32\nWorkers: 32\nHigh Priority: 8\nQA Fail: 6\nRollback: 4\nBatch: 2\nPredicted SLA Breach: 2.3%\nRisk Score: 7.2"
+    Company_088["<b>Company_088</b><br/>Tasks:40 | Workers:40<br/>HP:8 | QAF:10 | RB:7<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_088
+    Company_088 --> QA
+    style Company_088 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_088 "#Company_088" "Tasks: 40\nWorkers: 40\nHigh Priority: 8\nQA Fail: 10\nRollback: 7\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_089["<b>Company_089</b><br/>Tasks:38 | Workers:38<br/>HP:8 | QAF:4 | RB:11<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_089
+    Company_089 --> QA
+    style Company_089 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_089 "#Company_089" "Tasks: 38\nWorkers: 38\nHigh Priority: 8\nQA Fail: 4\nRollback: 11\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_090["<b>Company_090</b><br/>Tasks:26 | Workers:26<br/>HP:5 | QAF:4 | RB:5<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_090
+    Company_090 --> QA
+    style Company_090 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_090 "#Company_090" "Tasks: 26\nWorkers: 26\nHigh Priority: 5\nQA Fail: 4\nRollback: 5\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_091["<b>Company_091</b><br/>Tasks:16 | Workers:16<br/>HP:4 | QAF:4 | RB:3<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_091
+    Company_091 --> QA
+    style Company_091 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_091 "#Company_091" "Tasks: 16\nWorkers: 16\nHigh Priority: 4\nQA Fail: 4\nRollback: 3\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_092["<b>Company_092</b><br/>Tasks:24 | Workers:24<br/>HP:3 | QAF:9 | RB:3<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_092
+    Company_092 --> QA
+    style Company_092 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_092 "#Company_092" "Tasks: 24\nWorkers: 24\nHigh Priority: 3\nQA Fail: 9\nRollback: 3\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_093["<b>Company_093</b><br/>Tasks:17 | Workers:17<br/>HP:3 | QAF:5 | RB:2<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_093
+    Company_093 --> QA
+    style Company_093 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_093 "#Company_093" "Tasks: 17\nWorkers: 17\nHigh Priority: 3\nQA Fail: 5\nRollback: 2\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_094["<b>Company_094</b><br/>Tasks:36 | Workers:36<br/>HP:6 | QAF:9 | RB:1<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_094
+    Company_094 --> QA
+    style Company_094 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_094 "#Company_094" "Tasks: 36\nWorkers: 36\nHigh Priority: 6\nQA Fail: 9\nRollback: 1\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_095["<b>Company_095</b><br/>Tasks:23 | Workers:23<br/>HP:4 | QAF:3 | RB:3<br/>Batch:1 | Risk:39.2"]:::prio
+    ALLOC --> Company_095
+    Company_095 --> QA
+    style Company_095 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_095 "#Company_095" "Tasks: 23\nWorkers: 23\nHigh Priority: 4\nQA Fail: 3\nRollback: 3\nBatch: 1\nPredicted SLA Breach: 13.9%\nRisk Score: 39.2"
+    Company_096["<b>Company_096</b><br/>Tasks:29 | Workers:29<br/>HP:7 | QAF:4 | RB:3<br/>Batch:8 | Risk:75.0"]:::prio
+    ALLOC --> Company_096
+    Company_096 --> QA
+    style Company_096 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_096 "#Company_096" "Tasks: 29\nWorkers: 29\nHigh Priority: 7\nQA Fail: 4\nRollback: 3\nBatch: 8\nPredicted SLA Breach: 5.9%\nRisk Score: 75.0"
+    Company_097["<b>Company_097</b><br/>Tasks:16 | Workers:16<br/>HP:4 | QAF:2 | RB:0<br/>Batch:4 | Risk:38.6"]:::prio
+    ALLOC --> Company_097
+    Company_097 --> QA
+    style Company_097 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_097 "#Company_097" "Tasks: 16\nWorkers: 16\nHigh Priority: 4\nQA Fail: 2\nRollback: 0\nBatch: 4\nPredicted SLA Breach: 8.0%\nRisk Score: 38.6"
+    Company_098["<b>Company_098</b><br/>Tasks:24 | Workers:24<br/>HP:2 | QAF:7 | RB:8<br/>Batch:7 | Risk:93.9"]:::prio
+    ALLOC --> Company_098
+    Company_098 --> QA
+    style Company_098 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_098 "#Company_098" "Tasks: 24\nWorkers: 24\nHigh Priority: 2\nQA Fail: 7\nRollback: 8\nBatch: 7\nPredicted SLA Breach: 0.4%\nRisk Score: 93.9"
+    Company_099["<b>Company_099</b><br/>Tasks:35 | Workers:35<br/>HP:7 | QAF:7 | RB:8<br/>Batch:3 | Risk:60.9"]:::prio
+    ALLOC --> Company_099
+    Company_099 --> QA
+    style Company_099 fill:#fdd835,stroke:#333,stroke-width:2px
+    click Company_099 "#Company_099" "Tasks: 35\nWorkers: 35\nHigh Priority: 7\nQA Fail: 7\nRollback: 8\nBatch: 3\nPredicted SLA Breach: 14.9%\nRisk Score: 60.9"
+    Company_100["<b>Company_100</b><br/>Tasks:34 | Workers:34<br/>HP:4 | QAF:11 | RB:8<br/>Batch:6 | Risk:88.1"]:::prio
+    ALLOC --> Company_100
+    Company_100 --> QA
+    style Company_100 fill:#76ff03,stroke:#333,stroke-width:2px
+    click Company_100 "#Company_100" "Tasks: 34\nWorkers: 34\nHigh Priority: 4\nQA Fail: 11\nRollback: 8\nBatch: 6\nPredicted SLA Breach: 12.9%\nRisk Score: 88.1"
+    subgraph QA_LAYER["🧪 QA / Sandbox Layer"]
+      QA["Dev/QA Sandbox — 100 companies"]
+    end
+    QA --> DEPLOY
+    DEPLOY["🚀 Deploy / Monitor"]
+    classDef prio fill:#fff,stroke:#333,stroke-width:1px
+    classDef critical fill:#ff1744,stroke:#b71c1c,stroke-width:2px
+    classDef high fill:#ff6d00,stroke:#e65100,stroke-width:2px
+    classDef medium fill:#fdd835,stroke:#f9a825,stroke-width:2px
+    classDef normal fill:#76ff03,stroke:#33691e,stroke-width:2px
+    classDef low fill:#00e676,stroke:#1b5e20,stroke-width:2px
+  </div>
+
+</div>
+
+<footer class="footer">
+  Full Autonomous Corporate Agent v2.0 — Digital Twin Final<br>
+  Powered by execution_summary.json · simulation_report.json · analytics.json<br>
+  Worker Pool: 512 | Companies: 100 | Tasks: 2156 | 2026-05-19T14:38:29.318903
+</footer>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  flowchart: { curve: 'basis', padding: 20 },
+  securityLevel: 'loose'
+});
+</script>
+
+</body>
+</html>

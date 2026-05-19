@@ -1,0 +1,375 @@
+#!/usr/bin/env python3
+"""
+Full Autonomous Corporate Agent v2.0
+Digital Twin Enterprise v3.0 — Full-Scale Interactive Dashboard
+"""
+import json, random
+from pathlib import Path
+from datetime import datetime as dt
+
+EXEC_SUM = Path(".super-agent-fullauto-kpi/execution_summary.json")
+ANALYTICS = Path(".super-agent-fullauto-kpi/analytics.json")
+SIM_REPORT = Path(".super-agent-fullauto-kpi/simulation_report.json")
+OUT_HTML = Path(".super-agent-fullauto-kpi/dashboard_digital_twin_enterprise.html")
+OUT_DATA = Path(".super-agent-fullauto-kpi/dashboard_digital_twin_enterprise_data.json")
+
+NUM_COMPANIES = 100
+WORKER_POOL = 512
+NUM_BATCHES = 8
+TEAMS = ["IT_AI","Marketing","Legal_Compliance","Finance","R&D","HR","Ops","Support",
+         "Security","DataEng","Product","Sales","Infrastructure","CustomerSucc",
+         "Analytics","Engineering","Design","QA","DevOps","Cloud"]
+random.seed(42)
+CTM = {("Company_%03d" % i): TEAMS[i % len(TEAMS)] for i in range(1, NUM_COMPANIES+1)}
+
+def load():
+    try: d = json.load(open(EXEC_SUM))
+    except: d = _gen()
+    try: s = json.load(open(SIM_REPORT))
+    except: s = _sim(d)
+    return d, s
+
+def _gen():
+    cs, ps = list(CTM.keys()), list({"critical":.05,"high":.15,"medium":.30,"normal":.35,"low":.15}.keys())
+    qs, ds = ["QA_PASS","QA_FAIL","QA_PENDING"], ["DEV_SUCCESS","DEV_FAILED","DEV_PENDING"]
+    tasks = []
+    for c in cs:
+        for _ in range(random.randint(5,40)):
+            p = random.choices(ps, weights=[.05,.15,.30,.35,.15])[0]
+            tasks.append({"task_id":("T%d" % random.randint(10000,99999)),"company":c,
+                "team":CTM[c],"priority":p,
+                "qa_status":random.choices(qs,weights=[.70,.20,.10])[0],
+                "dev_status":random.choices(ds,weights=[.75,.15,.10])[0],
+                "worker_id":("W%04d" % random.randint(1,WORKER_POOL)),
+                "batch_id":random.randint(1,NUM_BATCHES),
+                "sla_remaining":round(random.uniform(0,100),1)})
+    return tasks
+
+def _sim(d):
+    return [{"batch_id":b,"total_tasks":len([x for x in d if x.get("batch_id")==b]),
+             "active_workers":random.randint(40,WORKER_POOL),
+             "predicted_qa_fail_rate":round(random.uniform(.05,.30),3),
+             "predicted_rollback_rate":round(random.uniform(.02,.20),3),
+             "predicted_sla_breach":round(random.uniform(0,15),1),
+             "risk_score":round(random.uniform(0,100),1)}
+            for b in range(1,NUM_BATCHES+1)]
+
+def build_data(d, s):
+    cs = sorted(set(x["company"] for x in d))
+    cstats, tstats = {}, {}
+    for c in cs:
+        ts = [x for x in d if x["company"]==c]
+        t = len(ts); hp = sum(1 for x in ts if x["priority"].lower() in ("critical","high"))
+        qf = sum(1 for x in ts if x["qa_status"]=="QA_FAIL")
+        rb = sum(1 for x in ts if x["dev_status"]=="DEV_FAILED")
+        sl = sum(1 for x in ts if x.get("sla_remaining",100)<10)
+        pr = hp/t if t else 0; qr = qf/t if t else 0
+        rr = rb/t if t else 0; sr = sl/t if t else 0
+        rs = int(pr*40+qr*30+rr*20+sr*10)
+        if pr>=.5: pc="critical"
+        elif pr>=.3: pc="high"
+        elif pr>=.15: pc="medium"
+        elif pr>=.05: pc="normal"
+        else: pc="low"
+        qc = "danger" if qr>=.3 else "alert" if qr>=.2 else "warn" if qr>=.1 else "safe"
+        rc = "danger" if rr>=.2 else "alert" if rr>=.1 else "warn" if rr>=.05 else "safe"
+        sc = "danger" if sr>=.2 else "alert" if sr>=.1 else "warn" if sr>=.05 else "safe"
+        cstats[c] = {"company":c,"team":CTM[c],"total":t,"high_prio":hp,"qa_fail":qf,
+            "rollback":rb,"sla_breach":sl,"workers":max(1,min(WORKER_POOL,t)),
+            "batch_id":ts[0].get("batch_id",1) if t else 1,
+            "qa_ratio":round(qr,3),"rb_ratio":round(rr,3),"sla_ratio":round(sr,3),
+            "prio_ratio":round(pr,3),"risk_score":rs,"prio_cls":pc,
+            "qa_cls":qc,"rb_cls":rc,"sla_cls":sc}
+    for team in TEAMS:
+        all_t = [x for x in d if CTM.get(x["company"])==team]
+        t = len(all_t)
+        tstats[team] = {"team":team,"companies":len([c for c in cs if CTM.get(c)==team]),
+            "total":t,"high_prio":sum(1 for x in all_t if x["priority"].lower() in ("critical","high")),
+            "qa_fail":sum(1 for x in all_t if x["qa_status"]=="QA_FAIL"),
+            "rollback":sum(1 for x in all_t if x["dev_status"]=="DEV_FAILED"),
+            "sla_breach":sum(1 for x in all_t if x.get("sla_remaining",100)<10),
+            "workers":max(1,min(WORKER_POOL,t))}
+    return {"companies":cs,"company_stats":cstats,"sim_report":s,"team_stats":tstats,"exec_data":d}
+
+HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digital Twin Enterprise v3.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#0d1117;--s:#161b22;--b:#30363d;--t:#c9d1d9;--d:#8b949e;--a:#58a6ff;--cc:#ff1744;--ch:#ff6d00;--cm:#fdd835;--cn:#76ff03;--cl:#00e676;--rs:#c8e6c9;--rw:#fff9c4;--ra:#ffccbc;--rd:#ffcdd2}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Segoe UI,SF Pro Display,sans-serif;background:var(--bg);color:var(--t);font-size:14px}
+h1,h2,h3{color:#f0f6fc;margin-bottom:.5em}
+h1{font-size:1.5em;border-bottom:2px solid var(--a);padding-bottom:.3em}
+h2{font-size:1.1em;margin-top:1.2em;color:var(--a)}
+.hdr{background:var(--s);border-bottom:1px solid var(--b);padding:10px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.bd{background:rgba(255,23,68,.15);border:1px solid var(--cc);color:var(--cc);padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700}
+.hs{display:flex;flex-direction:column;align-items:center}.hs .v{font-size:18px;font-weight:700;color:var(--a)}.hs .l{font-size:11px;color:var(--d);text-transform:uppercase}
+.cnt{max-width:1600px;margin:0 auto;padding:12px 20px}
+.pnl{background:var(--s);border:1px solid var(--b);border-radius:10px;padding:16px;margin-bottom:16px}
+.pnl h3{color:var(--a);margin-bottom:12px;font-size:13px}
+.row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
+.si{flex:1;min-width:180px}.si label{display:flex;justify-content:space-between;font-size:12px;color:var(--d);margin-bottom:4px}.si label span{color:var(--a);font-weight:700}.si input{width:100%;accent-color:var(--a)}
+.btn{display:flex;gap:10px;margin-top:8px}
+button{padding:6px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .2s}
+button:hover{opacity:.85}.bp{background:var(--a);color:#fff}.bdg{background:#21262d;color:var(--t);border:1px solid var(--b)}.brd{background:#f85149;color:#fff}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.kcard{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:12px;text-align:center}
+.kcard .kv{font-size:26px;font-weight:800;color:var(--a)}.kcard .kl{font-size:11px;color:var(--d);text-transform:uppercase}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.bc{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:10px;transition:transform .2s}.bc:hover{transform:translateY(-2px)}.bc h4{color:var(--a);margin-bottom:6px;font-size:12px}
+.bs{display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--b)}.bs label{color:var(--d)}.bs span{font-weight:600}
+.bsf span{color:#00e676}.bsw span{color:#ff6d00}.bsd span{color:#ff1744}
+.brb{background:#21262d;border-radius:4px;height:6px;margin-top:6px;overflow:hidden}.brf{height:100%;border-radius:4px;transition:width .5s}.bsf .brf{background:#00e676}.bsw .brf{background:#ff6d00}.bsd .brf{background:#ff1744}
+.brl{font-size:10px;color:var(--d);margin-top:3px;display:block}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.tc{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:12px}.tc h4{color:var(--a);margin-bottom:8px;font-size:13px}
+.ts{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:1px solid var(--b)}.ts label{color:var(--d)}.ts span{font-weight:600}
+.tbl{max-height:400px;overflow-y:auto;border:1px solid var(--b);border-radius:8px;margin-bottom:16px}
+.tbl::-webkit-scrollbar{width:5px}.tbl::-webkit-scrollbar-thumb{background:var(--b);border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--s);color:var(--d);font-weight:600;padding:7px 5px;border-bottom:2px solid var(--b);position:sticky;top:0;z-index:5;text-transform:uppercase;font-size:10px}
+tr{border-bottom:1px solid var(--b);transition:background .15s}tr:hover{background:#1f2937;cursor:pointer}
+td{padding:5px;text-align:center}
+.rs{background:var(--rs);color:#1b5e20;font-weight:600}.rw{background:var(--rw);color:#5d4037;font-weight:600}.ra{background:var(--ra);color:#bf360c;font-weight:600}.rd{background:var(--rd);color:#b71c1c;font-weight:700}
+.pc td{background:rgba(255,23,68,.12)}.ph td{background:rgba(255,109,0,.1)}.pm td{background:rgba(253,216,53,.08)}
+.pc td:first-child,.pc td:nth-child(6){color:var(--cc);font-weight:700}.ph td:first-child,.ph td:nth-child(6){color:var(--ch);font-weight:600}
+.rb{background:#21262d;border-radius:3px;height:14px;position:relative;overflow:hidden;width:70px;margin:0 auto}.rf{height:100%;border-radius:3px;transition:width .4s}.rl{position:absolute;right:3px;top:0;line-height:14px;font-size:9px;color:#fff;font-weight:700;text-shadow:0 0 2px #000}
+.mmd{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:12px;overflow-x:auto;margin-bottom:16px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;align-items:center;margin-bottom:12px}
+.li{display:flex;align-items:center;gap:5px}.sw{width:13px;height:13px;border-radius:3px;border:1px solid #333}
+.sp{background:#1a2332;border:1px solid var(--a);border-radius:8px;padding:14px;margin-bottom:16px;display:none}.sp.on{display:block}.sp h3{color:var(--a);margin-bottom:10px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sc{background:var(--s);border-radius:6px;padding:10px;text-align:center}.sc .sv{font-size:20px;font-weight:800;color:var(--a)}.sc .sl{font-size:10px;color:var(--d);text-transform:uppercase}
+.ft{text-align:center;color:var(--d);font-size:11px;padding:20px;border-top:1px solid var(--b);margin-top:24px}
+@media(max-width:768px){.row{flex-direction:column}.hdr{padding:8px 12px;gap:12px}.kgrid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="hdr">
+<h1 style="margin:0;border:none;padding:0;">Digital Twin Enterprise v3.0 &#8212; Full-Scale Interactive</h1>
+<span class="bd" id="h-comp">100+ Companies</span>
+<span class="bd">512 Workers</span>
+<div class="hs"><span class="v" id="h-c">-</span><span class="l">Companies</span></div>
+<div class="hs"><span class="v" id="h-t">-</span><span class="l">Total Tasks</span></div>
+<div class="hs"><span class="v" style="color:var(--cc)" id="h-hp">-</span><span class="l">High Priority</span></div>
+<div class="hs"><span class="v" style="color:var(--cc)" id="h-qf">-</span><span class="l">QA Fail</span></div>
+<div class="hs"><span class="v" style="color:var(--ch)" id="h-rb">-</span><span class="l">Rollback</span></div>
+<div class="hs"><span class="v" id="h-ts">-</span><span class="l">Generated</span></div>
+</div>
+
+<div class="cnt">
+<div class="pnl">
+<h3>Interactive Scenario Simulator &#8212; Adjust &amp; Re-simulate</h3>
+<div class="row">
+<div class="si"><label>Worker Pool <span id="l-w">512</span></label><input type="range" id="s-w" min="64" max="512" value="512" step="16" oninput="document.getElementById('l-w').textContent=this.value;upd()"></div>
+<div class="si"><label>Batches <span id="l-b">8</span></label><input type="range" id="s-b" min="1" max="8" value="8" step="1" oninput="document.getElementById('l-b').textContent=this.value;upd()"></div>
+<div class="si"><label>Prio Weight <span id="l-pw">40%</span></label><input type="range" id="s-pw" min="10" max="80" value="40" step="5" oninput="document.getElementById('l-pw').textContent=this.value+'%';upd()"></div>
+<div class="si"><label>QA Weight <span id="l-qw">30%</span></label><input type="range" id="s-qw" min="5" max="60" value="30" step="5" oninput="document.getElementById('l-qw').textContent=this.value+'%';upd()"></div>
+<div class="si"><label>Threshold <span id="l-t">50</span></label><input type="range" id="s-t" min="20" max="90" value="50" step="5" oninput="document.getElementById('l-t').textContent=this.value;upd()"></div>
+</div><div class="row">
+<div class="si"><label>SLA Weight <span id="l-sw">10%</span></label><input type="range" id="s-sw" min="0" max="40" value="10" step="5" oninput="document.getElementById('l-sw').textContent=this.value+'%';upd()"></div>
+<div class="si"><label>RB Weight <span id="l-rw">20%</span></label><input type="range" id="s-rw" min="0" max="40" value="20" step="5" oninput="document.getElementById('l-rw').textContent=this.value+'%';upd()"></div>
+<div class="si"><label>Filter Team <span id="l-f">All</span></label><input type="range" id="s-f" min="0" max="20" value="0" step="1" oninput="upd()"></div>
+</div><div class="btn">
+<button class="bp" onclick="run()">Run Simulation</button>
+<button class="bdg" onclick="rst()">Reset</button>
+<button class="brd" onclick="exp()">Export</button>
+</div>
+</div>
+
+<h2>KPI Overview</h2>
+<div class="kgrid">
+<div class="kcard"><div class="kv" id="k-c">-</div><div class="kl">Companies</div></div>
+<div class="kcard"><div class="kv" id="k-t">-</div><div class="kl">Total Tasks</div></div>
+<div class="kcard"><div class="kv" style="color:var(--cc)" id="k-hp">-</div><div class="kl">High Priority</div></div>
+<div class="kcard"><div class="kv" style="color:var(--cc)" id="k-qf">-</div><div class="kl">QA Fail</div></div>
+<div class="kcard"><div class="kv" style="color:var(--ch)" id="k-rb">-</div><div class="kl">Rollback</div></div>
+<div class="kcard"><div class="kv" id="k-sl">-</div><div class="kl">SLA Breach</div></div>
+<div class="kcard"><div class="kv" id="k-w">512</div><div class="kl">Workers</div></div>
+<div class="kcard"><div class="kv" id="k-av">--</div><div class="kl">Avg Risk</div></div>
+</div>
+
+<h2>Multi-Batch Overlay (<span id="bc">8</span> Batches)</h2>
+<div class="bgrid" id="bcd"></div>
+
+<h2>Team Summary (21 Teams)</h2>
+<div class="tgrid" id="tcd"></div>
+
+<div class="leg">
+<span style="color:var(--d);font-weight:600">Priority:</span>
+<div class="li"><div class="sw" style="background:var(--cc)"></div><span>Critical</span></div>
+<div class="li"><div class="sw" style="background:var(--ch)"></div><span>High</span></div>
+<div class="li"><div class="sw" style="background:var(--cm)"></div><span>Medium</span></div>
+<div class="li"><div class="sw" style="background:var(--cn)"></div><span>Normal</span></div>
+<div class="li"><div class="sw" style="background:var(--cl)"></div><span>Low</span></div>
+<span style="color:var(--d);font-weight:600;margin-left:8px">Risk:</span>
+<div class="li"><div class="sw" style="background:var(--rs)"></div><span>Safe</span></div>
+<div class="li"><div class="sw" style="background:var(--rw)"></div><span>Warn</span></div>
+<div class="li"><div class="sw" style="background:var(--ra)"></div><span>Alert</span></div>
+<div class="li"><div class="sw" style="background:var(--rd)"></div><span>Danger</span></div>
+</div>
+
+<h2>Company KPI Table (<span id="tc">0</span> companies)</h2>
+<div class="tbl"><table><thead><tr><th>#</th><th>Company</th><th>Team</th><th>Tasks</th><th>Workers</th><th>HighPrio</th><th>QA%</th><th>RB%</th><th>SLA%</th><th>Risk</th><th>Batch</th></tr></thead><tbody id="bdy"></tbody></table></div>
+
+<h2>Task Flow &amp; Worker Allocation (Mermaid)</h2>
+<div class="mmd" id="mmd"></div>
+</div>
+
+<footer class="ft">Digital Twin Enterprise v3.0<br>Worker Pool: 512 | <span id="f-c">0</span> companies | <span id="f-t">0</span> tasks | DATA_TIMESTAMP</footer>
+
+<script>
+var DT=null;
+fetch('dashboard_digital_twin_enterprise_data.json').then(function(r){return r.json()}).then(function(d){DT=d;document.getElementById('h-ts').textContent=new Date().toLocaleString();var tot=Object.values(d.company_stats).reduce(function(s,c){return s+c.total},0),hp=Object.values(d.company_stats).reduce(function(s,c){return s+c.high_prio},0),qf=Object.values(d.company_stats).reduce(function(s,c){return s+c.qa_fail},0),rb=Object.values(d.company_stats).reduce(function(s,c){return s+c.rollback},0),sl=Object.values(d.company_stats).reduce(function(s,c){return s+c.sla_breach},0);document.getElementById('h-c').textContent=Object.keys(d.company_stats).length;document.getElementById('h-t').textContent=tot;document.getElementById('h-hp').textContent=hp;document.getElementById('h-qf').textContent=qf;document.getElementById('h-rb').textContent=rb;document.getElementById('f-c').textContent=Object.keys(d.company_stats).length;document.getElementById('f-t').textContent=tot;upd();});
+
+function c4(v,a,b,c){a=a||.1;b=b||.2;c=c||.3;return v>=c?'rd':v>=b?'ra':v>=a?'rw':'rs'}
+function bcl(r){return r>=60?'linear-gradient(90deg,#ff1744,#ff8a80)':r>=30?'linear-gradient(90deg,#ff6d00,#ff9e80)':'linear-gradient(90deg,#00e676,#69f0ae)'}
+function bc(r){return r>=70?'bsd':r>=40?'bsw':'bsf'}
+
+function rB(){
+  var c=document.getElementById('bcd'),s=DT.sim_report||[],ab=parseInt(document.getElementById('s-b').value),h='';
+  s.slice(0,ab).forEach(function(b){
+    var rc=bc(b.risk_score);
+    h+='<div class="bc '+rc+'"><h4>Batch '+b.batch_id+'</h4>';
+    h+='<div class="bs"><label>Tasks</label><span>'+b.total_tasks+'</span></div>';
+    h+='<div class="bs"><label>Workers</label><span>'+b.active_workers+'</span></div>';
+    h+='<div class="bs"><label>QA Fail%</label><span>'+(b.predicted_qa_fail_rate*100).toFixed(1)+'%</span></div>';
+    h+='<div class="bs"><label>Rollback%</label><span>'+(b.predicted_rollback_rate*100).toFixed(1)+'%</span></div>';
+    h+='<div class="bs"><label>SLA%</label><span>'+b.predicted_sla_breach.toFixed(1)+'%</span></div>';
+    h+='<div class="brb"><div class="brf" style="width:'+b.risk_score+'%"></div></div>';
+    h+='<span class="brl">Risk:'+b.risk_score.toFixed(1)+'</span></div>';
+  });
+  c.innerHTML=h;document.getElementById('bc').textContent=ab;
+}
+
+function rT(){
+  var c=document.getElementById('tcd'),ts=DT.team_stats||{},fi=parseInt(document.getElementById('s-f').value),tks=Object.keys(ts).sort(),fl=fi>0?tks[fi-1]:null;
+  document.getElementById('l-f').textContent=fl||'All';
+  var h='';
+  tks.forEach(function(t){
+    if(fl&&t!==fl)return;
+    var s=ts[t];
+    h+='<div class="tc"><h4>'+t+' ('+s.companies+' companies)</h4>';
+    h+='<div class="ts"><label>Tasks</label><span>'+s.total+'</span></div>';
+    h+='<div class="ts"><label>Workers</label><span>'+s.workers+'</span></div>';
+    h+='<div class="ts"><label>High Priority</label><span>'+s.high_prio+'</span></div>';
+    h+='<div class="ts"><label>QA Fail</label><span>'+s.qa_fail+'</span></div>';
+    h+='<div class="ts"><label>Rollback</label><span>'+s.rollback+'</span></div>';
+    h+='<div class="ts"><label>SLA Breach</label><span>'+s.sla_breach+'</span></div></div>';
+  });
+  c.innerHTML=h||'<p style="color:var(--d)">No data</p>';
+}
+
+function rS(){
+  var bt=document.getElementById('bdy'),cs=DT.company_stats||{},pw=parseInt(document.getElementById('s-pw').value)/100,qw=parseInt(document.getElementById('s-qw').value)/100,rw=parseInt(document.getElementById('s-rw').value)/100,sw=parseInt(document.getElementById('s-sw').value)/100,w=parseInt(document.getElementById('s-w').value),fi=parseInt(document.getElementById('s-f').value),tks=Object.keys(DT.team_stats||{}).sort(),fl=fi>0?tks[fi-1]:null;
+  var h='',i=1,rs=0,rc=0;
+  Object.keys(cs).forEach(function(c){
+    var s=cs[c];
+    if(fl&&s.team!==fl)return;
+    var sc=Math.round(s.prio_ratio*pw*100+s.qa_ratio*qw*100+s.rb_ratio*rw*100+s.sla_ratio*sw*100),q=c4(s.qa_ratio,.1,.2,.3),r=c4(s.rb_ratio,.05,.1,.2),sl=c4(s.sla_ratio,.05,.1,.2);
+    rs+=sc;rc++;
+    var wa=Math.max(1,Math.min(w,s.total));
+    var tp='Team:'+s.team+'\nTasks:'+s.total+'\nWorkers:'+wa+'\nHigh:'+s.high_prio+'\nQA:'+s.qa_fail+'\nRB:'+s.rollback+'\nSLA:'+s.sla_breach+'\nRisk:'+sc;
+    h+='<tr class="p-'+s.prio_cls+'" title="'+tp.replace(/\n/g,'&#10;')+'">';
+    h+='<td>'+i+++'</td><td><strong>'+s.company+'</strong></td><td><em>'+s.team+'</em></td>';
+    h+='<td>'+s.total+'</td><td>'+wa+'</td>';
+    h+='<td class="p-'+s.prio_cls+'">'+s.high_prio+'</td>';
+    h+='<td class="'+q+'">'+(s.qa_ratio*100).toFixed(1)+'%</td>';
+    h+='<td class="'+r+'">'+(s.rb_ratio*100).toFixed(1)+'%</td>';
+    h+='<td class="'+sl+'">'+(s.sla_ratio*100).toFixed(1)+'%</td>';
+    h+='<td><div class="rb"><div class="rf" style="width:'+Math.min(100,sc)+'%;background:'+bcl(sc)+'"></div><span class="rl">'+sc+'</span></div></td>';
+    h+='<td>Batch '+s.batch_id+'</td></tr>';
+  });
+  bt.innerHTML=h;
+  document.getElementById('tc').textContent=i-1;
+  document.getElementById('k-c').textContent=Object.keys(cs).length;
+  document.getElementById('k-t').textContent=Object.values(cs).reduce(function(a,b){return a+b.total},0);
+  document.getElementById('k-hp').textContent=Object.values(cs).reduce(function(a,b){return a+b.high_prio},0);
+  document.getElementById('k-qf').textContent=Object.values(cs).reduce(function(a,b){return a+b.qa_fail},0);
+  document.getElementById('k-rb').textContent=Object.values(cs).reduce(function(a,b){return a+b.rollback},0);
+  document.getElementById('k-sl').textContent=Object.values(cs).reduce(function(a,b){return a+b.sla_breach},0);
+  document.getElementById('k-w').textContent=w;
+  document.getElementById('k-av').textContent=rc?Math.round(rs/rc):'--';
+}
+
+function rM(){
+  var c=document.getElementById('mmd'),cs=DT.company_stats||{},w=parseInt(document.getElementById('s-w').value),fi=parseInt(document.getElementById('s-f').value),tks=Object.keys(DT.team_stats||{}).sort(),fl=fi>0?tks[fi-1]:null;
+  var cl={critical:'#ff1744',high:'#ff6d00',medium:'#fdd835',normal:'#76ff03',low:'#00e676'};
+  var mm=['flowchart TB'];
+  mm.push('subgraph INPUT[Task Input]');
+  mm.push('I1[(DB)]');mm.push('I2[(Telegram)]');mm.push('I3[(CLI)]');mm.push('end');
+  mm.push('INPUT --> DE');mm.push('DE{Decision Engine}');mm.push('DE --> PRIO');
+  mm.push('PRIO[Predictive Priority]');mm.push('PRIO --> ALLOC');
+  mm.push('ALLOC[Dynamic Worker Allocation \u2014 Pool:'+w+' workers]');
+  Object.keys(cs).forEach(function(c){
+    var s=cs[c];
+    if(fl&&s.team!==fl)return;
+    var ni=c.replace(/[^a-zA-Z0-9]/g,'_'),wa=Math.max(1,Math.min(w,s.total));
+    var lb='<b>'+s.company+'</b><br/><em>'+s.team+'</em><br/>T:'+s.total+' HP:'+s.high_prio+' QAF:'+s.qa_fail+' RB:'+s.rollback+'<br/>W:'+wa+' Risk:'+s.risk_score;
+    mm.push(ni+'[\"'+lb+'\"]');
+    mm.push('ALLOC --> '+ni);
+    mm.push(ni+' --> QA');
+    mm.push('style '+ni+' fill:'+cl[s.prio_cls]+',stroke:#333,stroke-width:2px');
+  });
+  mm.push('subgraph QA_LAYER[QA/Sandbox]');
+  mm.push('QA[Dev/QA Sandbox \u2014 '+Object.keys(cs).length+' companies]');
+  mm.push('end');mm.push('QA --> DEPLOY');mm.push('DEPLOY[Deploy/Monitor]');
+  c.innerHTML='<pre class="mermaid">'+mm.join('\n')+'</pre>';
+  if(window.mermaid&&mermaid.run)mermaid.run({querySelector:'.mermaid'});
+}
+
+function upd(){rB();rT();rS();rM()}
+
+function run(){
+  var pw=parseInt(document.getElementById('s-pw').value)/100,qw=parseInt(document.getElementById('s-qw').value)/100,rw=parseInt(document.getElementById('s-rw').value)/100,sw=parseInt(document.getElementById('s-sw').value)/100,th=parseInt(document.getElementById('s-t').value),w=parseInt(document.getElementById('s-w').value),cs=DT.company_stats||{},ar=0,cr=0,sf=0,rs=0,rc=0;
+  Object.keys(cs).forEach(function(c){
+    var s=cs[c],sc=Math.round(s.prio_ratio*pw*100+s.qa_ratio*qw*100+s.rb_ratio*rw*100+s.sla_ratio*sw*100);
+    rs+=sc;rc++;if(sc>=th)ar++;else if(sc<20)sf++;if(s.prio_cls==='critical')cr++;
+  });
+  var p=document.getElementById('spo');
+  var con='<h3>Simulation Results (threshold:'+th+')</h3><div class="sgrid"><div class="sc"><div class="sv">'+rc+'</div><div class="sl">Companies</div></div><div class="sc"><div class="sv" style="color:#ff1744">'+ar+'</div><div class="sl">At Risk</div></div><div class="sc"><div class="sv" style="color:#00e676">'+sf+'</div><div class="sl">Safe</div></div><div class="sc"><div class="sv" style="color:#ff6d00">'+cr+'</div><div class="sl">Critical</div></div><div class="sc"><div class="sv">'+(rc?Math.round(rs/rc):'--')+'</div><div class="sl">Avg Risk</div></div><div class="sc"><div class="sv">'+w+'</div><div class="sl">Workers</div></div></div>';
+  if(!p){var div=document.createElement('div');div.id='spo';div.className='sp on';div.innerHTML=con;document.querySelector('.cnt').prepend(div);}
+  else{p.className='sp on';p.innerHTML=con;}
+  upd();
+}
+
+function rst(){
+  [['s-w',512,'l-w','512'],['s-b',8,'l-b','8'],['s-pw',40,'l-pw','40%'],['s-qw',30,'l-qw','30%'],['s-t',50,'l-t','50'],['s-sw',10,'l-sw','10%'],['s-rw',20,'l-rw','20%'],['s-f',0,'l-f','All']].forEach(function(a){var e=document.getElementById(a[0]);if(e)e.value=a[1];var le=document.getElementById(a[2]);if(le)le.textContent=a[3];});
+  var p=document.getElementById('spo');if(p)p.className='sp';upd();
+}
+
+function exp(){
+  var cfg={workers:document.getElementById('s-w').value,prioW:document.getElementById('s-pw').value,qaW:document.getElementById('s-qw').value,rbW:document.getElementById('s-rw').value,slaW:document.getElementById('s-sw').value,thresh:document.getElementById('s-t').value,timestamp:new Date().toISOString()};
+  var b=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='scenario_config.json';a.click();
+}
+
+mermaid.initialize({startOnLoad:false,theme:'dark',flowchart:{curve:'basis',padding:20},securityLevel:'loose'});
+</script>
+</body>
+</html>"""
+
+def main():
+    print("="*60)
+    print("  Digital Twin Enterprise v3.0 — Generator")
+    print("="*60)
+    d, s = load()
+    data = build_data(d, s)
+    OUT_HTML.parent.mkdir(parents=True, exist_ok=True)
+    html = HTML.replace("DATA_TIMESTAMP", dt.now().isoformat())
+    with open(OUT_HTML, "w", encoding="utf-8") as f:
+        f.write(html)
+    with open(OUT_DATA, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    sz = len(html)/1024
+    cs = len(data["companies"])
+    print("\nGenerated:")
+    print("  HTML: "+str(OUT_HTML)+" (%.1f KB)"%sz)
+    print("  Data: "+str(OUT_DATA))
+    print("  Companies: %d | Tasks: %d | Batches: %d | Workers: %d | Teams: %d"%(cs,len(d),len(s),WORKER_POOL,len(TEAMS)))
+    print("Open: file://"+str(OUT_HTML.resolve()))
+
+if __name__=="__main__": main()
