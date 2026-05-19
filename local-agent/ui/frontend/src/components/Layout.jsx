@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { api } from '../services/api.js';
+import LanguageSwitcher from './LanguageSwitcher.jsx';
+import { t } from '../i18n/index.js';
 
 const NAV_ITEMS = [
-  { path: '/',         label: 'Dashboard',  icon: '\u{1F4CA}', end: true },
-  { path: '/scanner',  label: 'Scanner',    icon: '\u{1F50D}' },
-  { path: '/chat',     label: 'Chat',       icon: '\u{1F4AC}' },
-  { path: '/patches',  label: 'Patches',    icon: '\u{1FA79}' },
-  { path: '/qa',       label: 'QA',         icon: '✔️' },
-  { path: '/reports',  label: 'Reports',    icon: '\u{1F4CB}' },
-  { path: '/memory',   label: 'Memory',     icon: '\u{1F9E0}' },
-  { path: '/security', label: 'Security',   icon: '\u{1F512}' },
+  { path: '/',              label: () => t('nav.dashboard'),      icon: '\u{1F4CA}', end: true },
+  { path: '/command-center',label: () => t('nav.commandCenter'),  icon: '\u{26A1}' },
+  { path: '/activity-log',  label: () => t('nav.activityLog'),    icon: '\u{1F4D3}' },
+  { path: '/scanner',       label: () => t('nav.scanner'),        icon: '\u{1F50D}' },
+  { path: '/chat',          label: 'Chat',                        icon: '\u{1F4AC}' },
+  { path: '/patches',       label: 'Patches',                     icon: '\u{1FA79}' },
+  { path: '/qa',            label: () => t('nav.qa'),             icon: '✔️' },
+  { path: '/reports',       label: () => t('nav.reports'),        icon: '\u{1F4CB}' },
+  { path: '/memory',        label: 'Memory',                      icon: '\u{1F9E0}' },
+  { path: '/security',      label: () => t('nav.security'),       icon: '\u{1F512}' },
 ];
 
 export default function Layout() {
@@ -57,7 +61,7 @@ export default function Layout() {
               className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
             >
               <span className="nav-icon">{item.icon}</span>
-              {!collapsed && <span className="nav-label">{item.label}</span>}
+              {!collapsed && <span className="nav-label">{typeof item.label === 'function' ? item.label() : item.label}</span>}
             </NavLink>
           ))}
         </div>
@@ -82,6 +86,7 @@ export default function Layout() {
           {llmStatus && (
             <span className="topbar-llm">LLM: {llmStatus}</span>
           )}
+          <LanguageSwitcher />
         </div>
 
         {/* Page content */}

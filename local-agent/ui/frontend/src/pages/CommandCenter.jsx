@@ -1,1 +1,310 @@
-import { useState } from 'react';\nimport ExecutiveOverview from './ExecutiveOverview';\nimport PatchWarRoom from './PatchWarRoom';\nimport ArchitectureIntelligence from './ArchitectureIntelligence';\nimport LocalAIInsights from './LocalAIInsights';\n\nexport default function CommandCenter() {\n  const [activeTab, setActiveTab] = useState('executive');\n\n  const tabs = [\n    { id: 'executive', label: 'Executive Overview', icon: '📊' },\n    { id: 'warroom', label: 'Patch War Room', icon: '⚔️' },\n    { id: 'architecture', label: 'Architecture', icon: '🏗️' },\n    { id: 'insights', label: 'Local AI Insights', icon: '🤖' }\n  ];\n\n  return (\n    <div className=\"p-6\">\n      <div className=\"mb-6\">\n        <h1 className=\"text-3xl font-bold text-gray-900\">Engineering Command Center</h1>\n        <p className=\"text-gray-600 mt-1\">Local AI Coding Agent - Full Engineering Dashboard</p>\n      </div>\n\n      <div className=\"flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg\">\n        {tabs.map(tab => (\n          <button\n            key={tab.id}\n            onClick={() => setActiveTab(tab.id)}\n            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${\n              activeTab === tab.id\n                ? 'bg-white text-blue-600 shadow'\n                : 'text-gray-600 hover:text-gray-900'\n            }`}\n          >\n            <span className=\"mr-2\">{tab.icon}</span>\n            {tab.label}\n          </button>\n        ))}\n      </div>\n\n      <div className=\"bg-white rounded-lg shadow\">\n        {activeTab === 'executive' && <ExecutiveOverview />}\n        {activeTab === 'warroom' && <PatchWarRoom />}\n        {activeTab === 'architecture' && <ArchitectureIntelligence />}\n        {activeTab === 'insights' && <LocalAIInsights />}\n      </div>\n    </div>\n  );\n}\n
+import React, { useState, useRef, useEffect } from 'react';
+import { t } from '../i18n/index.js';
+import viScripts from '../i18n/vi.json';
+import enScripts from '../i18n/en.json';
+import { getLang } from '../i18n/index.js';
+
+// Get scripts from current lang
+function getScripts() {
+  const lang = getLang();
+  return lang === 'en' ? enScripts.scripts : viScripts.scripts;
+}
+
+const GROUP_ORDER = ['kb', 'eval', 'accounting', 'build', 'agent'];
+const GROUP_ICONS = {
+  kb: '🧠',
+  eval: '📊',
+  accounting: '💰',
+  build: '🔧',
+  agent: '🤖',
+};
+
+const STATUS_COLORS = {
+  idle:      'var(--text-muted)',
+  running:   'var(--blue)',
+  completed: 'var(--green)',
+  failed:    'var(--red)',
+  stopped:   'var(--yellow)',
+};
+
+function lineColor(line) {
+  if (!line) return 'var(--text-muted)';
+  const l = line.toLowerCase();
+  if (l.includes('[stderr]') || l.includes('error') || l.includes('err:')) return 'var(--red)';
+  if (l.includes('warn') || l.includes('warning')) return 'var(--yellow)';
+  if (l.includes('done') || l.includes('success') || l.includes('completed') || l.includes('✓')) return 'var(--green)';
+  return 'var(--text)';
+}
+
+export default function CommandCenter() {
+  const scripts = getScripts();
+
+  // Group scripts
+  const grouped = GROUP_ORDER.map((groupKey) => ({
+    key: groupKey,
+    label: t(`commandCenter.groups.${groupKey}`),
+    icon: GROUP_ICONS[groupKey],
+    items: Object.entries(scripts)
+      .filter(([, meta]) => meta.group === groupKey)
+      .map(([scriptKey, meta]) => ({ scriptKey, ...meta })),
+  })).filter((g) => g.items.length > 0);
+
+  // Job state
+  const [activeJobId, setActiveJobId]   = useState(null);
+  const [activeScript, setActiveScript] = useState(null);
+  const [jobStatus, setJobStatus]       = useState('idle'); // idle|running|completed|failed|stopped
+  const [exitCode, setExitCode]         = useState(null);
+  const [lines, setLines]               = useState([]);
+  const [confirm, setConfirm]           = useState(null); // { scriptKey, meta }
+  const outputRef = useRef(null);
+  const cancelSSERef = useRef(null);
+
+  // Auto-scroll output
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [lines]);
+
+  function handleScriptClick(scriptKey, meta) {
+    if (jobStatus === 'running') return; // ignore while running
+    if (meta.warn) {
+      setConfirm({ scriptKey, meta });
+    } else {
+      runScript(scriptKey, meta);
+    }
+  }
+
+  async function runScript(scriptKey, meta) {
+    setConfirm(null);
+    setActiveScript(scriptKey);
+    setLines([]);
+    setJobStatus('running');
+    setExitCode(null);
+    setActiveJobId(null);
+
+    try {
+      const resp = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: scriptKey, label: meta.label }),
+      });
+      const data = await resp.json();
+      if (!data.jobId) {
+        setJobStatus('failed');
+        setLines((l) => [...l, '[error] Failed to start job: ' + (data.error ?? 'unknown')]);
+        return;
+      }
+      const jobId = data.jobId;
+      setActiveJobId(jobId);
+
+      // SSE stream
+      const es = new EventSource(`/api/run/${jobId}/stream`);
+      cancelSSERef.current = () => es.close();
+
+      es.onmessage = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.data);
+          if (parsed.done) {
+            es.close();
+            setJobStatus(parsed.status ?? 'completed');
+            setExitCode(parsed.exitCode ?? null);
+            cancelSSERef.current = null;
+          } else if (parsed.line !== undefined) {
+            setLines((l) => [...l, parsed.line]);
+          }
+        } catch { /* ignore */ }
+      };
+      es.onerror = () => {
+        es.close();
+        setJobStatus('failed');
+        cancelSSERef.current = null;
+      };
+    } catch (err) {
+      setJobStatus('failed');
+      setLines((l) => [...l, '[error] ' + err.message]);
+    }
+  }
+
+  async function handleStop() {
+    if (!activeJobId) return;
+    if (cancelSSERef.current) { cancelSSERef.current(); cancelSSERef.current = null; }
+    try {
+      await fetch(`/api/run/${activeJobId}/stop`, { method: 'POST' });
+    } catch { /* best effort */ }
+    setJobStatus('stopped');
+  }
+
+  const statusLabel = {
+    idle:      'IDLE',
+    running:   t('common.running'),
+    completed: t('common.success') + ' ✅',
+    failed:    t('common.error') + ' ❌',
+    stopped:   t('common.stop') + ' ⏹',
+  }[jobStatus] ?? jobStatus;
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">{t('commandCenter.title')}</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>{t('commandCenter.subtitle')}</p>
+        </div>
+        {/* Status badge */}
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 12px',
+          borderRadius: 20,
+          fontSize: 12,
+          fontWeight: 600,
+          border: '1px solid ' + STATUS_COLORS[jobStatus],
+          color: STATUS_COLORS[jobStatus],
+          background: STATUS_COLORS[jobStatus] + '18',
+        }}>
+          {jobStatus === 'running' && <span className="spinner" />}
+          {statusLabel}
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        {/* Left: script groups */}
+        <div>
+          {grouped.map((group) => (
+            <div key={group.key} className="card" style={{ marginBottom: 16 }}>
+              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>{group.icon}</span>
+                <span>{group.label}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {group.items.map((item) => {
+                  const isActive = activeScript === item.scriptKey;
+                  return (
+                    <button
+                      key={item.scriptKey}
+                      onClick={() => handleScriptClick(item.scriptKey, item)}
+                      disabled={jobStatus === 'running'}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        padding: '10px 14px',
+                        border: `1px solid ${isActive ? 'var(--blue)' : 'var(--border)'}`,
+                        borderRadius: 'var(--radius)',
+                        background: isActive ? 'rgba(88,166,255,0.08)' : 'transparent',
+                        color: 'var(--text)',
+                        cursor: jobStatus === 'running' ? 'not-allowed' : 'pointer',
+                        opacity: jobStatus === 'running' && !isActive ? 0.45 : 1,
+                        textAlign: 'left',
+                        transition: 'border-color 0.15s, background 0.15s',
+                        width: '100%',
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>
+                        {item.warn && <span style={{ color: 'var(--yellow)', marginRight: 4 }}>⚠</span>}
+                        {item.label}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{item.desc}</span>
+                      {item.estTime && (
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
+                          ~{item.estTime}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right: output panel */}
+        <div style={{ position: 'sticky', top: 24, alignSelf: 'start' }}>
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span>{t('commandCenter.outputTitle')}</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {jobStatus === 'running' && (
+                  <button className="btn btn-danger" style={{ fontSize: 12, padding: '3px 10px' }} onClick={handleStop}>
+                    {t('common.stop')}
+                  </button>
+                )}
+                <button
+                  className="btn"
+                  style={{ fontSize: 12, padding: '3px 10px' }}
+                  onClick={() => setLines([])}
+                  disabled={jobStatus === 'running'}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {activeScript && (
+              <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+                <code style={{ color: 'var(--blue)' }}>npm run {activeScript}</code>
+                {exitCode !== null && (
+                  <span style={{ marginLeft: 8, color: exitCode === 0 ? 'var(--green)' : 'var(--red)' }}>
+                    exit {exitCode}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div
+              ref={outputRef}
+              style={{
+                background: '#0d1117',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                padding: '12px',
+                fontFamily: 'monospace',
+                fontSize: 11,
+                lineHeight: 1.6,
+                height: 480,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              }}
+            >
+              {lines.length === 0 ? (
+                <span style={{ color: 'var(--text-muted)' }}>{t('commandCenter.noOutput')}</span>
+              ) : (
+                lines.map((line, i) => (
+                  <div key={i} style={{ color: lineColor(line) }}>{line}</div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm dialog */}
+      {confirm && (
+        <div className="modal-overlay">
+          <div className="confirm-dialog">
+            <div className="confirm-title">{t('commandCenter.confirmTitle')}</div>
+            <p style={{ fontSize: 14, color: 'var(--text)', marginBottom: 8 }}>
+              <strong>{confirm.meta.label}</strong>
+            </p>
+            <p className="confirm-msg">
+              {t('commandCenter.confirmWarning').replace('{time}', confirm.meta.estTime ?? '?')}
+            </p>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, fontFamily: 'monospace' }}>
+              npm run {confirm.scriptKey}
+            </div>
+            <div className="btn-group">
+              <button className="btn btn-primary" onClick={() => runScript(confirm.scriptKey, confirm.meta)}>
+                {t('common.confirm')}
+              </button>
+              <button className="btn" onClick={() => setConfirm(null)}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

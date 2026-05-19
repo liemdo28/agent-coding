@@ -14,6 +14,7 @@ dist/
 **/.local-agent/model-benchmarks.json
 *.log
 !sample-logs/*.log
+logs/activity/
 .DS_Store
 accounting-engine/node_modules/
 accounting-engine/ledgers/*.db

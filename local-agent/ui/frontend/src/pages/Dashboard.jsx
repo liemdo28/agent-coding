@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.js';
+import { t } from '../i18n/index.js';
 
 function CheckItem({ check }) {
   const passed = check.passed;
@@ -29,6 +30,24 @@ function statusBadgeClass(status) {
   return 'badge';
 }
 
+function formatUptime(sec) {
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+}
+
+function formatTs(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleString(); } catch { return ts; }
+}
+
+const STATUS_MAP = {
+  started:   { label: () => t('activityLog.status.started'),   color: 'var(--blue)' },
+  completed: { label: () => t('activityLog.status.completed'), color: 'var(--green)' },
+  failed:    { label: () => t('activityLog.status.failed'),    color: 'var(--red)' },
+  stopped:   { label: () => t('activityLog.status.stopped'),   color: 'var(--yellow)' },
+};
+
 export default function Dashboard() {
   const [projectStatus,      setProjectStatus]      = useState(null);
   const [policyStatus,       setPolicyStatus]        = useState(null);
@@ -37,6 +56,27 @@ export default function Dashboard() {
   const [scanning,           setScanning]            = useState(false);
   const [runningQA,          setRunningQA]           = useState(false);
   const [error,              setError]               = useState(null);
+  const [healthData,         setHealthData]          = useState(null);
+  const [recentActivity,     setRecentActivity]      = useState([]);
+
+  const loadHealth = useCallback(async () => {
+    try {
+      const h = await fetch('/api/health').then((r) => r.json());
+      if (h.success) setHealthData(h.data);
+    } catch { /* ignore */ }
+
+    try {
+      const al = await fetch('/api/activity-log').then((r) => r.json());
+      if (al.success) {
+        // Show last 5 "completed" or "failed" entries
+        const entries = al.data
+          .filter((e) => e.status === 'completed' || e.status === 'failed')
+          .slice(-5)
+          .reverse();
+        setRecentActivity(entries);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -62,7 +102,12 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+    loadHealth();
+    const interval = setInterval(loadHealth, 30000);
+    return () => clearInterval(interval);
+  }, [loadData, loadHealth]);
 
   const handleScan = async () => {
     setScanning(true);
@@ -127,6 +172,67 @@ export default function Dashboard() {
       {error && (
         <div className="card" style={{ borderColor: 'var(--red)', marginBottom: 16 }}>
           <span style={{ color: 'var(--red)' }}>{error}</span>
+        </div>
+      )}
+
+      {/* ── Health / KB Stats ──────────────────────────────────────────────── */}
+      {healthData && (
+        <div className="card-grid" style={{ marginBottom: 0 }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="card-title">{t('dashboard.kbDocs')}</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--blue)' }}>{healthData.kb?.docs?.toLocaleString() ?? 0}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(healthData.kb?.chunks ?? 0).toLocaleString()} {t('dashboard.kbChunks')}</div>
+          </div>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="card-title">{t('dashboard.testsPassing')}</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--green)' }}>{healthData.tests?.pass ?? 0}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {(healthData.tests?.fail ?? 0) > 0
+                ? <span style={{ color: 'var(--red)' }}>{healthData.tests.fail} {t('dashboard.testsFailing')}</span>
+                : <span style={{ color: 'var(--green)' }}>{t('dashboard.allGood')}</span>
+              }
+            </div>
+          </div>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="card-title">{t('dashboard.systemHealth')}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: (healthData.tests?.fail ?? 0) > 0 ? 'var(--red)' : 'var(--green)' }}>
+              {(healthData.tests?.fail ?? 0) > 0 ? '🔴' : '🟢'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {t('dashboard.uptime')}: {formatUptime(healthData.system?.uptime ?? 0)}
+              {'  ·  '}{t('dashboard.memoryUsed')}: {healthData.system?.memMB ?? 0} MB
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick actions ────────────────────────────────────────────────────── */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-title">{t('dashboard.quickActions')}</div>
+        <div className="btn-group">
+          <button className="btn" onClick={() => window.location.href = '/command-center'}>⚡ {t('nav.commandCenter')}</button>
+          <button className="btn" onClick={() => window.location.href = '/activity-log'}>📓 {t('nav.activityLog')}</button>
+        </div>
+      </div>
+
+      {/* ── Recent activity ──────────────────────────────────────────────────── */}
+      {recentActivity.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-title">{t('dashboard.recentActivity')}</div>
+          <ul style={{ listStyle: 'none' }}>
+            {recentActivity.map((entry, i) => {
+              const st = STATUS_MAP[entry.status] ?? { label: () => entry.status, color: 'var(--text-muted)' };
+              return (
+                <li key={i} className="stat-row">
+                  <span className="stat-label" style={{ fontFamily: 'monospace', fontSize: 12 }}>{entry.label || entry.script}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                    <span style={{ color: st.color }}>{st.label()}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{formatTs(entry.ts)}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

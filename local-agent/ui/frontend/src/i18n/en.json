@@ -1,0 +1,91 @@
+{
+  "common": {
+    "running": "Running...",
+    "success": "Success",
+    "error": "Error",
+    "stop": "Stop",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "export": "Export",
+    "loading": "Loading...",
+    "refresh": "Refresh",
+    "language": "Language"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "commandCenter": "Command Center",
+    "activityLog": "Activity Log",
+    "scanner": "Scanner",
+    "qa": "QA",
+    "security": "Security",
+    "reports": "Reports"
+  },
+  "dashboard": {
+    "title": "System Overview",
+    "kbDocs": "KB Documents",
+    "kbChunks": "Chunks",
+    "testsPassing": "Tests Passing",
+    "testsFailing": "Tests Failing",
+    "systemHealth": "System Health",
+    "lastRun": "Last Run",
+    "allGood": "System is healthy",
+    "hasErrors": "Errors detected — view details",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions",
+    "uptime": "Uptime",
+    "memoryUsed": "Memory Used"
+  },
+  "commandCenter": {
+    "title": "Command Center",
+    "subtitle": "Click to run — no terminal needed",
+    "groups": {
+      "kb": "Knowledge Base",
+      "eval": "Evaluation",
+      "accounting": "Accounting",
+      "build": "Build & Test",
+      "agent": "Agent"
+    },
+    "confirmTitle": "Confirm Run",
+    "confirmWarning": "This command will run for about {time}. Continue?",
+    "outputTitle": "Output",
+    "noOutput": "No output yet."
+  },
+  "activityLog": {
+    "title": "Activity Log",
+    "filterDate": "Filter by date",
+    "filterStatus": "Filter by status",
+    "filterAction": "Filter by action",
+    "noLogs": "No activity logs yet.",
+    "export": "Export log",
+    "status": {
+      "started": "Started",
+      "completed": "Completed",
+      "failed": "Failed",
+      "stopped": "Stopped",
+      "running": "Running"
+    }
+  },
+  "scripts": {
+    "kb:ingest":         { "label": "Ingest Knowledge Base",          "desc": "Download Wikipedia articles into KB (~4 min, needs internet)", "warn": true,  "estTime": "4-5 min",    "group": "kb" },
+    "kb:ingest:mdn":     { "label": "Ingest MDN (coding)",            "desc": "Download MDN Web Docs into KB (~2 min)",                       "warn": true,  "estTime": "2-3 min",    "group": "kb" },
+    "kb:stats":          { "label": "KB Statistics",                  "desc": "View document count, chunks, words in KB",                     "warn": false, "estTime": "seconds",    "group": "kb" },
+    "kb:query":          { "label": "Search KB",                      "desc": "Search information in Knowledge Base",                         "warn": false, "estTime": "seconds",    "group": "kb" },
+    "kb:package":        { "label": "Package KB",                     "desc": "Compress knowledge.db into .gz for distribution",              "warn": true,  "estTime": "1-2 min",    "group": "kb" },
+    "kb:install":        { "label": "Install KB from file",           "desc": "Decompress and install .gz file into system",                  "warn": false, "estTime": "1 min",      "group": "kb" },
+    "kb:generate-stats": { "label": "Generate KB Stats",              "desc": "Update kb/stats.json from database",                           "warn": false, "estTime": "seconds",    "group": "kb" },
+    "eval:quick":        { "label": "Quick Evaluation",               "desc": "Run small evaluation set (~30 sec)",                           "warn": false, "estTime": "30 sec",     "group": "eval" },
+    "eval:all":          { "label": "Full Evaluation",                "desc": "Run all evaluations (~10 min)",                                "warn": true,  "estTime": "10-15 min",  "group": "eval" },
+    "eval:humaneval":    { "label": "HumanEval",                      "desc": "Run HumanEval coding benchmark",                               "warn": false, "estTime": "5-10 min",   "group": "eval" },
+    "eval:mbpp":         { "label": "MBPP Evaluation",                "desc": "Run MBPP Python benchmark",                                    "warn": false, "estTime": "5-10 min",   "group": "eval" },
+    "eval:scoreboard":   { "label": "Scoreboard",                     "desc": "View evaluation results",                                      "warn": false, "estTime": "seconds",    "group": "eval" },
+    "accounting:api":    { "label": "Start Accounting API",           "desc": "Start accounting server at localhost:8844",                     "warn": false, "estTime": "seconds",    "group": "accounting" },
+    "accounting:verify": { "label": "Verify Ledger",                  "desc": "Check hash chain integrity",                                   "warn": false, "estTime": "30 sec",     "group": "accounting" },
+    "accounting:cert":   { "label": "Generate Certificate",           "desc": "Export audit certificate",                                     "warn": true,  "estTime": "1 min",      "group": "accounting" },
+    "build":             { "label": "Build System",                   "desc": "Check syntax of all JS files",                                 "warn": false, "estTime": "30 sec",     "group": "build" },
+    "test":              { "label": "Run Tests",                      "desc": "Run full test suite (~30 sec)",                                "warn": false, "estTime": "30 sec",     "group": "build" },
+    "test:integration":  { "label": "Integration Tests",             "desc": "Run CLI integration tests",                                    "warn": false, "estTime": "1 min",      "group": "build" },
+    "lint":              { "label": "Lint Code",                      "desc": "Scan all source files for syntax errors",                      "warn": false, "estTime": "30 sec",     "group": "build" },
+    "start":             { "label": "Start Agent",                    "desc": "Run the local agent main process",                             "warn": false, "estTime": "seconds",    "group": "agent" },
+    "corp:simulate":     { "label": "Corporate Simulation",           "desc": "Run corporate environment simulation",                         "warn": true,  "estTime": "5-10 min",   "group": "agent" }
+  }
+}

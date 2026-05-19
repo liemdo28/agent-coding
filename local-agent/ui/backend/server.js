@@ -33,6 +33,7 @@ import policyRouter    from './routes/policy.js';
 import memoryRouter    from './routes/memory.js';
 import agentRouter     from './routes/agent.js';
 import projectsRouter  from './routes/projects.js';
+import runnerRouter    from './routes/runner.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -123,6 +124,7 @@ const apiRouters = [
   memoryRouter,
   agentRouter,
   projectsRouter,
+  runnerRouter,
 ];
 
 for (const router of apiRouters) {

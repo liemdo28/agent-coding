@@ -1,0 +1,91 @@
+{
+  "common": {
+    "running": "Đang chạy...",
+    "success": "Thành công",
+    "error": "Lỗi",
+    "stop": "Dừng",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "export": "Xuất file",
+    "loading": "Đang tải...",
+    "refresh": "Làm mới",
+    "language": "Ngôn ngữ"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "commandCenter": "Trung tâm lệnh",
+    "activityLog": "Lịch sử hoạt động",
+    "scanner": "Quét mã",
+    "qa": "Kiểm thử",
+    "security": "Bảo mật",
+    "reports": "Báo cáo"
+  },
+  "dashboard": {
+    "title": "Tổng quan hệ thống",
+    "kbDocs": "Tài liệu KB",
+    "kbChunks": "Chunks",
+    "testsPassing": "Kiểm thử qua",
+    "testsFailing": "Kiểm thử lỗi",
+    "systemHealth": "Sức khỏe hệ thống",
+    "lastRun": "Lần chạy gần nhất",
+    "allGood": "Hệ thống hoạt động tốt",
+    "hasErrors": "Phát hiện lỗi — xem chi tiết",
+    "recentActivity": "Hoạt động gần đây",
+    "quickActions": "Thao tác nhanh",
+    "uptime": "Thời gian hoạt động",
+    "memoryUsed": "Bộ nhớ sử dụng"
+  },
+  "commandCenter": {
+    "title": "Trung tâm lệnh",
+    "subtitle": "Bấm để chạy — không cần terminal",
+    "groups": {
+      "kb": "Knowledge Base",
+      "eval": "Đánh giá",
+      "accounting": "Kế toán",
+      "build": "Build & Kiểm thử",
+      "agent": "Agent"
+    },
+    "confirmTitle": "Xác nhận chạy lệnh",
+    "confirmWarning": "Lệnh này sẽ chạy khoảng {time}. Tiếp tục?",
+    "outputTitle": "Kết quả",
+    "noOutput": "Chưa có kết quả."
+  },
+  "activityLog": {
+    "title": "Lịch sử hoạt động",
+    "filterDate": "Lọc theo ngày",
+    "filterStatus": "Lọc theo trạng thái",
+    "filterAction": "Lọc theo hành động",
+    "noLogs": "Chưa có lịch sử.",
+    "export": "Xuất log",
+    "status": {
+      "started": "Đã bắt đầu",
+      "completed": "Hoàn thành",
+      "failed": "Thất bại",
+      "stopped": "Đã dừng",
+      "running": "Đang chạy"
+    }
+  },
+  "scripts": {
+    "kb:ingest":         { "label": "Nạp dữ liệu Knowledge Base",   "desc": "Tải bài viết Wikipedia vào KB (~4 phút, cần mạng)",       "warn": true,  "estTime": "4-5 phút",    "group": "kb" },
+    "kb:ingest:mdn":     { "label": "Nạp dữ liệu MDN (lập trình)",  "desc": "Tải tài liệu MDN Web Docs vào KB (~2 phút)",              "warn": true,  "estTime": "2-3 phút",    "group": "kb" },
+    "kb:stats":          { "label": "Thống kê Knowledge Base",       "desc": "Xem số tài liệu, chunks, từ trong KB",                    "warn": false, "estTime": "vài giây",    "group": "kb" },
+    "kb:query":          { "label": "Tìm kiếm KB",                   "desc": "Tìm kiếm thông tin trong Knowledge Base",                 "warn": false, "estTime": "vài giây",    "group": "kb" },
+    "kb:package":        { "label": "Đóng gói KB",                   "desc": "Nén knowledge.db thành file .gz để phân phối",            "warn": true,  "estTime": "1-2 phút",    "group": "kb" },
+    "kb:install":        { "label": "Cài đặt KB từ file",            "desc": "Giải nén và cài file .gz vào hệ thống",                   "warn": false, "estTime": "1 phút",      "group": "kb" },
+    "kb:generate-stats": { "label": "Tạo file thống kê KB",          "desc": "Cập nhật kb/stats.json từ database",                      "warn": false, "estTime": "vài giây",    "group": "kb" },
+    "eval:quick":        { "label": "Đánh giá nhanh",                "desc": "Chạy bộ đánh giá nhỏ (~30 giây)",                         "warn": false, "estTime": "30 giây",     "group": "eval" },
+    "eval:all":          { "label": "Đánh giá toàn bộ",              "desc": "Chạy tất cả bài đánh giá (~10 phút)",                     "warn": true,  "estTime": "10-15 phút",  "group": "eval" },
+    "eval:humaneval":    { "label": "Đánh giá HumanEval",            "desc": "Chạy bộ bài HumanEval coding benchmark",                  "warn": false, "estTime": "5-10 phút",   "group": "eval" },
+    "eval:mbpp":         { "label": "Đánh giá MBPP",                 "desc": "Chạy bộ bài MBPP Python benchmark",                       "warn": false, "estTime": "5-10 phút",   "group": "eval" },
+    "eval:scoreboard":   { "label": "Bảng điểm đánh giá",           "desc": "Xem kết quả các lần đánh giá",                            "warn": false, "estTime": "vài giây",    "group": "eval" },
+    "accounting:api":    { "label": "Khởi động API kế toán",         "desc": "Mở server kế toán tại localhost:8844",                     "warn": false, "estTime": "vài giây",    "group": "accounting" },
+    "accounting:verify": { "label": "Xác minh sổ kế toán",          "desc": "Kiểm tra tính toàn vẹn chuỗi hash",                       "warn": false, "estTime": "30 giây",     "group": "accounting" },
+    "accounting:cert":   { "label": "Tạo chứng nhận",                "desc": "Xuất chứng nhận kiểm toán",                               "warn": true,  "estTime": "1 phút",      "group": "accounting" },
+    "build":             { "label": "Build hệ thống",                 "desc": "Kiểm tra syntax tất cả file JS",                          "warn": false, "estTime": "30 giây",     "group": "build" },
+    "test":              { "label": "Chạy kiểm thử",                  "desc": "Chạy toàn bộ bộ kiểm thử (~30 giây)",                     "warn": false, "estTime": "30 giây",     "group": "build" },
+    "test:integration":  { "label": "Kiểm thử tích hợp",             "desc": "Chạy test tích hợp CLI",                                  "warn": false, "estTime": "1 phút",      "group": "build" },
+    "lint":              { "label": "Kiểm tra code",                  "desc": "Quét lỗi syntax tất cả file nguồn",                       "warn": false, "estTime": "30 giây",     "group": "build" },
+    "start":             { "label": "Khởi động Agent",                "desc": "Chạy local agent chính",                                  "warn": false, "estTime": "vài giây",    "group": "agent" },
+    "corp:simulate":     { "label": "Mô phỏng doanh nghiệp",         "desc": "Chạy kịch bản mô phỏng môi trường công ty",               "warn": true,  "estTime": "5-10 phút",   "group": "agent" }
+  }
+}
