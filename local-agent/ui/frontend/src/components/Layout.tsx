@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/architecture',   label: () => t('nav.architecture'),  icon: '🏗' },
   { path: '/kpi',            label: () => t('nav.kpi'),           icon: '📈' },
   { path: '/corporate',      label: () => t('nav.corporate'),     icon: '🏢' },
+  { path: '/digital-twin',   label: 'Digital Twin',               icon: '◎' },
   { path: '/projects',       label: 'Projects',                   icon: '📂' },
   { path: '/active-tasks',   label: 'Active Tasks',               icon: '⚙️' },
   { path: '/simulation',     label: 'Simulation',                 icon: '🎛' },

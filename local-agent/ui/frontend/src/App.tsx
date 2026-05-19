@@ -18,6 +18,7 @@ import CorporateDashboard from './pages/CorporateDashboard.tsx';
 import ProjectExplorer    from './pages/ProjectExplorer.tsx';
 import ActiveTasks        from './pages/ActiveTasks.tsx';
 import Simulation         from './pages/Simulation.tsx';
+import DigitalTwin        from './pages/DigitalTwin.tsx';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="projects"         element={<ProjectExplorer />} />
           <Route path="active-tasks"     element={<ActiveTasks />} />
           <Route path="simulation"       element={<Simulation />} />
+          <Route path="digital-twin"     element={<DigitalTwin />} />
           <Route path="*"                element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

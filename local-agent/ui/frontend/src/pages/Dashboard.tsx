@@ -3,34 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.js';
 import { t } from '../i18n/index.js';
 
-function CheckItem({ check }) {
-  const passed = check.passed;
-  const cls = passed === true ? 'check-pass'
-            : passed === false && check.severity === 'FAIL' ? 'check-fail'
-            : passed === false && check.severity === 'WARN' ? 'check-warn'
-            : 'check-info';
-  const icon = passed === true ? '✓'
-             : passed === false && check.severity === 'FAIL' ? '✗'
-             : passed === false && check.severity === 'WARN' ? '⚠'
-             : 'i';
-  return (
-    <li className={`check-item ${cls}`}>
-      <span className="check-icon">{icon}</span>
-      <div>
-        <div className="check-name">{check.name}</div>
-        <div className="check-msg">{check.message}</div>
-      </div>
-    </li>
-  );
-}
-
-function statusBadgeClass(status) {
-  if (status === 'healthy') return 'badge badge-pass';
-  if (status === 'warning') return 'badge badge-warn';
-  if (status === 'fail')    return 'badge badge-fail';
-  return 'badge';
-}
-
 function formatUptime(sec) {
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
@@ -42,12 +14,53 @@ function formatTs(ts) {
   try { return new Date(ts).toLocaleString(); } catch { return ts; }
 }
 
-const STATUS_MAP = {
-  started:   { label: () => t('activityLog.status.started'),   color: 'var(--blue)' },
-  completed: { label: () => t('activityLog.status.completed'), color: 'var(--green)' },
-  failed:    { label: () => t('activityLog.status.failed'),    color: 'var(--red)' },
+const STATUS_LABEL = {
+  started:   { label: () => t('activityLog.status.started'),   color: 'var(--blue)'   },
+  completed: { label: () => t('activityLog.status.completed'), color: 'var(--green)'  },
+  failed:    { label: () => t('activityLog.status.failed'),    color: 'var(--red)'    },
   stopped:   { label: () => t('activityLog.status.stopped'),   color: 'var(--yellow)' },
 };
+
+function CheckItem({ check }) {
+  const cls =
+    check.passed === true                                   ? 'text-green'
+    : check.passed === false && check.severity === 'FAIL'  ? 'text-red'
+    : check.passed === false && check.severity === 'WARN'  ? 'text-yellow'
+    : 'text-blue';
+  const icon =
+    check.passed === true                                   ? '✓'
+    : check.passed === false && check.severity === 'FAIL'  ? '✗'
+    : check.passed === false && check.severity === 'WARN'  ? '⚠'
+    : 'i';
+  return (
+    <li className="flex items-start gap-2.5 py-2.5 border-b border-border/50 text-[13px] last:border-0">
+      <span className={`flex-shrink-0 mt-0.5 font-bold ${cls}`}>{icon}</span>
+      <div>
+        <div className="font-medium text-text">{check.name}</div>
+        <div className="text-[12px] text-muted mt-0.5">{check.message}</div>
+      </div>
+    </li>
+  );
+}
+
+function StatCard({ label, value, sub, valueColor = 'text-blue' }) {
+  return (
+    <div className="card flex flex-col gap-2">
+      <div className="card-title">{label}</div>
+      <div className={`text-4xl font-bold leading-none ${valueColor}`}>{value}</div>
+      {sub && <div className="text-[12px] text-muted">{sub}</div>}
+    </div>
+  );
+}
+
+function StatRow({ label, value }) {
+  return (
+    <li className="stat-row">
+      <span className="stat-label">{label}</span>
+      <span className="stat-value">{value}</span>
+    </li>
+  );
+}
 
 export default function Dashboard() {
   const [projectStatus,      setProjectStatus]      = useState(null);
@@ -65,28 +78,20 @@ export default function Dashboard() {
       const h = await fetch('/api/health').then((r) => r.json());
       if (h.success) setHealthData(h.data);
     } catch { /* ignore */ }
-
     try {
       const al = await fetch('/api/activity-log').then((r) => r.json());
       if (al.success) {
-        // Show last 5 "completed" or "failed" entries
-        const entries = al.data
-          .filter((e) => e.status === 'completed' || e.status === 'failed')
-          .slice(-5)
-          .reverse();
-        setRecentActivity(entries);
+        setRecentActivity(
+          al.data.filter((e) => e.status === 'completed' || e.status === 'failed').slice(-5).reverse()
+        );
       }
     } catch { /* ignore */ }
   }, []);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
-      const [ps, pol] = await Promise.all([
-        api.get('/project/status'),
-        api.get('/policy/status'),
-      ]);
+      const [ps, pol] = await Promise.all([api.get('/project/status'), api.get('/policy/status')]);
       if (ps.success)  setProjectStatus(ps.data);
       if (pol.success) setPolicyStatus(pol.data);
     } catch (err) {
@@ -94,53 +99,37 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-    // Load registered projects separately — endpoint may not exist yet
     try {
       const reg = await api.get('/projects');
       if (reg.success) setRegisteredProjects(reg.data);
-    } catch {
-      setRegisteredProjects([]);
-    }
+    } catch { setRegisteredProjects([]); }
   }, []);
 
   useEffect(() => {
-    loadData();
-    loadHealth();
+    loadData(); loadHealth();
     const interval = setInterval(loadHealth, 30000);
     return () => clearInterval(interval);
   }, [loadData, loadHealth]);
 
   const handleScan = async () => {
     setScanning(true);
-    try {
-      await api.post('/project/scan', {});
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setScanning(false);
-    }
+    try { await api.post('/project/scan', {}); await loadData(); }
+    catch (err) { setError(err.message); }
+    finally { setScanning(false); }
   };
 
   const handleQA = async () => {
     setRunningQA(true);
-    try {
-      await api.post('/qa/run', { deep: false, autoFix: false });
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRunningQA(false);
-    }
+    try { await api.post('/qa/run', { deep: false, autoFix: false }); await loadData(); }
+    catch (err) { setError(err.message); }
+    finally { setRunningQA(false); }
   };
 
   const handlePolicyCheck = async () => {
     try {
       const res = await api.post('/policy/check', {});
       if (res.success) setPolicyStatus(res.data);
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   };
 
   if (loading) return (
@@ -150,77 +139,53 @@ export default function Dashboard() {
     </div>
   );
 
-  const p = projectStatus;
+  const p   = projectStatus;
   const pol = policyStatus;
+  const polBadge = pol?.result === 'PASS' ? 'badge-pass' : pol?.result === 'WARNING' ? 'badge-warn' : 'badge-fail';
 
   return (
     <div>
+      {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <div className="btn-group">
           <button className="btn btn-primary" onClick={handleScan} disabled={scanning}>
-            {scanning ? <><span className="spinner" />Scanning...</> : 'Scan Project'}
+            {scanning ? <><span className="spinner" />Scanning…</> : 'Scan Project'}
           </button>
           <button className="btn btn-success" onClick={handleQA} disabled={runningQA}>
-            {runningQA ? <><span className="spinner" />Running QA...</> : 'Run QA'}
+            {runningQA ? <><span className="spinner" />Running QA…</> : 'Run QA'}
           </button>
-          <button className="btn" onClick={handlePolicyCheck}>
-            Policy Check
-          </button>
+          <button className="btn" onClick={handlePolicyCheck}>Policy Check</button>
         </div>
       </div>
 
       {error && (
-        <div className="card" style={{ borderColor: 'var(--red)', marginBottom: 16 }}>
-          <span style={{ color: 'var(--red)' }}>{error}</span>
+        <div className="card mb-4" style={{ borderColor: 'var(--red)' }}>
+          <span className="text-red">{error}</span>
         </div>
       )}
 
-      {/* ── Health / KB Stats ──────────────────────────────────────────────── */}
+      {/* Health stat cards */}
       {healthData && (
-        <div className="card-grid" style={{ marginBottom: 0 }}>
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="card-title">{t('dashboard.kbDocs')}</div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--blue)' }}>{healthData.kb?.docs?.toLocaleString() ?? 0}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(healthData.kb?.chunks ?? 0).toLocaleString()} {t('dashboard.kbChunks')}</div>
-          </div>
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="card-title">{t('dashboard.testsPassing')}</div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--green)' }}>{healthData.tests?.pass ?? 0}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {(healthData.tests?.fail ?? 0) > 0
-                ? <span style={{ color: 'var(--red)' }}>{healthData.tests.fail} {t('dashboard.testsFailing')}</span>
-                : <span style={{ color: 'var(--green)' }}>{t('dashboard.allGood')}</span>
-              }
-            </div>
-          </div>
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="card-title">{t('dashboard.systemHealth')}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: (healthData.tests?.fail ?? 0) > 0 ? 'var(--red)' : 'var(--green)' }}>
-              {(healthData.tests?.fail ?? 0) > 0 ? '🔴' : '🟢'}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {t('dashboard.uptime')}: {formatUptime(healthData.system?.uptime ?? 0)}
-              {'  ·  '}{t('dashboard.memoryUsed')}: {healthData.system?.memMB ?? 0} MB
-            </div>
-          </div>
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="card-title">AI (Local LLM)</div>
-            <div style={{ fontSize: 28, fontWeight: 700 }}>
-              {healthData.llm?.available ? '🟢' : '🔴'}
-            </div>
-            <div style={{ fontSize: 12, color: healthData.llm?.available ? 'var(--green)' : 'var(--red)' }}>
-              {healthData.llm?.available
-                ? 'AI đang chạy'
-                : <span>AI chưa chạy — <span style={{ color: 'var(--text-muted)' }}>xem docs/setup/local-llm.md</span></span>
-              }
-            </div>
-          </div>
+        <div className="card-grid">
+          <StatCard label={t('dashboard.kbDocs')} value={(healthData.kb?.docs ?? 0).toLocaleString()}
+            sub={`${(healthData.kb?.chunks ?? 0).toLocaleString()} ${t('dashboard.kbChunks')}`} valueColor="text-blue" />
+          <StatCard label={t('dashboard.testsPassing')} value={healthData.tests?.pass ?? 0} valueColor="text-green"
+            sub={(healthData.tests?.fail ?? 0) > 0
+              ? <span className="text-red">{healthData.tests.fail} {t('dashboard.testsFailing')}</span>
+              : <span className="text-green">{t('dashboard.allGood')}</span>} />
+          <StatCard label={t('dashboard.systemHealth')}
+            value={(healthData.tests?.fail ?? 0) > 0 ? '🔴' : '🟢'} valueColor="text-text"
+            sub={`${t('dashboard.uptime')}: ${formatUptime(healthData.system?.uptime ?? 0)}  ·  ${t('dashboard.memoryUsed')}: ${healthData.system?.memMB ?? 0} MB`} />
+          <StatCard label="AI (Local LLM)" value={healthData.llm?.available ? '🟢' : '🔴'} valueColor="text-text"
+            sub={healthData.llm?.available
+              ? <span className="text-green">AI đang chạy</span>
+              : <span className="text-red">AI chưa chạy</span>} />
         </div>
       )}
 
-      {/* ── Quick actions ────────────────────────────────────────────────────── */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      {/* Quick actions */}
+      <div className="card mb-4">
         <div className="card-title">{t('dashboard.quickActions')}</div>
         <div className="btn-group">
           <button className="btn" onClick={() => window.location.href = '/command-center'}>⚡ {t('nav.commandCenter')}</button>
@@ -228,19 +193,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recent activity ──────────────────────────────────────────────────── */}
+      {/* Recent activity */}
       {recentActivity.length > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card mb-4">
           <div className="card-title">{t('dashboard.recentActivity')}</div>
-          <ul style={{ listStyle: 'none' }}>
+          <ul className="list-none">
             {recentActivity.map((entry, i) => {
-              const st = STATUS_MAP[entry.status] ?? { label: () => entry.status, color: 'var(--text-muted)' };
+              const st = STATUS_LABEL[entry.status] ?? { label: () => entry.status, color: 'var(--text-muted)' };
               return (
                 <li key={i} className="stat-row">
-                  <span className="stat-label" style={{ fontFamily: 'monospace', fontSize: 12 }}>{entry.label || entry.script}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                  <span className="font-mono text-[12px] text-muted">{entry.label || entry.script}</span>
+                  <span className="flex items-center gap-3 text-[12px]">
                     <span style={{ color: st.color }}>{st.label()}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>{formatTs(entry.ts)}</span>
+                    <span className="text-muted">{formatTs(entry.ts)}</span>
                   </span>
                 </li>
               );
@@ -249,121 +214,90 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Project info + Policy */}
       <div className="card-grid">
-        {/* Project Info Card */}
         <div className="card">
           <div className="card-title">Project Info</div>
           {p ? (
-            <ul style={{ listStyle: 'none' }}>
-              <li className="stat-row"><span className="stat-label">Name</span><span className="stat-value">{p.projectName}</span></li>
-              <li className="stat-row"><span className="stat-label">Root</span><span className="stat-value" style={{ fontSize: 11, wordBreak: 'break-all' }}>{p.projectRoot}</span></li>
-              <li className="stat-row"><span className="stat-label">Framework</span><span className="stat-value">{p.framework ?? '—'}</span></li>
-              <li className="stat-row"><span className="stat-label">Language</span><span className="stat-value">{p.language ?? '—'}</span></li>
-              <li className="stat-row"><span className="stat-label">Pkg Manager</span><span className="stat-value">{p.pkgManager ?? '—'}</span></li>
-              <li className="stat-row"><span className="stat-label">Files</span><span className="stat-value">{p.fileCount}</span></li>
-              <li className="stat-row"><span className="stat-label">TODOs</span><span className="stat-value">{p.todoCount}</span></li>
-              <li className="stat-row">
-                <span className="stat-label">Secrets detected</span>
-                <span className="stat-value" style={{ color: p.secretCount > 0 ? 'var(--red)' : 'var(--green)' }}>
-                  {p.secretCount}
-                </span>
-              </li>
-              <li className="stat-row"><span className="stat-label">Last scan</span><span className="stat-value" style={{ fontSize: 11 }}>{p.lastScan ? new Date(p.lastScan).toLocaleString() : 'Never'}</span></li>
-              {p.qaScore !== null && (
-                <li className="stat-row"><span className="stat-label">QA Score</span><span className="stat-value" style={{ color: p.qaScore >= 80 ? 'var(--green)' : p.qaScore >= 60 ? 'var(--yellow)' : 'var(--red)' }}>{p.qaScore}/100</span></li>
+            <ul className="list-none">
+              <StatRow label="Name"        value={p.projectName} />
+              <StatRow label="Root"        value={<span className="font-mono text-[11px] break-all">{p.projectRoot}</span>} />
+              <StatRow label="Framework"   value={p.framework ?? '—'} />
+              <StatRow label="Language"    value={p.language ?? '—'} />
+              <StatRow label="Pkg Manager" value={p.pkgManager ?? '—'} />
+              <StatRow label="Files"       value={p.fileCount} />
+              <StatRow label="TODOs"       value={p.todoCount} />
+              <StatRow label="Secrets"     value={
+                <span style={{ color: p.secretCount > 0 ? 'var(--red)' : 'var(--green)', fontWeight: 600 }}>{p.secretCount}</span>
+              } />
+              <StatRow label="Last scan"   value={<span className="text-[11px]">{p.lastScan ? new Date(p.lastScan).toLocaleString() : 'Never'}</span>} />
+              {p.qaScore != null && (
+                <StatRow label="QA Score"  value={
+                  <span style={{ color: p.qaScore >= 80 ? 'var(--green)' : p.qaScore >= 60 ? 'var(--yellow)' : 'var(--red)', fontWeight: 600 }}>
+                    {p.qaScore}/100
+                  </span>
+                } />
               )}
             </ul>
-          ) : <div className="empty-state"><div>No project data yet.</div><div>Run a scan to get started.</div></div>}
+          ) : (
+            <div className="empty-state"><div>No project data yet.</div><div>Run a scan to get started.</div></div>
+          )}
         </div>
 
-        {/* Policy Status Card */}
         <div className="card">
-          <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Policy Status</span>
-            {pol && (
-              <span className={`badge badge-${pol.result === 'PASS' ? 'pass' : pol.result === 'WARNING' ? 'warn' : 'fail'}`}>
-                {pol.result}
-              </span>
-            )}
+          <div className="flex items-center justify-between mb-4">
+            <span className="card-title" style={{ margin: 0 }}>Policy Status</span>
+            {pol && <span className={`badge ${polBadge}`}>{pol.result}</span>}
           </div>
           {pol ? (
-            <ul className="check-list">
+            <ul className="list-none">
               {pol.checks.map((c) => <CheckItem key={c.name} check={c} />)}
             </ul>
-          ) : <div className="loading-row"><div className="spinner" />Loading policy...</div>}
+          ) : (
+            <div className="loading-row"><div className="spinner" />Loading policy…</div>
+          )}
         </div>
       </div>
 
-      {/* ── Registered Projects ─────────────────────────────────────────────── */}
-      <div style={{ marginTop: 32 }}>
-        <div className="page-header" style={{ marginBottom: 12 }}>
+      {/* Registered Projects */}
+      <div className="mt-8">
+        <div className="page-header mb-3">
           <h2 className="page-title" style={{ fontSize: 18 }}>
             Registered Projects
-            <span style={{ fontSize: 12, fontWeight: 'normal', marginLeft: 10, opacity: 0.6 }}>
-              (managed via CLI)
-            </span>
+            <span style={{ fontSize: 12, fontWeight: 'normal', marginLeft: 10, opacity: 0.6 }}>(managed via CLI)</span>
           </h2>
         </div>
-
         {registeredProjects === null ? (
-          <div className="loading-row"><div className="spinner" />Loading projects...</div>
+          <div className="loading-row"><div className="spinner" />Loading projects…</div>
         ) : registeredProjects.length === 0 ? (
           <div className="card">
             <div className="empty-state">
               <div>No other projects registered.</div>
-              <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 12, opacity: 0.7 }}>
-                Use: local-agent projects add &lt;path&gt;
-              </div>
+              <div className="mt-1.5 font-mono text-[12px] opacity-70">Use: local-agent projects add &lt;path&gt;</div>
             </div>
           </div>
         ) : (
           <div className="card-grid">
             {registeredProjects.map((proj) => (
               <div key={proj.projectId} className="card">
-                <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {proj.name}
-                  </span>
-                  <span className={statusBadgeClass(proj.status)} style={{ marginLeft: 8, flexShrink: 0 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="card-title truncate mr-2" style={{ margin: 0 }}>{proj.name}</span>
+                  <span className={`badge flex-shrink-0 ${proj.status === 'healthy' ? 'badge-pass' : proj.status === 'warning' ? 'badge-warn' : proj.status === 'fail' ? 'badge-fail' : 'badge-pending'}`}>
                     {proj.status ?? 'unknown'}
                   </span>
                 </div>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  <li className="stat-row">
-                    <span className="stat-label">Root</span>
-                    <span className="stat-value" style={{ fontSize: 11, wordBreak: 'break-all' }}>{proj.root}</span>
-                  </li>
-                  {proj.framework && (
-                    <li className="stat-row">
-                      <span className="stat-label">Framework</span>
-                      <span className="stat-value">{proj.framework}</span>
-                    </li>
-                  )}
-                  {proj.language && (
-                    <li className="stat-row">
-                      <span className="stat-label">Language</span>
-                      <span className="stat-value">{proj.language}</span>
-                    </li>
-                  )}
-                  <li className="stat-row">
-                    <span className="stat-label">Last scan</span>
-                    <span className="stat-value" style={{ fontSize: 11 }}>
-                      {proj.lastScan ? new Date(proj.lastScan).toLocaleString() : 'Never'}
-                    </span>
-                  </li>
-                  <li className="stat-row">
-                    <span className="stat-label">Last QA</span>
-                    <span className="stat-value" style={{ fontSize: 11 }}>
-                      {proj.lastQA ? new Date(proj.lastQA).toLocaleString() : 'Never'}
-                    </span>
-                  </li>
-                  {proj.lastScore > 0 && (
-                    <li className="stat-row">
-                      <span className="stat-label">Score</span>
-                      <span className="stat-value" style={{ color: proj.lastScore >= 80 ? 'var(--green)' : proj.lastScore >= 60 ? 'var(--yellow)' : 'var(--red)' }}>
+                <ul className="list-none">
+                  <StatRow label="Root"      value={<span className="font-mono text-[11px] break-all">{proj.root}</span>} />
+                  {proj.framework && <StatRow label="Framework" value={proj.framework} />}
+                  {proj.language  && <StatRow label="Language"  value={proj.language} />}
+                  <StatRow label="Last scan" value={<span className="text-[11px]">{proj.lastScan ? new Date(proj.lastScan).toLocaleString() : 'Never'}</span>} />
+                  <StatRow label="Last QA"   value={<span className="text-[11px]">{proj.lastQA ? new Date(proj.lastQA).toLocaleString() : 'Never'}</span>} />
+                  {(proj.lastScore ?? 0) > 0 && (
+                    <StatRow label="Score" value={
+                      <span style={{ color: proj.lastScore >= 80 ? 'var(--green)' : proj.lastScore >= 60 ? 'var(--yellow)' : 'var(--red)', fontWeight: 600 }}>
                         {proj.lastScore}/100
                       </span>
-                    </li>
+                    } />
                   )}
                 </ul>
               </div>
