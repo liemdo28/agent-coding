@@ -1215,6 +1215,165 @@ async function main() {
                   `${chalk.gray(summary.unknown + ' unknown')}\n`);
     });
 
+  projectsCmd
+    .command('check-dupes')
+    .description('Scan registry for duplicate paths, stale entries, and name conflicts')
+    .option('--fix', 'Remove stale entries and deduplicate (keeps most-recently-updated per path)')
+    .option('--json', 'Machine-readable JSON output (exit 1 on errors)')
+    .action(async (opts) => {
+      printBanner();
+      const {
+        loadRegistry, canonicalizePath, findDuplicates, pruneStale,
+      } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { existsSync: fsExists } = await import('fs');
+
+      const projects = loadRegistry();
+      if (!projects.length) {
+        console.log(chalk.yellow('No projects registered.\n'));
+        return;
+      }
+
+      const issues = [];
+
+      // 1. Stale paths
+      const stale = projects.filter((p) => !fsExists(p.root));
+      for (const p of stale) {
+        issues.push({ type: 'stale', severity: 'error', projectId: p.projectId, name: p.name, root: p.root,
+          message: `Path does not exist: "${p.root}"` });
+      }
+
+      // 2. Duplicate realpaths
+      const groups = findDuplicates();
+      for (const group of groups) {
+        const ids = group.map((p) => `${p.name} (${p.projectId})`).join(', ');
+        for (const p of group) {
+          issues.push({ type: 'duplicate', severity: 'error', projectId: p.projectId, name: p.name, root: p.root,
+            message: `Same realpath as: ${ids}` });
+        }
+      }
+
+      // 3. Subpath overlaps (warn)
+      const isSubpath = (parent, child) => {
+        const p = process.platform === 'darwin' ? parent.toLowerCase() : parent;
+        const c = process.platform === 'darwin' ? child.toLowerCase()  : child;
+        return c.startsWith((p.endsWith('/') ? p : p + '/'));
+      };
+      for (let i = 0; i < projects.length; i++) {
+        for (let j = 0; j < projects.length; j++) {
+          if (i === j) continue;
+          const a = projects[i], b = projects[j];
+          if (isSubpath(canonicalizePath(a.root), canonicalizePath(b.root))) {
+            issues.push({ type: 'overlap', severity: 'warn', projectId: b.projectId, name: b.name, root: b.root,
+              message: `"${b.name}" is inside "${a.name}" (${a.root})` });
+          }
+        }
+      }
+
+      // 4. Duplicate names (info)
+      const nameMap = new Map();
+      for (const p of projects) {
+        const k = p.name.toLowerCase();
+        if (!nameMap.has(k)) nameMap.set(k, []);
+        nameMap.get(k).push(p);
+      }
+      for (const [, g] of nameMap) {
+        if (g.length < 2) continue;
+        for (const p of g) {
+          issues.push({ type: 'duplicate-name', severity: 'info', projectId: p.projectId, name: p.name, root: p.root,
+            message: `Name "${p.name}" used by ${g.length} entries at different paths` });
+        }
+      }
+
+      const errors = issues.filter((i) => i.severity === 'error');
+      const warns  = issues.filter((i) => i.severity === 'warn');
+      const infos  = issues.filter((i) => i.severity === 'info');
+
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: errors.length === 0, totalProjects: projects.length, issues }, null, 2));
+      } else {
+        console.log(chalk.bold(`Registry check — ${projects.length} projects:\n`));
+        if (!issues.length) {
+          console.log(chalk.green('  ✅  No issues found. Registry is clean.\n'));
+        } else {
+          if (errors.length) {
+            console.log(chalk.red(`  ❌  Errors (${errors.length}):`));
+            for (const i of errors)
+              console.log(`     ${chalk.red(i.type.toUpperCase().padEnd(12))} ${chalk.bold(i.name.padEnd(28))} ${chalk.gray(i.message)}`);
+            console.log();
+          }
+          if (warns.length) {
+            console.log(chalk.yellow(`  ⚠   Warnings (${warns.length}):`));
+            for (const i of warns)
+              console.log(`     ${chalk.yellow(i.type.toUpperCase().padEnd(12))} ${chalk.bold(i.name.padEnd(28))} ${chalk.gray(i.message)}`);
+            console.log();
+          }
+          if (infos.length) {
+            console.log(chalk.gray(`  ℹ   Info (${infos.length}):`));
+            for (const i of infos)
+              console.log(`     ${chalk.gray(i.type.toUpperCase().padEnd(12))} ${chalk.bold(i.name.padEnd(28))} ${chalk.gray(i.message)}`);
+            console.log();
+          }
+        }
+      }
+
+      if (opts.fix && errors.length > 0) {
+        const { deduplicateRegistry } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+        const removedStale = pruneStale();
+        const removedDupes = deduplicateRegistry();
+        const all = [...removedStale, ...removedDupes];
+        if (!opts.json) {
+          console.log(chalk.bold(`  🔧  Fixed — removed ${all.length} entries:`));
+          for (const p of all) console.log(`     ${chalk.red('–')} ${p.name} (${p.projectId})  ${chalk.gray(p.root)}`);
+          console.log();
+        }
+      }
+
+      if (errors.length > 0 && !opts.fix) process.exit(1);
+    });
+
+  projectsCmd
+    .command('prune-stale')
+    .description('Remove registry entries whose root path no longer exists on disk')
+    .option('--yes', 'Skip confirmation prompt')
+    .action(async (opts) => {
+      printBanner();
+      const { pruneStale } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { existsSync: fsExists } = await import('fs');
+      const { loadRegistry } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+
+      const stale = loadRegistry().filter((p) => !fsExists(p.root));
+      if (!stale.length) {
+        console.log(chalk.green('✅  No stale entries found.\n'));
+        return;
+      }
+      console.log(chalk.yellow(`Found ${stale.length} stale entry/entries:\n`));
+      for (const p of stale)
+        console.log(`  ${chalk.red('✗')} ${chalk.bold(p.name.padEnd(30))} ${chalk.gray(p.root)}`);
+      console.log();
+      if (!opts.yes) {
+        console.log(chalk.yellow('Pass --yes to remove them.\n'));
+        return;
+      }
+      const removed = pruneStale();
+      console.log(chalk.green(`✓ Removed ${removed.length} stale entry/entries.\n`));
+    });
+
+  projectsCmd
+    .command('repath <project-id> <new-path>')
+    .description('Update the root path of a registered project (e.g. after moving a directory)')
+    .action(async (projectId, newPath) => {
+      printBanner();
+      const { repathProject } = await import('../local-agent/orchestrator/ProjectRegistry.js');
+      const { resolve: resolvePath } = await import('path');
+      try {
+        const updated = repathProject(projectId, resolvePath(newPath));
+        console.log(chalk.green(`✓ Repathed: ${updated.name}`));
+        console.log(`  ${chalk.gray('Root:')} ${updated.root}\n`);
+      } catch (err) {
+        die(err.message);
+      }
+    });
+
   program.addCommand(projectsCmd);
 
   // ── models (Phase 9) ─────────────────────────────────────────────────────
