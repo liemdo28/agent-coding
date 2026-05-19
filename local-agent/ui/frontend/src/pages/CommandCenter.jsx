@@ -39,6 +39,9 @@ export default function CommandCenter() {
       desc: t(cmd.descKey),
       warn: cmd.warn,
       estTime: cmd.estTime ?? null,
+      requiresInput: cmd.requiresInput ?? false,
+      inputPrompt: cmd.inputPrompt ?? '',
+      inputPlaceholder: cmd.inputPlaceholder ?? '',
     })),
   })).filter((g) => g.items.length > 0);
 
@@ -49,6 +52,8 @@ export default function CommandCenter() {
   const [exitCode, setExitCode]         = useState(null);
   const [lines, setLines]               = useState([]);
   const [confirm, setConfirm]           = useState(null); // { scriptKey, meta }
+  const [inputModal, setInputModal]     = useState(null); // { scriptKey, meta }
+  const [inputValue, setInputValue]     = useState('');
   const outputRef = useRef(null);
   const cancelSSERef = useRef(null);
 
@@ -61,14 +66,24 @@ export default function CommandCenter() {
 
   function handleScriptClick(scriptKey, meta) {
     if (jobStatus === 'running') return; // ignore while running
-    if (meta.warn) {
+    if (meta.requiresInput) {
+      setInputValue('');
+      setInputModal({ scriptKey, meta });
+    } else if (meta.warn) {
       setConfirm({ scriptKey, meta });
     } else {
       runScript(scriptKey, meta);
     }
   }
 
-  async function runScript(scriptKey, meta) {
+  function handleInputConfirm() {
+    if (!inputModal) return;
+    const { scriptKey, meta } = inputModal;
+    setInputModal(null);
+    runScript(scriptKey, meta, inputValue.trim());
+  }
+
+  async function runScript(scriptKey, meta, taskInput) {
     setConfirm(null);
     setActiveScript(scriptKey);
     setLines([]);
@@ -76,11 +91,14 @@ export default function CommandCenter() {
     setExitCode(null);
     setActiveJobId(null);
 
+    const body = { script: scriptKey, label: meta.label };
+    if (taskInput) body.args = ['--save', taskInput];
+
     try {
       const resp = await fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: scriptKey, label: meta.label }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json();
       if (!data.jobId) {
@@ -272,6 +290,49 @@ export default function CommandCenter() {
           </div>
         </div>
       </div>
+
+      {/* Input modal for requiresInput commands */}
+      {inputModal && (
+        <div className="modal-overlay">
+          <div className="confirm-dialog">
+            <div className="confirm-title">{inputModal.meta.inputPrompt || 'Nhập thông tin'}</div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              {inputModal.meta.label}
+            </p>
+            <input
+              autoFocus
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue.trim()) handleInputConfirm(); if (e.key === 'Escape') setInputModal(null); }}
+              placeholder={inputModal.meta.inputPlaceholder || ''}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text)',
+                fontSize: 13,
+                marginBottom: 16,
+                boxSizing: 'border-box',
+              }}
+            />
+            <div className="btn-group">
+              <button
+                className="btn btn-primary"
+                onClick={handleInputConfirm}
+                disabled={!inputValue.trim()}
+              >
+                Giao task
+              </button>
+              <button className="btn" onClick={() => setInputModal(null)}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm dialog */}
       {confirm && (

@@ -13,7 +13,7 @@
     "contextWindow": 8192,
     "retryAttempts": 3,
     "retryDelayMs": 1000,
-    "fallbackModel": "codellama:7b"
+    "fallbackModel": "qwen2.5-coder:1.5b"
   },
   "scanner": {
     "maxFileSizeBytes": 1048576,
