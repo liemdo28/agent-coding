@@ -2,7 +2,7 @@
 export const DOMAIN = 'website';
 export const DOMAIN_NAME = 'Web Development & Design';
 
-export const articles = [
+export const ARTICLES = [
   // ── Modern APIs & Protocols ──────────────────────────────────────────────
   { title: 'QUIC',                                     topic: 'fundamentals', priority: 2 },
   { title: 'WebTransport',                             topic: 'fundamentals', priority: 2 },

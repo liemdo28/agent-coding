@@ -2,7 +2,7 @@
 export const DOMAIN = 'hr';
 export const DOMAIN_NAME = 'Human Resources';
 
-export const articles = [
+export const ARTICLES = [
   // ── Talent & Workforce Strategy ──────────────────────────────────────────
   { title: 'Workforce planning',                       topic: 'development',  priority: 2 },
   { title: 'Skill gap analysis',                       topic: 'development',  priority: 2 },

@@ -2,7 +2,7 @@
 export const DOMAIN = 'machine-learning';
 export const DOMAIN_NAME = 'Machine Learning & AI';
 
-export const articles = [
+export const ARTICLES = [
   // ── Generative AI & LLMs ─────────────────────────────────────────────────
   { title: 'Reinforcement learning from human feedback', topic: 'nlp',       priority: 2 },
   { title: 'Constitutional AI',                         topic: 'ethics',     priority: 2 },

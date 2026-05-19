@@ -2,7 +2,7 @@
 export const DOMAIN = 'accounting';
 export const DOMAIN_NAME = 'Accounting & Finance';
 
-export const articles = [
+export const ARTICLES = [
   // ── Advanced Standards & Reporting ──────────────────────────────────────
   { title: 'Consolidated financial statement',         topic: 'statements',  priority: 2 },
   { title: 'Segment reporting',                        topic: 'statements',  priority: 2 },

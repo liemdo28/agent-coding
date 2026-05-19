@@ -9,7 +9,8 @@ import { fetchArticle, extractToMarkdown } from './pipeline/WikipediaFetcher.js'
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-const ROOT    = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT        = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const DOMAINS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'domains');
 const DOMAINS = [
   'coding', 'accounting', 'marketing', 'website', 'design',
   'machine-learning', 'data-analyst', 'hr', 'business-analyst', 'logistics',
@@ -109,12 +110,12 @@ async function main() {
       await ingestDomain(kb, mod, stats);
     } else {
       // Auto-discover: load all batch files for this domain slug in order
+      // Use existsSync so gaps in numbering (e.g. -2 and -4 but no -3) don't stop discovery
       const slug = domainArg;
       const batchFiles = [`./domains/${slug}-articles.js`];
-      // Find numbered batches: -articles-2.js through -articles-9.js
       for (let n = 2; n <= 9; n++) {
-        const f = `./domains/${slug}-articles-${n}.js`;
-        try { await import(new URL(f, import.meta.url).href); batchFiles.push(f); } catch { break; }
+        if (existsSync(join(DOMAINS_DIR, `${slug}-articles-${n}.js`)))
+          batchFiles.push(`./domains/${slug}-articles-${n}.js`);
       }
       for (const fileName of batchFiles) {
         let mod;

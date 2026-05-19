@@ -2,7 +2,7 @@
 export const DOMAIN = 'marketing';
 export const DOMAIN_NAME = 'Marketing';
 
-export const articles = [
+export const ARTICLES = [
   // ── Data-Driven Marketing ────────────────────────────────────────────────
   { title: 'Customer data platform',                   topic: 'analytics',   priority: 2 },
   { title: 'Marketing mix modeling',                   topic: 'analytics',   priority: 2 },

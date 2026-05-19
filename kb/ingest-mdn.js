@@ -39,8 +39,12 @@ async function ingestMDNDomain(kb, modFile, stats) {
 
   // Get existing slugs to skip
   const existingSlugs = new Set(
-    db.prepare(`SELECT slug FROM documents WHERE domain_id IN (SELECT id FROM domains WHERE slug = ?)`)
-      .all(DOMAIN).map(r => r.slug)
+    db.prepare(`
+      SELECT d.slug FROM documents d
+      JOIN topics t ON t.id = d.topic_id
+      JOIN domains dm ON dm.id = t.domain_id
+      WHERE dm.slug = ?
+    `).all(DOMAIN).map(r => r.slug)
   );
 
   let loaded = 0, skipped = 0, failed = 0;

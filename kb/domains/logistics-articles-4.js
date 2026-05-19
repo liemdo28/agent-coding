@@ -2,7 +2,7 @@
 export const DOMAIN = 'logistics';
 export const DOMAIN_NAME = 'Logistics & Supply Chain';
 
-export const articles = [
+export const ARTICLES = [
   // ── Last-Mile & Delivery Innovation ─────────────────────────────────────
   { title: 'Last-mile delivery',                       topic: 'transport',    priority: 2 },
   { title: 'Crowd shipping',                           topic: 'transport',    priority: 2 },

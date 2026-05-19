@@ -2,7 +2,7 @@
 export const DOMAIN = 'data-analyst';
 export const DOMAIN_NAME = 'Data Analysis';
 
-export const articles = [
+export const ARTICLES = [
   // ── Data Modelling & Architecture ────────────────────────────────────────
   { title: 'Star schema',                              topic: 'fundamentals', priority: 2 },
   { title: 'Snowflake schema',                         topic: 'fundamentals', priority: 2 },

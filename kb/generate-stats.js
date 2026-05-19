@@ -26,7 +26,7 @@ const domainRows = db.prepare(`
          COUNT(DISTINCT d.id)    as documents,
          COUNT(DISTINCT c.id)    as chunks,
          COALESCE(SUM(d.word_count),0) as words,
-         MIN(d.created_at)       as firstIngested,
+         MIN(d.ingested_at)      as firstIngested,
          MAX(d.updated_at)       as lastUpdated
   FROM   domains dm
   JOIN   topics  t  ON t.domain_id = dm.id

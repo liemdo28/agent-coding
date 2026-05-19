@@ -2,7 +2,7 @@
 export const DOMAIN = 'coding';
 export const DOMAIN_NAME = 'Software Development';
 
-export const articles = [
+export const ARTICLES = [
   // ── Runtimes & Package Managers ──────────────────────────────────────────
   { title: 'Bun (software)',                      topic: 'nodejs',           priority: 2 },
   { title: 'Protocol Buffers',                    topic: 'data-formats',     priority: 2 },

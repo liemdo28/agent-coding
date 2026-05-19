@@ -2,7 +2,7 @@
 export const DOMAIN = 'design';
 export const DOMAIN_NAME = 'UI/UX Design';
 
-export const articles = [
+export const ARTICLES = [
   // ── Design Tools & Handoff ───────────────────────────────────────────────
   { title: 'Zeplin (software)',                        topic: 'tools',        priority: 2 },
   { title: 'Framer (software)',                        topic: 'tools',        priority: 2 },

@@ -2,7 +2,7 @@
 export const DOMAIN = 'business-analyst';
 export const DOMAIN_NAME = 'Business Analysis';
 
-export const articles = [
+export const ARTICLES = [
   // ── Requirements Engineering ─────────────────────────────────────────────
   { title: 'Acceptance criteria',                      topic: 'fundamentals', priority: 2 },
   { title: 'Requirements traceability',                topic: 'fundamentals', priority: 2 },
