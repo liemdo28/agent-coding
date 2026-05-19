@@ -154,6 +154,24 @@ describe('DecisionTracker', () => {
 });
 
 describe('CommandPolicy and sandbox execution', () => {
+  test('allowed path validation rejects broad and sensitive roots', async () => {
+    const { isPathAllowed, validateAllowedPath } = await import('../local-agent/core/policy.js');
+
+    assert.strictEqual(validateAllowedPath('/').ok, false);
+    assert.strictEqual(validateAllowedPath('/Users').ok, false);
+    assert.strictEqual(validateAllowedPath('/etc').ok, false);
+    assert.strictEqual(validateAllowedPath('/Users/example/project').ok, true);
+
+    assert.strictEqual(
+      isPathAllowed('/tmp/shared/project/file.js', '/workspace/app', ['/tmp/shared/project']),
+      true
+    );
+    assert.strictEqual(
+      isPathAllowed('/Users/example/.ssh/id_rsa', '/workspace/app', ['/Users/example']),
+      false
+    );
+  });
+
   test('policy permits npm run scripts but blocks network package operations', async () => {
     const { checkCommand } = await import('../local-agent/security/CommandPolicy.js');
 

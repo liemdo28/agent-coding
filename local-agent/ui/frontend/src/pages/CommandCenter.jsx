@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { t } from '../i18n/index.js';
-import { COMMAND_GROUPS } from '../../../../shared/commands.js';
+import { COMMAND_GROUPS } from '../../../shared/commands.js';
 
 const GROUP_ICONS = {
   kb: '🧠',
