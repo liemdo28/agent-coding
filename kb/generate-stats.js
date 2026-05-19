@@ -31,7 +31,7 @@ const domainRows = db.prepare(`
   FROM   domains dm
   JOIN   topics  t  ON t.domain_id = dm.id
   JOIN   documents d ON d.topic_id = t.id
-  LEFT JOIN chunks c ON c.document_id = d.id
+  LEFT JOIN chunks c ON c.doc_id = d.id
   GROUP  BY dm.id
   ORDER  BY dm.slug
 `).all();
@@ -43,7 +43,7 @@ const byDomain = domainRows.map(row => {
     FROM   documents d
     JOIN   topics t ON t.id = d.topic_id
     JOIN   domains dm ON dm.id = t.domain_id
-    LEFT JOIN chunks c ON c.document_id = d.id
+    LEFT JOIN chunks c ON c.doc_id = d.id
     WHERE  dm.slug = ?
     GROUP  BY d.id
     ORDER  BY d.word_count DESC

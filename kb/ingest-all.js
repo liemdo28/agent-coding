@@ -59,7 +59,7 @@ async function ingestDomain(kb, domainMod, stats) {
         domainSlug:  DOMAIN,
         domainName:  DOMAIN_NAME,
         topicSlug:   art.topic,
-        topicName:   art.topicName,
+        topicName:   art.topicName ?? art.topic,
         slug,
         title:       result.title,
         content,
