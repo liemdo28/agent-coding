@@ -13,6 +13,7 @@
     "dev":                "node bin/local-agent.js",
     "build":              "node scripts/build-check.js",
     "bootstrap:v2":       "bash scripts/bootstrap-v2.sh",
+    "corp:simulate":      "node bin/super-agent-corp.js",
     "lint":               "node scripts/lint-check.js",
     "setup:production":   "bash scripts/production-setup.sh",
     "test":               "node --test tests/smoke.test.js tests/modules.test.js",

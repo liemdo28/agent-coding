@@ -225,3 +225,34 @@ describe('SecretScanner', () => {
     assert.ok(findings.some((f) => f.name === 'Basic Auth URL'));
   });
 });
+
+describe('SuperAgentCorporation', () => {
+  test('defines 8 strategic divisions', async () => {
+    const { defineDivisions } = await import('../local-agent/command-center/SuperAgentCorporation.js');
+    const divisions = defineDivisions();
+    assert.strictEqual(divisions.length, 8);
+    assert.ok(divisions.some((d) => d.id === 'it-ai'));
+  });
+
+  test('routes coding fixes to the IT & AI company', async () => {
+    const { createCompanies, parseTask, selectCompany } = await import('../local-agent/command-center/SuperAgentCorporation.js');
+    const task = parseTask('Fix bug module payment');
+    const company = selectCompany(task, createCompanies());
+    assert.strictEqual(task.type, 'build_fix');
+    assert.strictEqual(company.id, 'it-ai');
+  });
+
+  test('executes Dev and QA in parallel without mutating files', async () => {
+    const { executeCorporateTask } = await import('../local-agent/command-center/SuperAgentCorporation.js');
+    const result = await executeCorporateTask('Audit deployment risk', {
+      workspaceRoot: process.cwd(),
+      now: '2026-05-19T00:00:00.000Z',
+      context: { sources: [] },
+    });
+
+    assert.strictEqual(result.company.id, 'legal-compliance');
+    assert.strictEqual(result.execution.dev.status, 'proposal-ready');
+    assert.ok(['review-required', 'provisionally-approved'].includes(result.execution.qa.status));
+    assert.match(result.telegramSummary, /Dispatch:/);
+  });
+});
