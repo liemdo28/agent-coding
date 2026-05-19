@@ -18,7 +18,9 @@
     "scanner": "Quét mã",
     "qa": "Kiểm thử",
     "security": "Bảo mật",
-    "reports": "Báo cáo"
+    "reports": "Báo cáo",
+    "architecture": "Kiến trúc hệ thống",
+    "kpi": "Thống kê KPI"
   },
   "dashboard": {
     "title": "Tổng quan hệ thống",

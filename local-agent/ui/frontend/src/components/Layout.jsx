@@ -15,6 +15,8 @@ const NAV_ITEMS = [
   { path: '/reports',       label: () => t('nav.reports'),        icon: '\u{1F4CB}' },
   { path: '/memory',        label: 'Memory',                      icon: '\u{1F9E0}' },
   { path: '/security',      label: () => t('nav.security'),       icon: '\u{1F512}' },
+  { path: '/architecture',  label: () => t('nav.architecture'),   icon: '\u{1F3D7}' },
+  { path: '/kpi',           label: () => t('nav.kpi'),            icon: '\u{1F4CA}' },
 ];
 
 export default function Layout() {

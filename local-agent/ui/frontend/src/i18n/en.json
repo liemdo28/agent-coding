@@ -18,7 +18,9 @@
     "scanner": "Scanner",
     "qa": "QA",
     "security": "Security",
-    "reports": "Reports"
+    "reports": "Reports",
+    "architecture": "System Architecture",
+    "kpi": "KPI Charts"
   },
   "dashboard": {
     "title": "System Overview",

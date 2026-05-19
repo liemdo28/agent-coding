@@ -430,4 +430,58 @@ router.get('/api/health', (_req, res) => {
   }
 });
 
+// ── GET /api/kpi-stats ────────────────────────────────────────────────────────
+router.get('/api/kpi-stats', (req, res) => {
+  try {
+    const logDir = join(PROJECT_ROOT, 'logs', 'activity');
+    if (!existsSync(logDir)) return res.json({ byDay: [], byScript: [], totalRuns: 0, totalCompleted: 0, totalFailed: 0, avgDurationMs: 0 });
+
+    const files = readdirSync(logDir)
+      .filter(f => f.startsWith('activity-') && f.endsWith('.log'))
+      .sort();
+
+    const byDay = {};
+    const byScript = {};
+    let totalRuns = 0, totalCompleted = 0, totalFailed = 0, totalDuration = 0, durationCount = 0;
+
+    for (const file of files) {
+      const date = file.replace('activity-', '').replace('.log', '');
+      const lines = readFileSync(join(logDir, file), 'utf8').trim().split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const e = JSON.parse(line);
+          if (e.status === 'started' || e.status === 'rejected') continue;
+          if (!byDay[date]) byDay[date] = { date, total: 0, completed: 0, failed: 0 };
+          byDay[date].total++;
+          totalRuns++;
+          if (e.status === 'completed') { byDay[date].completed++; totalCompleted++; }
+          if (e.status === 'failed')    { byDay[date].failed++;    totalFailed++; }
+          if (e.durationMs) { totalDuration += e.durationMs; durationCount++; }
+          if (e.script) {
+            if (!byScript[e.script]) byScript[e.script] = { script: e.script, label: e.label || e.script, count: 0, completed: 0, failed: 0 };
+            byScript[e.script].count++;
+            if (e.status === 'completed') byScript[e.script].completed++;
+            if (e.status === 'failed')    byScript[e.script].failed++;
+          }
+        } catch { /* skip malformed lines */ }
+      }
+    }
+
+    const byScriptArr = Object.values(byScript)
+      .map(s => ({ ...s, successRate: s.count > 0 ? s.completed / s.count : 0 }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json({
+      byDay: Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)),
+      byScript: byScriptArr,
+      totalRuns,
+      totalCompleted,
+      totalFailed,
+      avgDurationMs: durationCount > 0 ? Math.round(totalDuration / durationCount) : 0,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
