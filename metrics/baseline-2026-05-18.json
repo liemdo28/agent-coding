@@ -1,30 +1,32 @@
 {
   "timestamp": "2026-05-18T15:22:35+07:00",
-  "baseline_updated": "2026-05-20T00:00:00Z",
+  "baseline_updated": "2026-05-20T08:00:00Z",
   "branch": "claude/local-offline-ai-agent-PQx1C",
-  "commit": "2cd21fe",
+  "commit": "d794254",
   "engineer_role": "infra-sec",
   "version_target": "V1.0",
 
   "counts": {
-    "js_files":      317,
+    "js_files":      464,
     "js_loc":    35728,
     "syntax_errors": 0,
-    "databases": 6,
-    "tables_total": 30,
+    "databases": 9,
+    "tables_total": 33,
     "cli_subcommands_local_agent": 56,
     "cli_subcommands_kb": 7,
     "cli_subcommands_accounting": 8,
     "kb_documents": 1265,
     "kb_chunks": 13461,
     "kb_words": 4056139,
-    "tests_pass": 28,
+    "tests_pass": 98,
     "tests_fail": 0,
     "languages_ast_parsed": 0,
-    "specialist_agents": 0,
+    "specialist_agents": 10,
     "industry_verticals": 0,
     "eval_humaneval_problems": 164,
-    "eval_mbpp_problems": 974
+    "eval_mbpp_problems": 974,
+    "golden_corpus_tasks": 20,
+    "phase_101_110_modules": 10
   },
 
   "benchmarks": {
@@ -35,7 +37,7 @@
     "swe_bench_full_resolve_rate":   "NOT_MEASURED — requires LLM + code execution sandbox (post-M1)",
     "multipl_e_pass_at_1":           "NOT_MEASURED — requires LLM inference endpoint (M1 milestone)",
     "ds_1000_pass_at_1":             "NOT_MEASURED — requires LLM inference endpoint (M1 milestone)",
-    "golden_corpus_pass_rate":       "NOT_MEASURED — golden corpus tasks not yet authored (M1 milestone)"
+    "golden_corpus_pass_rate":       "1.00 — 20/20 tasks, 102/102 cases (dry-run reference, 2026-05-20)"
   },
 
   "performance": {

@@ -28,8 +28,8 @@
 | HumanEval pass@1 | NOT MEASURED | 0.85 | Blocked: no LLM endpoint |
 | MBPP pass@1 | NOT MEASURED | 0.80 | Blocked: no LLM endpoint |
 | SWE-bench Lite resolve rate | NOT MEASURED | 0.35 | Blocked: no LLM + sandbox |
-| Golden corpus pass rate | NOT MEASURED | TBD | Blocked: no tasks authored |
-| Tests passing | 28/28 (100%) | 2,500 total | Gap: need 2,472 more tests |
+| Golden corpus pass rate | **1.00** (20/20 ref) | TBD | ✓ dry-run; LLM eval blocked |
+| Tests passing | 98/98 (100%) | 2,500 total | Gap: need 2,402 more tests |
 
 **Datasets vendored and committed:**
 - `eval/benchmarks/humaneval/data/humaneval.json` — 164 problems (MIT)
@@ -85,7 +85,7 @@ p50=106ms, p99=373ms on a 1,265-doc corpus. As corpus grows to 5,000+ docs, p99 
 - KB docs ≥ 3,000 across 10 domains — ⏳ pending Mac ingest
 - At least 1 benchmark with a real number (not NOT_MEASURED) — ❌ needs Ollama
 - Scan latency < 5,000ms for 35k LOC — ✅ **CLEARED** (2,400ms)
-- All tests green on CI — ✅ 28/28
+- All tests green on CI — ✅ 98/98
 
 ---
 
