@@ -1,0 +1,1694 @@
+{
+  "timestamp": "2026-05-20T06:21:18.688Z",
+  "model": "reference",
+  "dry_run": true,
+  "summary": {
+    "tasks_passed": 19,
+    "tasks_total": 20,
+    "task_pass_rate": 0.95,
+    "cases_passed": 96,
+    "cases_total": 100
+  },
+  "results": [
+    {
+      "task_id": "task-001",
+      "title": "Flatten Nested Array",
+      "difficulty": "easy",
+      "category": "array",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            1,
+            2,
+            3
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            42
+          ],
+          "expected": [
+            42
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-002",
+      "title": "Unique Items by Key",
+      "difficulty": "easy",
+      "category": "array",
+      "passed": 4,
+      "total": 4,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            {
+              "id": 1,
+              "name": "Alice"
+            },
+            {
+              "id": 2,
+              "name": "Bob"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1,
+              "name": "Alice"
+            },
+            {
+              "id": 2,
+              "name": "Bob"
+            }
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            {
+              "x": 1
+            }
+          ],
+          "expected": [
+            {
+              "x": 1
+            }
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            {
+              "t": "a"
+            },
+            {
+              "t": "b"
+            },
+            {
+              "t": "c"
+            }
+          ],
+          "expected": [
+            {
+              "t": "a"
+            },
+            {
+              "t": "b"
+            },
+            {
+              "t": "c"
+            }
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-003",
+      "title": "Chunk Array",
+      "difficulty": "easy",
+      "category": "array",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-004",
+      "title": "camelCase to snake_case",
+      "difficulty": "easy",
+      "category": "string",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": "camel_case_string",
+          "expected": "camel_case_string",
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": "",
+          "expected": "",
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": "alreadylower",
+          "expected": "alreadylower",
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": "my_h_t_t_p_s_request",
+          "expected": "my_h_t_t_p_s_request",
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": "get_page_u_r_l",
+          "expected": "get_page_u_r_l",
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-005",
+      "title": "Template String Interpolation",
+      "difficulty": "easy",
+      "category": "string",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": "Hello, World!",
+          "expected": "Hello, World!",
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": "1 + 2 = 3",
+          "expected": "1 + 2 = 3",
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": "No placeholders here.",
+          "expected": "No placeholders here.",
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": "{{missing}} stays",
+          "expected": "{{missing}} stays",
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": "hi and hi again",
+          "expected": "hi and hi again",
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-006",
+      "title": "Invert Object Map",
+      "difficulty": "easy",
+      "category": "object",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "1": "a",
+            "2": "b",
+            "3": "c"
+          },
+          "expected": {
+            "1": "a",
+            "2": "b",
+            "3": "c"
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {
+            "y": "x"
+          },
+          "expected": {
+            "y": "x"
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "z": "b"
+          },
+          "expected": {
+            "z": "b"
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": {
+            "bar": "foo",
+            "qux": "baz"
+          },
+          "expected": {
+            "bar": "foo",
+            "qux": "baz"
+          },
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-007",
+      "title": "Group Array by Key",
+      "difficulty": "medium",
+      "category": "array",
+      "passed": 4,
+      "total": 4,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "fruit": [
+              {
+                "type": "fruit",
+                "name": "apple"
+              },
+              {
+                "type": "fruit",
+                "name": "banana"
+              }
+            ],
+            "veg": [
+              {
+                "type": "veg",
+                "name": "carrot"
+              }
+            ]
+          },
+          "expected": {
+            "fruit": [
+              {
+                "type": "fruit",
+                "name": "apple"
+              },
+              {
+                "type": "fruit",
+                "name": "banana"
+              }
+            ],
+            "veg": [
+              {
+                "type": "veg",
+                "name": "carrot"
+              }
+            ]
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {
+            "1": [
+              {
+                "x": 1
+              }
+            ]
+          },
+          "expected": {
+            "1": [
+              {
+                "x": 1
+              }
+            ]
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "1": [
+              {
+                "a": 1,
+                "b": 2
+              },
+              {
+                "a": 1,
+                "b": 3
+              }
+            ],
+            "2": [
+              {
+                "a": 2,
+                "b": 4
+              }
+            ]
+          },
+          "expected": {
+            "1": [
+              {
+                "a": 1,
+                "b": 2
+              },
+              {
+                "a": 1,
+                "b": 3
+              }
+            ],
+            "2": [
+              {
+                "a": 2,
+                "b": 4
+              }
+            ]
+          },
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-008",
+      "title": "Zip Arrays",
+      "difficulty": "medium",
+      "category": "array",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            [
+              1,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ],
+            [
+              3,
+              "c"
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ],
+            [
+              3,
+              "c"
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "expected": [
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            [
+              1,
+              "a",
+              true
+            ],
+            [
+              2,
+              "b",
+              false
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              "a",
+              true
+            ],
+            [
+              2,
+              "b",
+              false
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-009",
+      "title": "Parse CSV Line",
+      "difficulty": "medium",
+      "category": "string",
+      "passed": 6,
+      "total": 6,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            "one",
+            "two",
+            "three"
+          ],
+          "expected": [
+            "one",
+            "two",
+            "three"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [
+            "hello, world",
+            "foo",
+            "bar"
+          ],
+          "expected": [
+            "hello, world",
+            "foo",
+            "bar"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            "she said \"hi\"",
+            "ok"
+          ],
+          "expected": [
+            "she said \"hi\"",
+            "ok"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            ""
+          ],
+          "expected": [
+            ""
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            "a",
+            "b",
+            "c"
+          ],
+          "expected": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 5,
+          "passed": true,
+          "got": [
+            "quoted",
+            "unquoted",
+            "also quoted"
+          ],
+          "expected": [
+            "quoted",
+            "unquoted",
+            "also quoted"
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-010",
+      "title": "Deep Merge Objects",
+      "difficulty": "medium",
+      "category": "object",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "a": 1,
+            "b": {
+              "c": 2,
+              "d": 3
+            },
+            "e": 4
+          },
+          "expected": {
+            "a": 1,
+            "b": {
+              "c": 2,
+              "d": 3
+            },
+            "e": 4
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {
+            "a": 1
+          },
+          "expected": {
+            "a": 1
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {
+            "a": 1
+          },
+          "expected": {
+            "a": 1
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "a": {
+              "b": {
+                "c": 1,
+                "d": 2
+              }
+            }
+          },
+          "expected": {
+            "a": {
+              "b": {
+                "c": 1,
+                "d": 2
+              }
+            }
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": {
+            "arr": [
+              4,
+              5
+            ]
+          },
+          "expected": {
+            "arr": [
+              4,
+              5
+            ]
+          },
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-011",
+      "title": "Pick Keys from Object",
+      "difficulty": "medium",
+      "category": "object",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "a": 1,
+            "c": 3
+          },
+          "expected": {
+            "a": 1,
+            "c": 3
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "name": "Alice",
+            "role": "admin"
+          },
+          "expected": {
+            "name": "Alice",
+            "role": "admin"
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": {
+            "a": 1
+          },
+          "expected": {
+            "a": 1
+          },
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-012",
+      "title": "Flatten Nested Object Keys",
+      "difficulty": "medium",
+      "category": "object",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "a.b.c": 1
+          },
+          "expected": {
+            "a.b.c": 1
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {
+            "x": 1,
+            "y": 2
+          },
+          "expected": {
+            "x": 1,
+            "y": 2
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "a.b": 1,
+            "c": 2
+          },
+          "expected": {
+            "a.b": 1,
+            "c": 2
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": {
+            "arr": [
+              1,
+              2,
+              3
+            ],
+            "nested.val": 42
+          },
+          "expected": {
+            "arr": [
+              1,
+              2,
+              3
+            ],
+            "nested.val": 42
+          },
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-013",
+      "title": "Binary Search",
+      "difficulty": "medium",
+      "category": "algorithm",
+      "passed": 6,
+      "total": 6,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": 3,
+          "expected": 3,
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": -1,
+          "expected": -1,
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": 0,
+          "expected": 0,
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": -1,
+          "expected": -1,
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": 0,
+          "expected": 0,
+          "reason": "ok"
+        },
+        {
+          "case": 5,
+          "passed": true,
+          "got": 4,
+          "expected": 4,
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-014",
+      "title": "Sliding Window Maximum",
+      "difficulty": "medium",
+      "category": "algorithm",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            3,
+            3,
+            5,
+            5,
+            6,
+            7
+          ],
+          "expected": [
+            3,
+            3,
+            5,
+            5,
+            6,
+            7
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            5,
+            4,
+            3
+          ],
+          "expected": [
+            5,
+            4,
+            3
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-015",
+      "title": "Tokenize Expression String",
+      "difficulty": "medium",
+      "category": "string",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "operator",
+              "value": "+"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ],
+          "expected": [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "operator",
+              "value": "+"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [
+            {
+              "type": "lparen",
+              "value": "("
+            },
+            {
+              "type": "number",
+              "value": "3.14"
+            },
+            {
+              "type": "operator",
+              "value": "*"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "rparen",
+              "value": ")"
+            }
+          ],
+          "expected": [
+            {
+              "type": "lparen",
+              "value": "("
+            },
+            {
+              "type": "number",
+              "value": "3.14"
+            },
+            {
+              "type": "operator",
+              "value": "*"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "rparen",
+              "value": ")"
+            }
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            {
+              "type": "number",
+              "value": "10"
+            },
+            {
+              "type": "operator",
+              "value": "/"
+            },
+            {
+              "type": "lparen",
+              "value": "("
+            },
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "operator",
+              "value": "+"
+            },
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "rparen",
+              "value": ")"
+            }
+          ],
+          "expected": [
+            {
+              "type": "number",
+              "value": "10"
+            },
+            {
+              "type": "operator",
+              "value": "/"
+            },
+            {
+              "type": "lparen",
+              "value": "("
+            },
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "operator",
+              "value": "+"
+            },
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "rparen",
+              "value": ")"
+            }
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            {
+              "type": "number",
+              "value": "42"
+            }
+          ],
+          "expected": [
+            {
+              "type": "number",
+              "value": "42"
+            }
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-016",
+      "title": "Omit Keys from Object",
+      "difficulty": "medium",
+      "category": "object",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": {
+            "a": 1,
+            "c": 3
+          },
+          "expected": {
+            "a": 1,
+            "c": 3
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": {
+            "x": 10,
+            "y": 20
+          },
+          "expected": {
+            "x": 10,
+            "y": 20
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": {
+            "name": "Alice"
+          },
+          "expected": {
+            "name": "Alice"
+          },
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": {},
+          "expected": {},
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-017",
+      "title": "LRU Cache",
+      "difficulty": "hard",
+      "category": "algorithm",
+      "passed": 0,
+      "total": 4,
+      "cases": [
+        {
+          "case": 0,
+          "passed": false,
+          "reason": "Class constructor LRUCache cannot be invoked without 'new'"
+        },
+        {
+          "case": 1,
+          "passed": false,
+          "reason": "Class constructor LRUCache cannot be invoked without 'new'"
+        },
+        {
+          "case": 2,
+          "passed": false,
+          "reason": "Class constructor LRUCache cannot be invoked without 'new'"
+        },
+        {
+          "case": 3,
+          "passed": false,
+          "reason": "Class constructor LRUCache cannot be invoked without 'new'"
+        }
+      ]
+    },
+    {
+      "task_id": "task-018",
+      "title": "Topological Sort",
+      "difficulty": "hard",
+      "category": "algorithm",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "expected": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            "x"
+          ],
+          "expected": [
+            "x"
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": null,
+          "expected": null,
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            "build",
+            "lint",
+            "test",
+            "deploy"
+          ],
+          "expected": [
+            "build",
+            "lint",
+            "test",
+            "deploy"
+          ],
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-019",
+      "title": "JSON Path Query",
+      "difficulty": "hard",
+      "category": "transform",
+      "passed": 6,
+      "total": 6,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": 42,
+          "expected": 42,
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": 20,
+          "expected": 20,
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": "foo",
+          "expected": "foo",
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": null,
+          "expected": null,
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": 99,
+          "expected": 99,
+          "reason": "ok"
+        },
+        {
+          "case": 5,
+          "passed": true,
+          "got": null,
+          "expected": null,
+          "reason": "ok"
+        }
+      ]
+    },
+    {
+      "task_id": "task-020",
+      "title": "Run-Length Encode and Decode",
+      "difficulty": "hard",
+      "category": "transform",
+      "passed": 5,
+      "total": 5,
+      "cases": [
+        {
+          "case": 0,
+          "passed": true,
+          "got": [
+            [
+              2,
+              "A"
+            ],
+            [
+              3,
+              "B"
+            ],
+            [
+              2,
+              "C"
+            ],
+            [
+              4,
+              "D"
+            ],
+            [
+              2,
+              "E"
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              "A"
+            ],
+            [
+              3,
+              "B"
+            ],
+            [
+              2,
+              "C"
+            ],
+            [
+              4,
+              "D"
+            ],
+            [
+              2,
+              "E"
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 1,
+          "passed": true,
+          "got": [],
+          "expected": [],
+          "reason": "ok"
+        },
+        {
+          "case": 2,
+          "passed": true,
+          "got": [
+            [
+              1,
+              "A"
+            ],
+            [
+              1,
+              "B"
+            ],
+            [
+              1,
+              "C"
+            ],
+            [
+              1,
+              "D"
+            ],
+            [
+              1,
+              "E"
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              "A"
+            ],
+            [
+              1,
+              "B"
+            ],
+            [
+              1,
+              "C"
+            ],
+            [
+              1,
+              "D"
+            ],
+            [
+              1,
+              "E"
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 3,
+          "passed": true,
+          "got": [
+            [
+              7,
+              "A"
+            ]
+          ],
+          "expected": [
+            [
+              7,
+              "A"
+            ]
+          ],
+          "reason": "ok"
+        },
+        {
+          "case": 4,
+          "passed": true,
+          "got": [
+            [
+              2,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ],
+            [
+              2,
+              "a"
+            ],
+            [
+              1,
+              "b"
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              "a"
+            ],
+            [
+              2,
+              "b"
+            ],
+            [
+              2,
+              "a"
+            ],
+            [
+              1,
+              "b"
+            ]
+          ],
+          "reason": "ok"
+        }
+      ]
+    }
+  ]
+}
