@@ -428,4 +428,80 @@ export class CosmicKnowledgeGraph {
     }
 }
 
+/**
+ * TranscendentMemoryCore - Coordinates all memory subsystems
+ * Wraps TranscendentMemory, MemoryTimeMachine, and CosmicKnowledgeGraph
+ */
+export class TranscendentMemoryCore {
+    constructor() {
+        this.memory = new TranscendentMemory();
+        this.timeMachine = new MemoryTimeMachine();
+        this.knowledgeGraph = new CosmicKnowledgeGraph();
+        this.initialized = false;
+    }
+
+    async initialize() {
+        this.initialized = true;
+        return { status: 'initialized', timestamp: Date.now() };
+    }
+
+    async store(experience) {
+        if (!this.initialized) await this.initialize();
+        const memory = await this.memory.storeExperience(experience);
+
+        // Also store in knowledge graph
+        this.knowledgeGraph.addEntity({
+            id: memory.id,
+            type: experience.type || 'experience',
+            domain: experience.domain || 'engineering',
+            label: experience.description || memory.id
+        });
+
+        return memory;
+    }
+
+    async recall(params) {
+        if (!this.initialized) await this.initialize();
+        return this.memory.recall(params);
+    }
+
+    createSnapshot(state, label) {
+        return this.timeMachine.createSnapshot(state, label);
+    }
+
+    createBranch(baseSnapshotId, name) {
+        return this.timeMachine.createBranch(baseSnapshotId, name);
+    }
+
+    getTimeline(branchId) {
+        return this.timeMachine.getTimeline(branchId);
+    }
+
+    addKnowledgeEntity(entity) {
+        this.knowledgeGraph.addEntity(entity);
+    }
+
+    addKnowledgeRelationship(fromId, toId, type, properties) {
+        return this.knowledgeGraph.addRelationship(fromId, toId, type, properties);
+    }
+
+    queryKnowledge(pattern) {
+        return this.knowledgeGraph.query(pattern);
+    }
+
+    getRelatedKnowledge(entityId, depth) {
+        return this.knowledgeGraph.getRelatedEntities(entityId, depth);
+    }
+
+    getStatus() {
+        return {
+            initialized: this.initialized,
+            memories: this.memory.memories.size,
+            snapshots: this.timeMachine.snapshots.size,
+            branches: this.timeMachine.branches.size,
+            entities: this.knowledgeGraph.entities.size
+        };
+    }
+}
+
 export default TranscendentMemoryCore;

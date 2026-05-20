@@ -61,12 +61,38 @@ export {
     OptimizationRealityController
 } from './TranscendentGovernance.js';
 
+// Phase 116: AI Cosmic Knowledge Fabric
+export {
+    CosmicKnowledgeGraph,
+    DomainBridge,
+    KnowledgeUniverse
+} from './CosmicKnowledgeFabric.js';
+
+// Phase 117: AI Reality Compiler
+export {
+    IntentCompiler,
+    StrategyCompiler,
+    RealityGenerator
+} from './RealityCompiler.js';
+
+// Phase 118: AI Post-Software Evolution
+export {
+    PostSoftwareEvolutionEngine,
+    OperationalIntelligenceEcosystem
+} from './PostSoftwareEvolution.js';
+
+// Phase 119: AI Universal Reasoning Matrix
+export {
+    UniversalReasoningEngine,
+    ReasoningCoordinator
+} from './UniversalReasoningMatrix.js';
+
 // Phase 120: AI Transcendent Memory Core
 export {
     TranscendentMemoryCore,
     TranscendentMemory,
     MemoryTimeMachine,
-    CosmicKnowledgeGraph
+    CosmicKnowledgeGraph as TranscendentCosmicKnowledgeGraph
 } from './TranscendentMemoryCore.js';
 
 // Phase 121-150: The Engineering Cosmos
@@ -81,6 +107,60 @@ export {
     EvolutionaryOptimizer,
     CosmicScaleArchitect
 } from './CosmicScaleIntelligence.js';
+
+// Phase 151-200: Engineering Omniverse
+export {
+    EngineeringOmniverseIntelligence,
+    // Phase 151
+    ExecutionFieldEngine,
+    FieldDistortionEngine,
+    RealityTopologyMap,
+    // Phase 152
+    HyperReasoningMatrix,
+    CausalChainEngine,
+    ReasoningStabilityEngine,
+    // Phase 153
+    SoftwareOrganismEngine,
+    EvolutionaryFitnessSystem,
+    DigitalEcologyEngine,
+    // Phase 154
+    TemporalExecutionSimulation,
+    TimelineOptimizer,
+    FailureTimeRewindEngine,
+    // Phase 155
+    EngineeringGDPEngine,
+    CapitalFlowEngine,
+    ExecutionMarketEngine,
+    // Phase 156
+    UniversalEngineeringMemory,
+    MemoryRecombinationEngine,
+    MemoryResonanceEngine,
+    // Phase 157
+    ExecutionConstellationEngine,
+    OrchestrationGravityEngine,
+    HyperscaleExecutionFabric,
+    // Phase 158
+    CivilizationConstitution,
+    AutonomousOversightEngine,
+    ChaosPreventionEngine,
+    // Phase 159-160
+    CivilizationExpansionEngine,
+    ExecutionCosmologyMap,
+    UniversalStabilityEngine,
+    GlobalAwarenessEngine,
+    AutonomousEvolutionCore,
+    // Phase 161-200
+    RealitySynthesisEngine,
+    SelfGeneratingCivilizationEngine,
+    MultiRealityExecutionEngine,
+    AutonomousScienceEngine,
+    ExecutionPhysicsUnification,
+    CivilizationImmunityEngine,
+    UniversalCreationEngine,
+    TranscendentStrategicIntelligence,
+    OmniversalMemoryFabric,
+    RealityStabilizationEngine
+} from './EngineeringOmniverse.js';
 
 // Default export for the entire cosmic engine
 export { default as CosmicEngine } from './UniversalExecutionField.js';
