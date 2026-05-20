@@ -27,7 +27,7 @@ This project is developed as a local-first engineering system.
 npm install
 npm audit --audit-level=moderate
 npm run dev -- --help
-npm run ui:server -- --project .
+npm run ui
 ```
 
 ```bash
@@ -47,8 +47,8 @@ npm run build
 
 ## Local Service Ports
 
-- Local Agent UI/API backend: `127.0.0.1:4001`.
-- Vite dev frontend: `127.0.0.1:3000`.
+- Local Agent UI + API: `127.0.0.1:4001`.
+- Optional Vite frontend hot-reload only: `127.0.0.1:3000` via `npm run ui:dev:frontend`.
 - Accounting API: `127.0.0.1:8844`.
 - Future Coding DB API: `127.0.0.1:8765`.
 - Ollama: `localhost:11434`.

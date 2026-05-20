@@ -12,8 +12,8 @@ import { runPolicyChecks }                      from '../../../core/policy.js';
 import { LocalLLMAdapter }                      from '../../../llm/LocalLLMAdapter.js';
 import { buildContext, renderContextPrompt }    from '../../../llm/context.js';
 import { buildPersonaPrompt }                   from '../../../llm/persona/index.js';
-import { parseContentRequest, runAutoContentPipeline } from '../../project-context/AutoContextPipeline.js';
-import { ProjectContextEngine } from '../../project-context/ProjectContextEngine.js';
+import { parseContentRequest, runAutoContentPipeline } from '../../../project-context/AutoContextPipeline.js';
+import { ProjectContextEngine } from '../../../project-context/ProjectContextEngine.js';
 import { aiMemorySystem } from '../../../ai-memory/AIMemorySystem.js';
 
 const router = Router();

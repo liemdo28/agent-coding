@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import pkg from '../../orchestration/TaskQueueManager.js';
-const { TaskQueueManager } = pkg;
+import { TaskQueueManager } from '../../../orchestration/TaskQueueManager.js';
 import { logger } from '../../../core/logger.js';
 
 const router = Router();

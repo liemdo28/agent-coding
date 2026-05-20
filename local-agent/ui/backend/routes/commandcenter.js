@@ -7,10 +7,10 @@ import { join } from 'path';
 import { PROJECT_ROOT } from '../server.js';
 import { logger } from '../../../core/logger.js';
 import { GlobalFileIndexer } from '../../../global-indexer/GlobalFileIndexer.js';
-import ContentGenerator from '../../content-pipeline/ContentGenerator.js';
-import globalMemory from '../../memory/GlobalMemoryManager.js';
-import { reasoningEngine } from '../../ai-reasoning/ReasoningEngine.js';
-import { agentMonitor } from '../../live-agents/LiveAgentMonitor.js';
+import ContentGenerator from '../../../content-pipeline/ContentGenerator.js';
+import globalMemory from '../../../memory/GlobalMemoryManager.js';
+import { reasoningEngine } from '../../../ai-reasoning/ReasoningEngine.js';
+import { agentMonitor } from '../../../live-agents/LiveAgentMonitor.js';
 
 const router = Router();
 

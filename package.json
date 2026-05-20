@@ -20,7 +20,10 @@
     "test":               "node --test tests/smoke.test.js tests/modules.test.js",
     "test:integration":   "node --test tests/integration/cli.test.js",
 
+    "ui:build":           "npm --prefix local-agent/ui/frontend install --silent && npm --prefix local-agent/ui/frontend run build",
     "ui:server":          "node local-agent/ui/backend/server.js",
+    "ui":                 "npm run ui:build && npm run ui:server",
+    "ui:dev:frontend":    "npm --prefix local-agent/ui/frontend run dev",
 
     "accounting:api":     "node accounting-engine/api/server.js",
     "accounting:stress":  "cd accounting-engine && node --experimental-vm-modules node_modules/.bin/jest tests/stress --runInBand",

@@ -43,9 +43,7 @@ All endpoints are offline/local-only and mounted on the existing UI backend at `
 ## Runbook
 
 ```bash
-npm run ui:server
-cd local-agent/ui/frontend
-npm run build
+npm run ui
 ```
 
 Open:

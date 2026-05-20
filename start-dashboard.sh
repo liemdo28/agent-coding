@@ -5,7 +5,7 @@ if ! command -v node &>/dev/null; then
   echo "❌ Node.js chưa cài. Tải tại: https://nodejs.org"; exit 1
 fi
 npm install --silent 2>/dev/null
-npm run ui:server &
+npm run ui &
 SERVER_PID=$!
 sleep 3
 # Check Ollama / LLM
@@ -17,5 +17,5 @@ if ! curl -s --connect-timeout 2 http://localhost:11434/api/tags > /dev/null 2>&
   echo ""
 fi
 xdg-open "http://localhost:4001" 2>/dev/null &
-echo "✅ Dashboard đang chạy tại http://localhost:4001 — Ctrl+C để dừng."
+echo "✅ Dashboard + API đang chạy chung tại http://localhost:4001 — Ctrl+C để dừng."
 wait $SERVER_PID

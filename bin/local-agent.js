@@ -756,20 +756,36 @@ async function main() {
 
       if (!existsSync(targetDir)) die(`Directory does not exist: ${targetDir}`);
 
-      const serverPath = join(__dirname, '../local-agent/ui/backend/server.js');
+      const serverPath   = join(__dirname, '../local-agent/ui/backend/server.js');
+      const frontendDir  = join(__dirname, '../local-agent/ui/frontend');
+      const frontendDist = join(frontendDir, 'dist', 'index.html');
       if (!existsSync(serverPath)) {
         console.log(chalk.yellow('⚠  UI backend not found at local-agent/ui/backend/server.js'));
         console.log(chalk.gray('   Run the Phase 5 setup to install the UI.\n'));
         return;
       }
 
-      // Set env vars and spawn backend
+      if (!existsSync(frontendDist)) {
+        const spinner = ora('Building frontend for single-port UI...').start();
+        try {
+          const { execFileSync } = await import('child_process');
+          execFileSync('npm', ['--prefix', frontendDir, 'install', '--silent'], { stdio: 'ignore' });
+          execFileSync('npm', ['--prefix', frontendDir, 'run', 'build'], { stdio: 'ignore' });
+          spinner.succeed('Frontend built into local-agent/ui/frontend/dist');
+        } catch (err) {
+          spinner.fail('Frontend build failed');
+          die(err.message);
+        }
+      }
+
+      // Set env vars and spawn the single backend that serves both UI and API.
       const { spawn } = await import('child_process');
       const server = spawn(process.execPath, [serverPath], {
         env: {
           ...process.env,
           LOCAL_AGENT_PROJECT: targetDir,
           LOCAL_AGENT_PORT: String(port),
+          PORT: String(port),
         },
         stdio: 'inherit',
       });
@@ -779,6 +795,7 @@ async function main() {
       console.log(`  ${chalk.gray('URL:')}     ${chalk.cyan(url)}`);
       console.log(`  ${chalk.gray('Project:')} ${targetDir}`);
       console.log(`  ${chalk.gray('API:')}     ${url}/health`);
+      console.log(`  ${chalk.gray('Mode:')}    single-port UI + API`);
       console.log(chalk.gray('\n  Press Ctrl+C to stop.\n'));
 
       server.on('error', (err) => die('Failed to start UI server: ' + err.message));

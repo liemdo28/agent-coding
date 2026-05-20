@@ -28,7 +28,7 @@ npm install
 ```powershell
 cd path\to\agent-coding
 npm run dev -- --help
-npm run ui:server -- --project .
+npm run ui
 ```
 
 ```powershell

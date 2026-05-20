@@ -2,10 +2,7 @@
  * Phase 55 - Task Queue Manager
  * Manages prioritized task queue
  */
-const fs = require('fs');
-const path = require('path');
-
-class TaskQueueManager {
+export class TaskQueueManager {
   constructor() {
     this.queue = [];
     this.history = [];
@@ -155,4 +152,4 @@ class TaskQueueManager {
   }
 }
 
-module.exports = { TaskQueueManager };
+export default { TaskQueueManager };

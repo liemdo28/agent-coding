@@ -24,7 +24,7 @@ cd ../local-agent/ui/frontend && npm install
 cd /path/to/agent-coding
 npm audit --audit-level=moderate
 npm run dev -- --help
-npm run ui:server -- --project .
+npm run ui
 ```
 
 ```bash

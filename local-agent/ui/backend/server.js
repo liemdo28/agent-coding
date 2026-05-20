@@ -74,13 +74,19 @@ app.use((req, _res, next) => {
 });
 
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
+function sendHealth(_req, res) {
   res.json({ status: 'ok', offline: true, timestamp: new Date().toISOString(), projectRoot: PROJECT_ROOT });
-});
+}
 
-app.get('/metrics', (_req, res) => {
+app.get('/health', sendHealth);
+app.get('/api/health', sendHealth);
+
+function sendMetrics(_req, res) {
   res.json(snapshotMetrics({ projectRoot: PROJECT_ROOT }));
-});
+}
+
+app.get('/metrics', sendMetrics);
+app.get('/api/metrics', sendMetrics);
 
 // ── SSE log stream ────────────────────────────────────────────────────────────
 app.get('/logs/stream', (req, res) => {
@@ -190,7 +196,7 @@ app.use((err, _req, res, _next) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-const PORT = Number(process.env.PORT ?? 4001);
+const PORT = Number(process.env.PORT ?? process.env.LOCAL_AGENT_PORT ?? 4001);
 // SECURITY: MUST bind to 127.0.0.1 ONLY — never 0.0.0.0
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`[local-agent ui] Server running at http://127.0.0.1:${PORT}`);
