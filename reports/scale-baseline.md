@@ -49,16 +49,16 @@ The eval harness (`eval/runner.js`) is scaffolded with all 6 benchmark adapters 
 
 | Metric | Measured | V1 Target | Status |
 |---|---|---|---|
-| Scan latency (317 JS files, ~35k LOC) | **9,494 ms** | < 5,000 ms | ❌ 1.9x over target |
-| Scan latency extrapolated 1M LOC | ~270,000 ms | < 120,000 ms | ❌ needs optimization |
+| Scan latency (322 JS files, ~35k LOC) | ~~9,494 ms~~ → **2,400 ms** | < 5,000 ms | ✓ CLEARED (2026-05-20) |
+| Scan latency extrapolated 1M LOC | ~66,000 ms | < 120,000 ms | ✓ within target |
 | KB query p50 (FTS5 + TF-IDF, 1,265 docs) | **106 ms** | < 200 ms | ✓ |
 | KB query p99 | **373 ms** | < 500 ms | ✓ |
 | RAM steady state | **43 MB** | < 512 MB | ✓ |
 | IDE completion p50 | NOT MEASURED | < 200 ms | Blocked: no IDE plugin yet |
 | Patch generation avg | NOT MEASURED | < 30 s | Blocked: no LLM endpoint |
 
-**Scan latency analysis:**
-Current 9.5s for 317 files = ~30ms/file. Primary bottleneck is `node --check` spawned per file in `lint-check.js`. This runs a separate Node.js process per file, which has ~15ms startup overhead per invocation. Fix: batch files or use a persistent worker. This is a M1 optimization task.
+**Scan latency analysis (RESOLVED 2026-05-20):**
+~~9.5s for 317 files~~ → **2.4s for 322 files** (4x improvement). Fix applied in `scripts/lint-check.js`: replaced sequential `execSync` per file with concurrent `exec` batches (`CONCURRENCY=32`). The ~15ms Node startup overhead per file was the bottleneck; with 32 parallel checks, 10 batch rounds × ~30ms wall-clock = ~300ms startup overhead total. G1 scan-latency gate cleared.
 
 **KB query latency:**
 p50=106ms, p99=373ms on a 1,265-doc corpus. As corpus grows to 5,000+ docs, p99 may increase. Current architecture (FTS5 → top-50 candidates → TF-IDF rerank) should scale well since FTS5 is O(log n) and rerank is bounded by 50 candidates.
@@ -74,18 +74,18 @@ p50=106ms, p99=373ms on a 1,265-doc corpus. As corpus grows to 5,000+ docs, p99 
 
 | Task | Status | Effort |
 |---|---|---|
-| Expand KB to 3,000+ docs | Ready to run (`kb:ingest`) | 1 day |
-| Add ≥2 non-Wikipedia source types | MDN fetcher coded, ready | 3 days |
-| Wire LLM endpoint for eval harness | Needs Ollama/llama.cpp setup | 2 days |
+| Expand KB to 3,000+ docs | batch-4 + MDN fixes pushed; needs ingest on Mac | 1 day |
+| Add ≥2 non-Wikipedia source types | MDN fetcher rewritten (GitHub raw) | ✓ code done |
+| Wire LLM endpoint for eval harness | Needs Ollama/llama.cpp setup on Mac | 2 days |
 | Run full benchmark baseline (eval:all) | Blocked on above | 4h machine time |
-| Fix scan latency (batch lint) | Code change in lint-check.js | 1 day |
+| Fix scan latency (batch lint) | ✓ DONE — 9,494ms → 2,400ms (2026-05-20) | ✓ |
 | Author 20 golden corpus tasks | Manual effort | 3 days |
 
 **G1 numeric thresholds:**
-- KB docs ≥ 3,000 across 10 domains
-- At least 1 benchmark with a real number (not NOT_MEASURED)
-- Scan latency < 5,000ms for 35k LOC
-- All tests green on CI
+- KB docs ≥ 3,000 across 10 domains — ⏳ pending Mac ingest
+- At least 1 benchmark with a real number (not NOT_MEASURED) — ❌ needs Ollama
+- Scan latency < 5,000ms for 35k LOC — ✅ **CLEARED** (2,400ms)
+- All tests green on CI — ✅ 28/28
 
 ---
 
@@ -107,7 +107,7 @@ p50=106ms, p99=373ms on a 1,265-doc corpus. As corpus grows to 5,000+ docs, p99 
 
 | Threshold | Metric |
 |---|---|
-| Scan latency < 5,000ms for 35k LOC | Requires batched lint / AST workers |
+| Scan latency < 5,000ms for 35k LOC | ✅ Already cleared at G1 (2,400ms) |
 | KB query p50 < 50ms (at 5k docs) | May need query result caching |
 | HumanEval pass@1 approaching 0.60 | Model quality improvement |
 | Languages AST parsed ≥ 3 | JS + Python + one more |

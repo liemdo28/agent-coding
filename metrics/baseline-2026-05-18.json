@@ -1,8 +1,8 @@
 {
   "timestamp": "2026-05-18T15:22:35+07:00",
-  "baseline_updated": "2026-05-18T09:30:00Z",
+  "baseline_updated": "2026-05-20T00:00:00Z",
   "branch": "claude/local-offline-ai-agent-PQx1C",
-  "commit": "e2543bb",
+  "commit": "2cd21fe",
   "engineer_role": "infra-sec",
   "version_target": "V1.0",
 
@@ -39,9 +39,11 @@
   },
 
   "performance": {
-    "_note": "Measured on Linux x86-64, Node v22. Project: 317 JS files. KB: 1,265 docs / 13,461 chunks. Dates: 2026-05-18.",
-    "scan_latency_sample_project_ms":   9494,
-    "scan_latency_1m_loc_ms":           "NOT_MEASURED — no 1M-LOC project available; extrapolated ~30s from 35k-LOC/9.5s rate",
+    "_note": "Measured on Linux x86-64, Node v22. Project: 322 JS files / ~35k LOC. KB: 1,265 docs / 13,461 chunks. Scan re-measured 2026-05-20 after parallel lint fix.",
+    "scan_latency_sample_project_ms":   2400,
+    "scan_latency_previous_ms":         9494,
+    "scan_latency_improvement":         "4x — sequential execSync → parallel exec CONCURRENCY=32",
+    "scan_latency_1m_loc_ms":           "NOT_MEASURED — no 1M-LOC project available; extrapolated ~66s from 35k-LOC/2.4s rate",
     "kb_query_p50_ms":                  106,
     "kb_query_p99_ms":                  373,
     "ide_completion_p50_ms":            "NOT_MEASURED — requires IDE plugin integration (post-M1)",

@@ -10,14 +10,15 @@
 //
 // Called by `npm run kb:ingest`
 // Safe to re-run: idempotent (skips already-ingested articles).
-import { spawnSync } from 'child_process';
-import { existsSync } from 'fs';
+import { spawnSync }  from 'child_process';
+import { existsSync }  from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const ROOT    = dirname(dirname(fileURLToPath(import.meta.url)));
-const INGEST  = join(ROOT, 'kb', 'ingest-all.js');
-const DB_PATH = join(ROOT, '.local-agent', 'kb', 'knowledge.db');
+const ROOT         = dirname(dirname(fileURLToPath(import.meta.url)));
+const INGEST       = join(ROOT, 'kb', 'ingest-all.js');
+const GEN_STATS    = join(ROOT, 'kb', 'generate-stats.js');
+const DB_PATH      = join(ROOT, '.local-agent', 'kb', 'knowledge.db');
 
 console.log('═'.repeat(60));
 console.log('  ⚠  BUILD-TIME TOOL — requires outbound internet access');
@@ -51,6 +52,16 @@ const result = spawnSync(
 if (result.status !== 0) {
   console.error('\n[kb-ingest] ingest-all.js exited with status', result.status);
   process.exit(result.status ?? 1);
+}
+
+// Auto-update kb/stats.json so it always reflects the current DB state
+process.stdout.write('\nUpdating kb/stats.json...');
+const statsResult = spawnSync(process.execPath, [GEN_STATS], { stdio: 'pipe', cwd: ROOT });
+if (statsResult.status === 0) {
+  process.stdout.write(' done\n');
+} else {
+  process.stdout.write(' WARN: stats update failed (non-blocking)\n');
+  process.stderr.write(statsResult.stderr?.toString() ?? '');
 }
 
 console.log('\n✓ Knowledge base ready. Test with:');
