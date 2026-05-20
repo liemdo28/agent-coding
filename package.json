@@ -37,6 +37,10 @@
 
     "metrics:collect":   "node scripts/collect-metrics.js",
 
+    "strategy:score":    "node bin/strategy.js score",
+    "strategy:history":  "node bin/strategy.js history",
+    "strategy:matrix":   "node bin/strategy.js matrix",
+
     "eval:all":           "node eval/runner.js --all",
     "eval:humaneval":     "node eval/runner.js --benchmark humaneval",
     "eval:mbpp":          "node eval/runner.js --benchmark mbpp",
