@@ -1168,7 +1168,287 @@ async function main() {
 
   program.addCommand(contentCmd);
 
-  // ── security (Phase 7) ───────────────────────────────────────────────────
+  // ── project-brain (Phase 11) ──────────────────────────────────────────────
+  const projectBrainCmd = new Command('project-brain').description('AI Project Brain self-awareness analysis & docs tools');
+
+  projectBrainCmd
+    .command('analyze <project-alias>')
+    .description('Analyze project architecture, dependencies, and construct DNA/Profile maps')
+    .option('--no-llm', 'Skip LLM analysis and use heuristics only')
+    .action(async (alias, opts) => {
+      printBanner();
+      const spinner = ora(`Analyzing project brain for "${alias}"...`).start();
+      try {
+        const { ProjectBrainEngine } = await import('../local-agent/project-brain/ProjectBrainEngine.js');
+        const engine = new ProjectBrainEngine();
+        const { dna, profile } = await engine.analyzeProject(alias, { useLLM: opts.llm });
+        spinner.succeed(chalk.green(`Analysis complete for project: ${alias}`));
+        
+        console.log(chalk.bold.cyan('\n🧬 Project DNA:'));
+        console.log(JSON.stringify(dna, null, 2));
+        
+        console.log(chalk.bold.cyan('\n🧠 AI Profile:'));
+        console.log(JSON.stringify(profile, null, 2));
+      } catch (err) {
+        spinner.fail(chalk.red(`Analysis failed: ${err.message}`));
+      }
+    });
+
+  projectBrainCmd
+    .command('doc <project-alias>')
+    .description('Generate documentation (onboarding, api, architecture, deployment, dependencies)')
+    .action(async (alias) => {
+      printBanner();
+      const spinner = ora(`Generating documentation set for "${alias}"...`).start();
+      try {
+        const { ProjectBrainEngine } = await import('../local-agent/project-brain/ProjectBrainEngine.js');
+        const engine = new ProjectBrainEngine();
+        const { docsDir, files } = await engine.generateDocs(alias);
+        spinner.succeed(chalk.green(`Docs successfully generated inside: ${docsDir}`));
+        for (const file of files) {
+          console.log(chalk.gray(`  - ${file}`));
+        }
+      } catch (err) {
+        spinner.fail(chalk.red(`Docs generation failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(projectBrainCmd);
+
+  // ── world model (Phase 31) ───────────────────────────────────────────────
+  const worldModelCmd = new Command('world-model').description('AI World Model inference & graph tools');
+
+  worldModelCmd
+    .command('understand <project-alias>')
+    .description('Analyze system understanding and intent')
+    .action(async (alias) => {
+      printBanner();
+      const spinner = ora(`Analyzing system intent for "${alias}"...`).start();
+      try {
+        const { SystemUnderstandingEngine } = await import('../local-agent/world-model/SystemUnderstandingEngine.js');
+        const engine = new SystemUnderstandingEngine();
+        const result = await engine.understandSystem(alias);
+        spinner.succeed(`System understanding complete for project: ${alias}\n`);
+        console.log(chalk.cyan('🧠 Architecture Intent:'));
+        console.log(result.architectureIntent);
+        console.log(chalk.cyan('\n💼 Business Intent:'));
+        console.log(result.businessIntent);
+        console.log(chalk.yellow('\n⚠️ Engineering Constraints:'));
+        console.log(result.engineeringConstraints);
+        console.log(chalk.magenta('\n🔮 Long-term Impact:'));
+        console.log(result.longTermImpact);
+      } catch (err) {
+        spinner.fail(chalk.red(`Analysis failed: ${err.message}`));
+      }
+    });
+
+  worldModelCmd
+    .command('causal <event>')
+    .description('Run causal reasoning chain for an event (e.g. "websocket load increases")')
+    .action(async (event) => {
+      printBanner();
+      try {
+        const { CausalReasoningEngine } = await import('../local-agent/world-model/CausalReasoningEngine.js');
+        const engine = new CausalReasoningEngine();
+        const result = engine.reason(event);
+        console.log(chalk.cyan(`\n🔗 Causal Chain for: "${event}"\n`));
+        result.chain.forEach((step, idx) => {
+          console.log(`  ${chalk.gray(idx === 0 ? '○' : '↓')} ${step}`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Causal reasoning failed: ${err.message}`));
+      }
+    });
+
+  worldModelCmd
+    .command('graph')
+    .description('Print organizational graph topology')
+    .action(async () => {
+      printBanner();
+      try {
+        const { OrganizationalGraph } = await import('../local-agent/world-model/OrganizationalGraph.js');
+        const engine = new OrganizationalGraph();
+        const graph = engine.buildGraph();
+        console.log(chalk.cyan('\n🌐 Organizational Nodes:'));
+        graph.nodes.forEach(n => console.log(`  - [${n.group}] ${n.id} (${n.type})`));
+        console.log(chalk.magenta('\n⛓️ Organizational Links:'));
+        graph.links.forEach(l => console.log(`  - ${l.source} → ${l.relationship} → ${l.target}`));
+      } catch (err) {
+        console.error(chalk.red(`Graph generation failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(worldModelCmd);
+
+  // ── execution matrix (Phase 41) ──────────────────────────────────────────
+  const matrixCmd = new Command('matrix').description('Global Execution Matrix tools');
+
+  matrixCmd
+    .command('tasks')
+    .description('View global task matrix and dependencies')
+    .action(async () => {
+      printBanner();
+      try {
+        const { GlobalTaskMatrix } = await import('../local-agent/execution-matrix/GlobalTaskMatrix.js');
+        const engine = new GlobalTaskMatrix();
+        const matrix = engine.buildMatrix();
+        console.log(chalk.cyan('\\n🌐 Global Tasks:'));
+        matrix.tasks.forEach(t => console.log(`  - [${t.status}] ${t.id}: ${t.name}`));
+        console.log(chalk.magenta('\\n⛓️ Dependencies:'));
+        matrix.dependencies.forEach(d => console.log(`  - ${d.source} → ${d.type} → ${d.target}`));
+      } catch (err) {
+        console.error(chalk.red(`Matrix tasks failed: ${err.message}`));
+      }
+    });
+
+  matrixCmd
+    .command('predict <taskId>')
+    .description('Predict cascading execution impacts for a specific task')
+    .action(async (taskId) => {
+      printBanner();
+      try {
+        const { GlobalTaskMatrix } = await import('../local-agent/execution-matrix/GlobalTaskMatrix.js');
+        const { ExecutionCascadeEngine } = await import('../local-agent/execution-matrix/ExecutionCascadeEngine.js');
+        const matrixEngine = new GlobalTaskMatrix();
+        const cascadeEngine = new ExecutionCascadeEngine();
+        
+        const matrix = matrixEngine.buildMatrix();
+        const result = cascadeEngine.predictCascade(taskId, matrix);
+        
+        console.log(chalk.yellow(`\\n💥 Cascade Prediction for: ${taskId}`));
+        console.log(`Blast Radius: ${result.blastRadius} downstream tasks affected`);
+        result.cascadeSteps.forEach((step, i) => {
+          console.log(`  ${i === 0 ? '↳' : '↓'} ${step.taskId} (${step.taskName}) - ${chalk.red(step.reason)}`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Cascade prediction failed: ${err.message}`));
+      }
+    });
+
+  matrixCmd
+    .command('pressure')
+    .description('View execution pressure map across the organization')
+    .action(async () => {
+      printBanner();
+      try {
+        const { ExecutionPressureMap } = await import('../local-agent/execution-matrix/ExecutionPressureMap.js');
+        const engine = new ExecutionPressureMap();
+        const pressure = engine.getPressure();
+        
+        console.log(chalk.cyan('\\n📊 Execution Pressure Map:'));
+        pressure.forEach(p => {
+          const color = p.status === 'critical' ? chalk.red : p.status === 'warning' ? chalk.yellow : chalk.green;
+          console.log(`  - ${p.system.padEnd(25)} Load: ${color(p.load + '%')} (${p.status}) - Active Tasks: ${p.activeTasks}`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Pressure map failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(matrixCmd);
+
+  // ── meta-civilization (Phase 61) ──────────────────────────────────────────
+  const civilizationCmd = new Command('civilization').description('Global AI Meta-Civilization tools');
+
+  civilizationCmd
+    .command('state')
+    .description('View real-time global civilization state')
+    .action(async () => {
+      printBanner();
+      try {
+        const { CivilizationStateEngine } = await import('../local-agent/meta-civilization/CivilizationStateEngine.js');
+        const engine = new CivilizationStateEngine();
+        const state = engine.getGlobalState();
+        console.log(chalk.cyan('\\n🌍 Civilization Global State:'));
+        console.log(`  Active Agents: ${state.totalAgentsActive}`);
+        console.log(`  Projects Indexed: ${state.totalProjectsIndexed}`);
+        console.log(`  Runtime Anomalies: ${state.runtimeAnomalies}`);
+        console.log(chalk.magenta('\\n🔭 Active Sectors:'));
+        state.activeSectors.forEach(s => {
+          const color = s.status === 'critical' ? chalk.red : s.status === 'warning' ? chalk.yellow : chalk.green;
+          console.log(`  - ${s.name.padEnd(25)} Status: ${color(s.status)} | Nodes: ${s.nodes} | Load: ${s.load}%`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Civilization state failed: ${err.message}`));
+      }
+    });
+
+  civilizationCmd
+    .command('stability')
+    .description('View civilization stability index and risk mapping')
+    .action(async () => {
+      printBanner();
+      try {
+        const { CivilizationStabilityIndex } = await import('../local-agent/meta-civilization/CivilizationStabilityIndex.js');
+        const engine = new CivilizationStabilityIndex();
+        const index = engine.computeIndex();
+        console.log(chalk.cyan('\\n⚖️  Civilization Stability Index:'));
+        console.log(`  Stability:           ${index.stability}%`);
+        console.log(`  Chaos Risk:          ${index.chaosRisk}%`);
+        console.log(`  Execution Pressure:  ${index.executionPressure}%`);
+        console.log(`  Evolution Readiness: ${index.evolutionReadiness}%`);
+        
+        console.log(chalk.yellow('\\n⚠️  High-Risk Zones:'));
+        index.riskZones.forEach(z => {
+          const color = z.riskLevel === 'high' ? chalk.red : z.riskLevel === 'medium' ? chalk.yellow : chalk.green;
+          console.log(`  - ${z.zone.padEnd(30)} ${color(`[${z.riskLevel.toUpperCase()}]`)} (Probability: ${z.probability}%)`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Civilization stability failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(civilizationCmd);
+
+  // ── meta-reality (Phase 81) ─────────────────────────────────────────────
+  const realityCmd = new Command('reality').description('Meta-Reality Engineering Physics tools');
+
+  realityCmd
+    .command('graph')
+    .description('View the living engineering universe graph')
+    .action(async () => {
+      printBanner();
+      try {
+        const { MetaRealityGraph } = await import('../local-agent/meta-reality/MetaRealityGraph.js');
+        const engine = new MetaRealityGraph();
+        const graph = engine.buildGraph();
+        console.log(chalk.cyan('\\n🌌 Meta-Reality Universe Graph:'));
+        
+        console.log(chalk.magenta('\\n⚡ Nodes:'));
+        graph.nodes.forEach(n => {
+          const color = n.type === 'system' ? chalk.blue : n.type === 'intent' ? chalk.yellow : chalk.red;
+          console.log(`  [${color(n.type.toUpperCase().padEnd(11))}] ${n.name.padEnd(25)} (Energy: ${n.energy} | Cluster: ${n.cluster})`);
+        });
+
+        console.log(chalk.green('\\n🔗 Physics Edges:'));
+        graph.edges.forEach(e => {
+          console.log(`  ${e.source.padEnd(5)} --[${e.type.padEnd(8)} (w:${e.weight})]--> ${e.target}`);
+        });
+      } catch (err) {
+        console.error(chalk.red(`Meta-Reality graph failed: ${err.message}`));
+      }
+    });
+
+  realityCmd
+    .command('stability')
+    .description('View reality stability and civilization physics')
+    .action(async () => {
+      printBanner();
+      try {
+        const { RealityStabilityEngine } = await import('../local-agent/meta-reality/RealityStabilityEngine.js');
+        const engine = new RealityStabilityEngine();
+        const physics = engine.computePhysics();
+        console.log(chalk.cyan('\\n⚛️  Engineering Reality Physics:'));
+        console.log(`  Reality Drift:           ${physics.realityDrift}%`);
+        console.log(`  Execution Instability:   ${physics.executionInstability}%`);
+        console.log(`  Organizational Entropy:  ${physics.organizationalEntropy} eUnits`);
+        console.log(`  Civilization Pressure:   ${physics.civilizationPressure} pUnits`);
+      } catch (err) {
+        console.error(chalk.red(`Reality stability failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(realityCmd);  // ── security (Phase 7) ───────────────────────────────────────────────────
   const securityCmd = new Command('security').description('Security hardening and offline verification tools');
 
   securityCmd

@@ -5,7 +5,7 @@
  * and builds comprehensive context for intelligent answers.
  */
 
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import fg from 'fast-glob';
 
@@ -159,7 +159,6 @@ export class ProjectContextEngine {
 
   _structure(dir, depth = 0) {
     if (depth > 2) return null;
-    const { readdirSync, statSync } = require('fs');
     try {
       const entries = readdirSync(dir).filter(e => !e.startsWith('.') && !['node_modules', 'dist', 'build'].includes(e)).slice(0, 20);
       return entries.map(e => {

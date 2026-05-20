@@ -25,7 +25,13 @@ import WorkspaceGraph     from './pages/WorkspaceGraph.tsx';
 import AutonomousQueue   from './pages/AutonomousQueue.tsx';
 import KnowledgeBase      from './pages/KnowledgeBase.tsx';
 import RuntimeMonitor     from './pages/RuntimeMonitor.tsx';
-import Timeline          from './pages/Timeline.tsx';import ProjectHealth      from './pages/ProjectHealth.tsx';
+import Timeline          from './pages/Timeline.tsx';
+import ProjectHealth      from './pages/ProjectHealth.tsx';
+import ProjectBrain       from './pages/ProjectBrain.tsx';
+import WorldModel         from './pages/WorldModel.tsx';
+import ExecutionMatrix    from './pages/ExecutionMatrix.tsx';
+import CivilizationHealth from './pages/CivilizationHealth.tsx';
+import EngineeringUniverse from './pages/EngineeringUniverse.tsx';
 
 export default function App() {
   return (
@@ -57,6 +63,11 @@ export default function App() {
           <Route path="knowledge-base"   element={<KnowledgeBase />} />
           <Route path="runtime-monitor"  element={<RuntimeMonitor />} />
           <Route path="timeline"         element={<Timeline />} />
+          <Route path="project-brain"    element={<ProjectBrain />} />
+          <Route path="world-model"      element={<WorldModel />} />
+          <Route path="execution-matrix" element={<ExecutionMatrix />} />
+          <Route path="civilization"     element={<CivilizationHealth />} />
+          <Route path="engineering-universe" element={<EngineeringUniverse />} />
           <Route path="*"                element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

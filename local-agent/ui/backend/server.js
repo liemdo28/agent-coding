@@ -44,6 +44,11 @@ import commandcenterRouter from './routes/commandcenter.js';
 import projectHealthRouter from './routes/project-health.js';
 import queueRouter         from './routes/queue.js';
 import cognitionRouter     from './routes/cognition.js';
+import projectBrainRouter  from './routes/project-brain.js';
+import worldModelRouter    from './routes/world-model.js';
+import executionMatrixRouter from './routes/execution-matrix.js';
+import metaCivilizationRouter from './routes/meta-civilization.js';
+import metaRealityRouter      from './routes/meta-reality.js';
 import { metricsMiddleware, snapshotMetrics } from './lib/runtime-metrics.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
@@ -151,6 +156,11 @@ const apiRouters = [
   projectHealthRouter,
   queueRouter,
   cognitionRouter,
+  projectBrainRouter,
+  worldModelRouter,
+  executionMatrixRouter,
+  metaCivilizationRouter,
+  metaRealityRouter,
 ];
 
 for (const router of apiRouters) {
