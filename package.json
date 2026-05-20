@@ -15,6 +15,7 @@
     "bootstrap:v2":       "bash scripts/bootstrap-v2.sh",
     "corp:simulate":      "node bin/super-agent-corp.js",
     "lint":               "node scripts/lint-check.js",
+    "stress":             "bash scripts/stress-test.sh",
     "setup:production":   "bash scripts/production-setup.sh",
     "test":               "node --test tests/smoke.test.js tests/modules.test.js",
     "test:integration":   "node --test tests/integration/cli.test.js",

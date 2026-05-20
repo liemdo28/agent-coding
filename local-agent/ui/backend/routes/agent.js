@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, writeFileSync,
          readFileSync }                         from 'fs';
 import { join, resolve }                        from 'path';
 import { PROJECT_ROOT }                         from '../server.js';
+import { writeJsonAtomic }                      from '../lib/runtime-json.js';
+import { recordJsonWrite, trackSseConnection }  from '../lib/runtime-metrics.js';
 import { loadConfig }                           from '../../../core/config.js';
 import { initLogger, logger }                   from '../../../core/logger.js';
 import { runPolicyChecks }                      from '../../../core/policy.js';
@@ -43,8 +45,10 @@ function persistToSession(sessionId, question, fullResponse) {
       session.title = question.slice(0, 60) + (question.length > 60 ? '…' : '');
     }
     session.updatedAt = now;
-    writeFileSync(path, JSON.stringify(session, null, 2), 'utf8');
+    writeJsonAtomic(path, session);
+    recordJsonWrite(true);
   } catch (e) {
+    recordJsonWrite(false);
     // Non-fatal — session persistence failed but we don't interrupt the user
     logger.fileOnly('warn', 'agent: failed to persist session', { sessionId, error: e.message });
   }
@@ -67,6 +71,7 @@ router.post('/agent/ask', async (req, res) => {
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders();
+  trackSseConnection(req);
 
   const send = (event, data) => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);

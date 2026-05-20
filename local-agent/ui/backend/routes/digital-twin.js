@@ -1,8 +1,10 @@
 // routes/digital-twin.js — local-only Digital Twin v3 data/API surface
 import { Router } from 'express';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { PROJECT_ROOT } from '../server.js';
+import { readJsonSafe, writeJsonAtomic } from '../lib/runtime-json.js';
+import { recordJsonWrite } from '../lib/runtime-metrics.js';
 
 const router = Router();
 
@@ -18,6 +20,10 @@ const COMPANIES = [
 ];
 
 const PRIORITY_WEIGHT = { critical: 1, high: 0.8, medium: 0.55, normal: 0.35, low: 0.18 };
+let assignmentState = null;
+let executionState = null;
+let assignmentsFlushTimer = null;
+let executionsFlushTimer = null;
 
 function runtimeDir() {
   const dir = join(PROJECT_ROOT, '.local-agent', 'digital-twin');
@@ -25,18 +31,75 @@ function runtimeDir() {
   return dir;
 }
 
-function readJson(path, fallback) {
+function writeJson(path, value) {
   try {
-    if (!existsSync(path)) return fallback;
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    return fallback;
+    writeJsonAtomic(path, value);
+    recordJsonWrite(true);
+  } catch (err) {
+    recordJsonWrite(false);
+    throw err;
   }
 }
 
-function writeJson(path, value) {
-  writeFileSync(path, JSON.stringify(value, null, 2), 'utf8');
+function assignmentsPath() {
+  return join(runtimeDir(), 'task-assignments.json');
 }
+
+function executionsPath() {
+  return join(runtimeDir(), 'executions.json');
+}
+
+function getAssignments() {
+  if (assignmentState === null) assignmentState = readJsonSafe(assignmentsPath(), {});
+  return assignmentState;
+}
+
+function getExecutions() {
+  if (executionState === null) executionState = readJsonSafe(executionsPath(), []);
+  return executionState;
+}
+
+function scheduleRuntimeFlush(kind) {
+  const isAssignments = kind === 'assignments';
+  const existing = isAssignments ? assignmentsFlushTimer : executionsFlushTimer;
+  if (existing) return;
+
+  const flush = () => {
+    try {
+      if (isAssignments) {
+        assignmentsFlushTimer = null;
+        writeJson(assignmentsPath(), getAssignments());
+      } else {
+        executionsFlushTimer = null;
+        writeJson(executionsPath(), getExecutions());
+      }
+    } catch {
+      recordJsonWrite(false);
+    }
+  };
+
+  const timer = setTimeout(flush, 75);
+  if (isAssignments) assignmentsFlushTimer = timer;
+  else executionsFlushTimer = timer;
+}
+
+function flushRuntimeState() {
+  if (assignmentsFlushTimer) {
+    clearTimeout(assignmentsFlushTimer);
+    assignmentsFlushTimer = null;
+    writeJson(assignmentsPath(), getAssignments());
+  }
+  if (executionsFlushTimer) {
+    clearTimeout(executionsFlushTimer);
+    executionsFlushTimer = null;
+    writeJson(executionsPath(), getExecutions());
+  }
+}
+
+process.once('beforeExit', flushRuntimeState);
+process.once('SIGTERM', () => {
+  try { flushRuntimeState(); } finally { process.exit(0); }
+});
 
 function readDispatches(limit = 160) {
   const dir = join(PROJECT_ROOT, '.local-agent', 'command-center');
@@ -101,8 +164,8 @@ function buildTwinData(rawControls = {}) {
   const controls = normalizeControls(rawControls);
   const dispatches = readDispatches();
   const source = dispatches.length > 0 ? dispatches : fallbackDispatches();
-  const assignments = readJson(join(runtimeDir(), 'task-assignments.json'), {});
-  const executions = readJson(join(runtimeDir(), 'executions.json'), []);
+  const assignments = getAssignments();
+  const executions = getExecutions();
 
   const tasks = source.map((d, index) => {
     const assignedCompany = assignments[d.task?.id] ?? d.company?.id ?? COMPANIES[index % COMPANIES.length][0];
@@ -221,22 +284,18 @@ router.get('/task', (req, res) => {
 router.post('/task', (req, res) => {
   const { taskId, companyId } = req.body ?? {};
   if (!taskId || !companyId) return res.status(400).json({ success: false, error: 'taskId and companyId are required' });
-  const path = join(runtimeDir(), 'task-assignments.json');
-  const assignments = readJson(path, {});
-  assignments[taskId] = companyId;
-  writeJson(path, assignments);
+  getAssignments()[taskId] = companyId;
+  scheduleRuntimeFlush('assignments');
   res.json({ success: true, taskId, companyId });
 });
 
 router.get('/execution', (_req, res) => {
-  res.json({ executions: readJson(join(runtimeDir(), 'executions.json'), []).slice(-50).reverse() });
+  res.json({ executions: getExecutions().slice(-50).reverse() });
 });
 
 router.post('/execution', (req, res) => {
   const { taskId, action = 'sandbox-build-fix', companyId = 'it-ai' } = req.body ?? {};
   if (!taskId) return res.status(400).json({ success: false, error: 'taskId is required' });
-  const path = join(runtimeDir(), 'executions.json');
-  const executions = readJson(path, []);
   const event = {
     id: `exec-${Date.now().toString(36)}`,
     taskId,
@@ -246,8 +305,10 @@ router.post('/execution', (req, res) => {
     sandboxed: true,
     createdAt: new Date().toISOString(),
   };
+  const executions = getExecutions();
   executions.push(event);
-  writeJson(path, executions);
+  if (executions.length > 5000) executions.splice(0, executions.length - 5000);
+  scheduleRuntimeFlush('executions');
   res.json({ success: true, execution: event });
 });
 

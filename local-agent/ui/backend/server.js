@@ -37,6 +37,7 @@ import runnerRouter       from './routes/runner.js';
 import chatSessionsRouter  from './routes/chat-sessions.js';
 import allowedPathsRouter  from './routes/allowed-paths.js';
 import digitalTwinRouter   from './routes/digital-twin.js';
+import { metricsMiddleware, snapshotMetrics } from './lib/runtime-metrics.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -49,6 +50,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+app.use(metricsMiddleware);
 
 // ── Request logging ───────────────────────────────────────────────────────────
 app.use((req, _res, next) => {
@@ -62,6 +64,10 @@ app.use((req, _res, next) => {
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', offline: true, timestamp: new Date().toISOString(), projectRoot: PROJECT_ROOT });
+});
+
+app.get('/metrics', (_req, res) => {
+  res.json(snapshotMetrics({ projectRoot: PROJECT_ROOT }));
 });
 
 // ── SSE log stream ────────────────────────────────────────────────────────────

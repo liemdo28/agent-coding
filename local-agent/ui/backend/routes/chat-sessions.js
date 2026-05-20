@@ -3,12 +3,16 @@
 // Each file: session-{id}.json  →  { id, title, createdAt, updatedAt, messages[] }
 
 import { Router }                                     from 'express';
+import { randomUUID }                                 from 'crypto';
 import { existsSync, mkdirSync, readdirSync,
-         readFileSync, writeFileSync, unlinkSync }    from 'fs';
+         readFileSync, unlinkSync }                   from 'fs';
 import { join }                                       from 'path';
 import { PROJECT_ROOT }                               from '../server.js';
+import { enqueueJsonWrite, readJsonSafe, writeJsonAtomic } from '../lib/runtime-json.js';
+import { recordJsonWrite }                            from '../lib/runtime-metrics.js';
 
 const router = Router();
+let sessionIndex = null;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,23 +29,50 @@ function sessionPath(id) {
 function readSession(id) {
   const p = sessionPath(id);
   if (!existsSync(p)) return null;
-  try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; }
+  return readJsonSafe(p, null);
 }
 
 function writeSession(session) {
   session.updatedAt = new Date().toISOString();
-  writeFileSync(sessionPath(session.id), JSON.stringify(session, null, 2), 'utf8');
+  try {
+    writeJsonAtomic(sessionPath(session.id), session);
+    recordJsonWrite(true);
+  } catch (err) {
+    recordJsonWrite(false);
+    throw err;
+  }
 }
 
 function listSessions() {
+  if (sessionIndex) {
+    return [...sessionIndex.values()].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  }
   const dir = sessionsDir();
-  return readdirSync(dir)
+  const sessions = readdirSync(dir)
     .filter((f) => f.startsWith('session-') && f.endsWith('.json'))
     .map((f) => {
       try { return JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { return null; }
     })
     .filter(Boolean)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  sessionIndex = new Map(sessions.map((session) => [session.id, session]));
+  return sessions;
+}
+
+function indexSession(session) {
+  if (!sessionIndex) listSessions();
+  sessionIndex.set(session.id, {
+    id: session.id,
+    title: session.title,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    messages: session.messages ?? [],
+  });
+}
+
+function unindexSession(id) {
+  if (!sessionIndex) listSessions();
+  sessionIndex.delete(id);
 }
 
 // ── GET /api/chat/sessions — list all ────────────────────────────────────────
@@ -61,7 +92,7 @@ router.get('/chat/sessions', (_req, res) => {
 // ── POST /api/chat/sessions — create new ─────────────────────────────────────
 
 router.post('/chat/sessions', (req, res) => {
-  const id      = `${Date.now()}`;
+  const id      = `${Date.now()}-${randomUUID().slice(0, 8)}`;
   const now     = new Date().toISOString();
   const session = {
     id,
@@ -71,6 +102,7 @@ router.post('/chat/sessions', (req, res) => {
     messages:  [],
   };
   writeSession(session);
+  indexSession(session);
   res.json({ sessionId: id, session });
 });
 
@@ -89,6 +121,7 @@ router.patch('/chat/sessions/:id', (req, res) => {
   if (!session) return res.status(404).json({ error: 'Session not found' });
   if (req.body?.title) session.title = req.body.title.slice(0, 80);
   writeSession(session);
+  indexSession(session);
   res.json({ ok: true, session });
 });
 
@@ -98,6 +131,7 @@ router.delete('/chat/sessions/:id', (req, res) => {
   const p = sessionPath(req.params.id);
   if (!existsSync(p)) return res.status(404).json({ error: 'Session not found' });
   unlinkSync(p);
+  unindexSession(req.params.id);
   res.json({ ok: true });
 });
 
@@ -135,24 +169,34 @@ router.get('/chat/sessions/:id/export', (req, res) => {
 // ── POST /api/chat/sessions/:id/messages — append message pair ───────────────
 // Called by agent route after streaming completes to persist the exchange.
 
-router.post('/chat/sessions/:id/messages', (req, res) => {
+router.post('/chat/sessions/:id/messages', async (req, res, next) => {
   const session = readSession(req.params.id);
   if (!session) return res.status(404).json({ error: 'Session not found' });
 
   const { userText, agentText } = req.body ?? {};
   if (!userText || !agentText) return res.status(400).json({ error: 'Missing userText or agentText' });
 
-  const now = new Date().toISOString();
-  session.messages.push({ role: 'user',  text: userText,  ts: now });
-  session.messages.push({ role: 'agent', text: agentText, ts: now });
-
-  // Auto-title: first user message, truncated
-  if (session.title === 'Phiên mới' && session.messages.length === 2) {
-    session.title = userText.slice(0, 60) + (userText.length > 60 ? '…' : '');
+  try {
+    await enqueueJsonWrite(sessionPath(req.params.id), (current) => {
+      const now = new Date().toISOString();
+      const nextSession = current ?? session;
+      nextSession.messages = Array.isArray(nextSession.messages) ? nextSession.messages : [];
+      nextSession.messages.push({ role: 'user',  text: userText,  ts: now });
+      nextSession.messages.push({ role: 'agent', text: agentText, ts: now });
+      if (nextSession.title === 'Phiên mới' && nextSession.messages.length === 2) {
+        nextSession.title = userText.slice(0, 60) + (userText.length > 60 ? '…' : '');
+      }
+      nextSession.updatedAt = now;
+      return nextSession;
+    }, session);
+    recordJsonWrite(true);
+    const latest = readSession(req.params.id);
+    if (latest) indexSession(latest);
+    res.json({ ok: true });
+  } catch (err) {
+    recordJsonWrite(false);
+    next(err);
   }
-
-  writeSession(session);
-  res.json({ ok: true });
 });
 
 export default router;
