@@ -1893,6 +1893,142 @@ async function main() {
       }
     });
 
+  // ── projects discover ────────────────────────────────────────────────────
+  projectsCmd
+    .command('discover')
+    .description('Auto-scan ~/Projects for git repos, register new ones, detect relationships')
+    .option('--roots <paths...>', 'additional roots to scan (space-separated)')
+    .option('--dry-run', 'show what would be added without writing')
+    .option('--no-graph', 'skip KnowledgeGraph rebuild after discovery')
+    .action(async (opts) => {
+      printBanner();
+      const { discoverProjects, DEFAULT_ROOTS } = await import('../local-agent/orchestrator/ProjectAutoDiscovery.js');
+      const { buildKnowledgeGraph }             = await import('../local-agent/orchestrator/KnowledgeGraphBuilder.js');
+
+      const roots = [...DEFAULT_ROOTS, ...(opts.roots ?? [])];
+      const spinner = ora('Discovering projects…').start();
+      const lines = [];
+
+      const result = await discoverProjects({
+        roots,
+        dryRun: !!opts.dryRun,
+        onProgress: (msg) => {
+          lines.push(msg);
+          spinner.text = msg;
+        },
+      });
+
+      spinner.succeed(chalk.bold('Discovery complete'));
+
+      if (result.added.length) {
+        console.log(chalk.green(`\n  ✚ ${opts.dryRun ? 'Would add' : 'Added'} (${result.added.length}):`));
+        for (const p of result.added) {
+          console.log(`    ${chalk.white(p.name.padEnd(28))} ${chalk.gray(p.path)}`);
+          if (p.framework) process.stdout.write(`      ${chalk.cyan(p.framework)}${p.language ? ' · ' + p.language : ''}\n`);
+        }
+      }
+      if (result.updated.length) {
+        console.log(chalk.blue(`\n  ↻ Updated metadata (${result.updated.length}):`));
+        for (const p of result.updated) console.log(`    ${chalk.white(p.name)}`);
+      }
+      if (result.errors.length) {
+        console.log(chalk.red(`\n  ✗ Errors (${result.errors.length}):`));
+        for (const e of result.errors) console.log(`    ${chalk.gray(e.dir)}: ${e.error}`);
+      }
+      if (!result.added.length && !result.updated.length) {
+        console.log(chalk.gray('\n  All repos already registered — nothing to add.\n'));
+      }
+
+      // Build KnowledgeGraph unless --no-graph or dry-run
+      if (!opts.dryRun && opts.graph !== false) {
+        const kgSpinner = ora('Building KnowledgeGraph…').start();
+        const kg = await buildKnowledgeGraph({
+          onProgress: (msg) => { kgSpinner.text = msg; },
+        });
+        kgSpinner.succeed(
+          chalk.green(`KnowledgeGraph: ${kg.nodes} nodes · ${kg.edges} edges  `) +
+          chalk.gray(`(${kg.newNodes} upserted, ${kg.newEdges} new edges)`)
+        );
+      }
+      console.log();
+    });
+
+  // ── projects graph ───────────────────────────────────────────────────────
+  projectsCmd
+    .command('graph')
+    .description('Show the KnowledgeGraph — project relationships, shared deps, same-org links')
+    .option('--project <id>', 'show relationships for a specific project ID')
+    .option('--rebuild', 'rebuild the graph from scratch before displaying')
+    .action(async (opts) => {
+      printBanner();
+      const { buildKnowledgeGraph }   = await import('../local-agent/orchestrator/KnowledgeGraphBuilder.js');
+      const { getRelatedProjects }    = await import('../local-agent/orchestrator/KnowledgeGraphBuilder.js');
+      const { listProjects }          = await import('../local-agent/orchestrator/ProjectRegistry.js');
+
+      if (opts.rebuild) {
+        const s = ora('Rebuilding KnowledgeGraph…').start();
+        const kg = await buildKnowledgeGraph({ onProgress: (m) => { s.text = m; } });
+        s.succeed(`Rebuilt — ${kg.nodes} nodes, ${kg.edges} edges`);
+      }
+
+      if (opts.project) {
+        // Show related projects for one node
+        const related = getRelatedProjects(opts.project);
+        const all = listProjects();
+        const self = all.find(p => p.projectId === opts.project);
+        console.log(chalk.bold(`\nRelationships for: ${chalk.cyan(self?.name ?? opts.project)}\n`));
+        if (!related.length) {
+          console.log(chalk.gray('  No relationships found. Run: local-agent projects discover\n'));
+          return;
+        }
+        for (const r of related) {
+          const tag = r.relation === 'DEPENDS_ON'
+            ? chalk.yellow('DEPENDS_ON')
+            : chalk.blue('RELATED_TO');
+          const weight = chalk.gray(`(${(r.weight * 100).toFixed(0)}%)`);
+          console.log(`  ${tag}  ${chalk.white(r.project.name.padEnd(28))} ${weight}`);
+          if (r.properties?.sharedDeps?.length) {
+            console.log(`    shared: ${chalk.gray(r.properties.sharedDeps.slice(0, 6).join(', '))}`);
+          }
+          if (r.properties?.org) {
+            console.log(`    org: ${chalk.gray(r.properties.org)}`);
+          }
+        }
+        console.log();
+        return;
+      }
+
+      // Full graph overview
+      const { detectSharedDependencies, detectSameOrg } = await import('../local-agent/orchestrator/ProjectAutoDiscovery.js');
+      const projects = listProjects();
+      console.log(chalk.bold(`\nProject Knowledge Graph  ${chalk.gray('(' + projects.length + ' registered)')}\n`));
+
+      const orgs = detectSameOrg();
+      if (orgs.length) {
+        console.log(chalk.bold('  By GitHub org:'));
+        for (const { org, projects: ps } of orgs) {
+          console.log(`    ${chalk.cyan(org)}: ${ps.map(p => chalk.white(p.name)).join(', ')}`);
+        }
+        console.log();
+      }
+
+      const pairs = detectSharedDependencies();
+      if (pairs.length) {
+        console.log(chalk.bold(`  Shared-dependency links (top ${Math.min(pairs.length, 10)}):`));
+        for (const p of pairs.slice(0, 10)) {
+          console.log(
+            `    ${chalk.white(p.a.name)} ↔ ${chalk.white(p.b.name)}` +
+            chalk.gray(`  ${p.count} shared: ${p.shared.slice(0, 4).join(', ')}`)
+          );
+        }
+        console.log();
+      }
+
+      if (!orgs.length && !pairs.length) {
+        console.log(chalk.gray('  Graph is empty. Run: local-agent projects discover\n'));
+      }
+    });
+
   program.addCommand(projectsCmd);
 
   // ── models (Phase 9) ─────────────────────────────────────────────────────

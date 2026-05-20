@@ -7,8 +7,11 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
+import { homedir } from 'os';
 import fg from 'fast-glob';
+import { loadRegistry } from '../orchestrator/ProjectRegistry.js';
 
+// Legacy alias map — still used as fallback for fuzzy matching
 const PROJECT_ALIASES = {
   'rawwwebsite': ['rawwwebsite', 'raw-website', 'raw_website'],
   'dashboard': ['dashboard', 'dash', 'dash-bakudanramen', 'bakudanramen'],
@@ -22,45 +25,65 @@ export class ProjectContextEngine {
 
   resolveProjectPath(alias) {
     const cleanAlias = alias.toLowerCase().trim();
-    // 1. Try to read from global-index.json
-    const indexPath = '/Users/liemdo/.super-agent-ai/index/global-index.json';
-    if (existsSync(indexPath)) {
-      try {
-        const index = JSON.parse(readFileSync(indexPath, 'utf8'));
-        if (index && Array.isArray(index.projects)) {
-          // Resolve all valid aliases for this key
-          const aliases = (PROJECT_ALIASES[cleanAlias] || [cleanAlias]).map(a => a.toLowerCase());
-          
-          // First, exact match on name
-          let found = index.projects.find(p => aliases.includes(p.name.toLowerCase()));
-          if (found) return found.path;
+    const fuzzyAliases = (PROJECT_ALIASES[cleanAlias] || [cleanAlias]).map(a => a.toLowerCase());
 
-          // Second, check path ending with alias
-          found = index.projects.find(p => aliases.some(a => p.path.toLowerCase().endsWith('/' + a) || p.path.toLowerCase().endsWith('\\' + a)));
-          if (found) return found.path;
-        }
-      } catch (e) {
-        console.error('[ProjectContextEngine] Failed reading global index:', e.message);
+    // ── 1. Global registry (~/.local-agent-global/projects.json) ──────────────
+    try {
+      const projects = loadRegistry();
+      if (projects.length) {
+        // Exact name match
+        let found = projects.find(p => fuzzyAliases.includes(p.name.toLowerCase()));
+        if (found) return found.root;
+        // Path-suffix match  (e.g. alias "agent-coding" → .../Projects/agent-coding)
+        found = projects.find(p =>
+          fuzzyAliases.some(a =>
+            p.root.toLowerCase().endsWith('/' + a) ||
+            p.root.toLowerCase().endsWith('\\' + a)
+          )
+        );
+        if (found) return found.root;
+        // Partial name match (substring)
+        found = projects.find(p =>
+          fuzzyAliases.some(a => p.name.toLowerCase().includes(a) || a.includes(p.name.toLowerCase()))
+        );
+        if (found) return found.root;
       }
-    }
+    } catch { /* registry may not exist yet */ }
 
-    // 2. Fall back to manual filesystem search
-    const searchRoots = ['/Users/liemdo/Projects', '/Users/liemdo/Documents', '/Users/liemdo/Desktop', '/Users/liemdo'];
+    // ── 2. Filesystem fallback ─────────────────────────────────────────────────
+    const home = homedir();
+    const searchRoots = [
+      join(home, 'Projects'),
+      join(home, 'Documents'),
+      join(home, 'Desktop'),
+      home,
+    ];
     for (const root of searchRoots) {
       if (!existsSync(root)) continue;
-      const exact = join(root, alias);
-      if (existsSync(exact)) return exact;
-      const aliases = PROJECT_ALIASES[cleanAlias] || [alias];
-      for (const a of aliases) {
+      for (const a of fuzzyAliases) {
         const p = join(root, a);
         if (existsSync(p)) return p;
-        try {
-          const matches = fg.globSync([`**/${a}/**`], { cwd: root, onlyDirectories: true, deep: 1 });
-          if (matches.length) return join(root, matches[0]);
-        } catch {}
       }
+      try {
+        for (const a of fuzzyAliases) {
+          const matches = fg.globSync([`*/${a}`], { cwd: root, onlyDirectories: true, deep: 1 });
+          if (matches.length) return join(root, matches[0]);
+        }
+      } catch {}
     }
     return null;
+  }
+
+  /**
+   * List all registered projects (from global registry).
+   * @returns {Array<{projectId, name, root, framework, language, status}>}
+   */
+  listProjects() {
+    try {
+      return loadRegistry();
+    } catch {
+      return [];
+    }
   }
 
   async buildContext(projectAlias, options = {}) {
