@@ -9,7 +9,7 @@ import { dirname } from 'path';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const SCAN_DIRS   = ['bin', 'local-agent', 'accounting-engine'];
-const SKIP_PATHS  = ['node_modules', '.git', 'sample-project'];
+const SKIP_PATHS  = ['node_modules', '.git', 'sample-project', 'ui/frontend/dist'];
 
 function collectJS(dir) {
   const abs = join(ROOT, dir);

@@ -7,6 +7,8 @@ import { runPolicyChecks }    from '../core/policy.js';
 import { LocalLLMAdapter }    from './LocalLLMAdapter.js';
 import { buildContext, renderContextPrompt } from './context.js';
 import { buildPersonaPrompt } from './persona/index.js';
+import { parseContentRequest, runAutoContentPipeline } from '../project-context/AutoContextPipeline.js';
+import { globalMemory } from '../memory/GlobalMemoryManager.js';
 
 // System prompt injected into every LLM request — enforces offline guardrails
 const SYSTEM_PROMPT = buildPersonaPrompt('vi') + `QUYỀN HẠN KỸ THUẬT — tuân thủ tuyệt đối:
@@ -68,7 +70,50 @@ export async function askAgent(question, workspaceRoot) {
   }
 
   // ── Build context ─────────────────────────────────────────────────────────
-  const ctxSpinner = ora('Building context from project...').start();
+  const autoReq = parseContentRequest(question);
+  if (autoReq) {
+    ctxSpinner.succeed(chalk.green(`Auto-Context request detected: Generating ${autoReq.type} for ${autoReq.alias}`));
+    console.log('\n' + chalk.bold.cyan('Answer:\n'));
+    let fullResponse = '';
+    try {
+      fullResponse = await runAutoContentPipeline(
+        autoReq.type,
+        autoReq.alias,
+        adapter,
+        (token) => {
+          process.stdout.write(token);
+        },
+        config
+      );
+      process.stdout.write('\n\n');
+    } catch (err) {
+      console.error('\n' + chalk.red('Auto-Context Error: ' + err.message));
+      process.exit(1);
+    }
+
+    // Save conversation log
+    const logsDir = join(workspaceRoot, '.local-agent', 'logs');
+    if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
+    const ts      = new Date().toISOString().replace(/[:.]/g, '-');
+    const logPath = join(logsDir, `ask-${ts}.md`);
+    const logContent = [
+      `# Ask Log (Auto-Context) — ${new Date().toISOString()}`,
+      '',
+      `## Question\n${question}`,
+      '',
+      `## Project Context\n- Alias: ${autoReq.alias}\n- Type: ${autoReq.type}`,
+      '',
+      `## Answer\n${fullResponse}`,
+    ].join('\n');
+    writeFileSync(logPath, logContent, 'utf8');
+    console.log(chalk.gray(`  Log saved: ${logPath}`));
+    
+    // Log to global memory
+    globalMemory.logPrompt(question, fullResponse);
+    globalMemory.logTask(`Generate content ${autoReq.type} for ${autoReq.alias}`, 'success');
+    return;
+  }
+
   const context = buildContext(question, workspaceRoot, config);
   if (context.warning) ctxSpinner.warn(chalk.yellow(context.warning));
   else ctxSpinner.succeed(
@@ -115,4 +160,8 @@ export async function askAgent(question, workspaceRoot) {
   writeFileSync(logPath, logContent, 'utf8');
   logger.info('ask: log saved', { path: logPath });
   console.log(chalk.gray(`  Log saved: ${logPath}`));
+
+  // Log to global memory
+  globalMemory.logPrompt(question, fullResponse);
+  globalMemory.logTask(`Ask: ${question.slice(0, 50)}`, 'success');
 }

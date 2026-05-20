@@ -12,6 +12,7 @@ import { runPolicyChecks }                      from '../../../core/policy.js';
 import { LocalLLMAdapter }                      from '../../../llm/LocalLLMAdapter.js';
 import { buildContext, renderContextPrompt }    from '../../../llm/context.js';
 import { buildPersonaPrompt }                   from '../../../llm/persona/index.js';
+import { parseContentRequest, runAutoContentPipeline } from '../../project-context/AutoContextPipeline.js';
 
 const router = Router();
 
@@ -103,6 +104,52 @@ router.post('/agent/ask', async (req, res) => {
     const avail = await adapter.checkAvailability();
     if (!avail.available) {
       send('error', { message: `Local LLM not reachable at ${config.llm.baseUrl}. Make sure Ollama/LM Studio is running.` });
+      res.end();
+      return;
+    }
+
+    // Intercept with Auto-Context Pipeline if request matches
+    const autoReq = parseContentRequest(question.trim());
+    if (autoReq) {
+      send('context', { files: [`Auto-Context: resolving ${autoReq.alias}`], warning: null });
+      logger.fileOnly('info', 'ui: /agent/ask auto-context matched', { type: autoReq.type, alias: autoReq.alias });
+      
+      let fullResponse = '';
+      try {
+        fullResponse = await runAutoContentPipeline(
+          autoReq.type,
+          autoReq.alias,
+          adapter,
+          (token) => {
+            send('token', { token });
+          },
+          config
+        );
+      } catch (err) {
+        send('error', { message: err.message });
+        res.end();
+        return;
+      }
+
+      send('done', { complete: true });
+      logger.fileOnly('info', 'ui: /agent/ask auto-context complete', { chars: fullResponse.length });
+      
+      persistToSession(sessionId, question.trim(), fullResponse);
+      
+      const logsDir = join(PROJECT_ROOT, '.local-agent', 'logs');
+      if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const logPath = join(logsDir, `ask-${ts}.md`);
+      const logContent = [
+        `# Ask Log (Auto-Context) — ${new Date().toISOString()}`,
+        '',
+        `## Question\n${question}`,
+        '',
+        `## Project Context\n- Alias: ${autoReq.alias}\n- Type: ${autoReq.type}`,
+        '',
+        `## Answer\n${fullResponse}`,
+      ].join('\n');
+      writeFileSync(logPath, logContent, 'utf8');
       res.end();
       return;
     }

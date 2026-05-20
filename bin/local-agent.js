@@ -944,7 +944,229 @@ async function main() {
       console.log();
     });
 
+  memoryCmd
+    .command('global-stats')
+    .description('Show global memory statistics')
+    .action(async () => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      const stats = globalMemory.getStats();
+      console.log(chalk.bold('Global Memory Statistics:'));
+      console.log(`  ${chalk.gray('Semantic concepts:')} ${stats.semanticCount}`);
+      console.log(`  ${chalk.gray('Tasks tracked:')}     ${stats.taskCount}`);
+      console.log(`  ${chalk.gray('Prompts recorded:')}  ${stats.promptCount}`);
+      console.log(`  ${chalk.gray('Fixes recorded:')}    ${stats.fixCount}`);
+      console.log(`  ${chalk.gray('Last updated:')}      ${formatDate(stats.lastUpdated)}`);
+      console.log();
+    });
+
+  memoryCmd
+    .command('semantic-store <key> <val>')
+    .description('Store a key/value concept in global semantic memory')
+    .action(async (key, val) => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      globalMemory.storeSemantic(key, val);
+      console.log(chalk.green(`✓ Stored: ${chalk.cyan(key)} = ${val}\n`));
+    });
+
+  memoryCmd
+    .command('semantic-search <query>')
+    .description('Search global semantic memory')
+    .action(async (query) => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      const results = globalMemory.searchSemantic(query);
+      console.log(chalk.bold(`Semantic Search Results for "${query}" (${results.length} found):`));
+      results.forEach((r) => {
+        console.log(`  ${chalk.cyan(r.key)}: ${r.value}`);
+      });
+      console.log();
+    });
+
+  memoryCmd
+    .command('tasks')
+    .description('List recent tasks run by the agent')
+    .action(async () => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      const tasks = globalMemory.memory.tasks;
+      if (!tasks.length) {
+        console.log(chalk.gray('No tasks tracked yet.\n'));
+        return;
+      }
+      console.log(chalk.bold(`Recent Tasks (${tasks.length} tracked):`));
+      tasks.slice(-20).reverse().forEach((t) => {
+        const icon = t.status === 'success' ? chalk.green('✓') : chalk.red('✗');
+        console.log(`  ${icon} ${chalk.gray(`[${formatDate(t.timestamp)}]`)} ${t.task}`);
+      });
+      console.log();
+    });
+
+  memoryCmd
+    .command('prompts')
+    .description('List recent prompts/responses history')
+    .action(async () => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      const prompts = globalMemory.memory.prompts;
+      if (!prompts.length) {
+        console.log(chalk.gray('No prompt history yet.\n'));
+        return;
+      }
+      console.log(chalk.bold(`Recent Prompt History (${prompts.length} tracked):`));
+      prompts.slice(-10).reverse().forEach((p) => {
+        console.log(`  ${chalk.cyan(`[${formatDate(p.timestamp)}]`)} Q: ${p.prompt.slice(0, 60)}...`);
+        console.log(`    A: ${p.response.slice(0, 80).replace(/\n/g, ' ')}...`);
+      });
+      console.log();
+    });
+
+  memoryCmd
+    .command('fixes')
+    .description('List recent code fixes history')
+    .action(async () => {
+      printBanner();
+      const { globalMemory } = await import('../local-agent/memory/GlobalMemoryManager.js');
+      const fixes = globalMemory.memory.fixes;
+      if (!fixes.length) {
+        console.log(chalk.gray('No fixes history yet.\n'));
+        return;
+      }
+      console.log(chalk.bold(`Recent Fixes History (${fixes.length} tracked):`));
+      fixes.slice(-15).reverse().forEach((f) => {
+        const icon = f.status === 'applied' ? chalk.green('✓') : f.status === 'proposed' ? chalk.blue('?') : chalk.yellow('✗');
+        console.log(`  ${icon} ${chalk.bold(f.patchId)} [${f.status}] - ${f.task}`);
+        console.log(`    Files: ${f.filesChanged.join(', ')}`);
+      });
+      console.log();
+    });
+
   program.addCommand(memoryCmd);
+
+  // ── indexer ──────────────────────────────────────────────────────────────
+  const indexerCmd = new Command('indexer').description('Global file indexer management');
+  
+  indexerCmd
+    .command('scan')
+    .description('Run a recursive scan across /Users/liemdo/ to index repositories')
+    .action(async () => {
+      printBanner();
+      const spinner = ora('Initializing global scan...').start();
+      try {
+        const { GlobalFileIndexer } = await import('../local-agent/global-indexer/GlobalFileIndexer.js');
+        const indexer = new GlobalFileIndexer();
+        spinner.text = 'Scanning directories... (this might take a few moments)';
+        const index = await indexer.scan();
+        spinner.succeed(chalk.green(`Global scan complete. Indexed ${index.projects.length} projects.`));
+      } catch (err) {
+        spinner.fail(chalk.red(`Scan failed: ${err.message}`));
+        process.exit(1);
+      }
+    });
+
+  indexerCmd
+    .command('stats')
+    .description('Show stats of the global file index')
+    .action(async () => {
+      printBanner();
+      const { GlobalFileIndexer } = await import('../local-agent/global-indexer/GlobalFileIndexer.js');
+      const indexer = new GlobalFileIndexer();
+      const index = indexer.loadIndex();
+      if (!index) {
+        console.log(chalk.yellow('No global index found. Run: local-agent indexer scan\n'));
+        return;
+      }
+      const stats = indexer.getStats();
+      console.log(chalk.bold('Global Index Stats:'));
+      console.log(`  ${chalk.gray('Last Scanned:')} ${formatDate(stats.lastScanned)}`);
+      console.log(`  ${chalk.gray('Total Projects:')} ${stats.totalProjects}`);
+      console.log(`  ${chalk.gray('Total Repos:')} ${stats.totalRepos}`);
+      console.log(`  ${chalk.gray('Languages Detected:')}`);
+      Object.entries(stats.languages || {}).forEach(([lang, count]) => {
+        console.log(`    - ${chalk.cyan(lang)}: ${count}`);
+      });
+      console.log();
+    });
+
+  indexerCmd
+    .command('search <query>')
+    .description('Search projects in the global file index')
+    .action(async (query) => {
+      printBanner();
+      const { GlobalFileIndexer } = await import('../local-agent/global-indexer/GlobalFileIndexer.js');
+      const indexer = new GlobalFileIndexer();
+      const index = indexer.loadIndex();
+      if (!index) {
+        console.log(chalk.yellow('No global index found. Run: local-agent indexer scan\n'));
+        return;
+      }
+      const results = indexer.searchProjects(query);
+      console.log(chalk.bold(`Search Results for "${query}" (${results.length} found):`));
+      results.forEach((p) => {
+        const typeIcon = p.type === 'git-repo' ? chalk.cyan('[Git]') : chalk.yellow('[Node]');
+        const dupBadge = p.isDuplicate ? chalk.red(' [DUPLICATE]') : '';
+        console.log(`  ${typeIcon}${dupBadge} ${chalk.bold(p.name)}`);
+        console.log(`    Path:   ${p.path}`);
+        if (p.remoteUrl) console.log(`    Remote: ${p.remoteUrl}`);
+        if (p.description) console.log(`    Desc:   ${p.description}`);
+      });
+      console.log();
+    });
+
+  program.addCommand(indexerCmd);
+
+  // ── content ──────────────────────────────────────────────────────────────
+  const contentCmd = new Command('content').description('Automated content generation pipeline');
+
+  contentCmd
+    .command('generate <project-alias> <content-type>')
+    .description('Generate strategy and polished marketing copy for a project')
+    .option('--audience <text>', 'Override target audience')
+    .option('--angle <text>', 'Marketing angle override')
+    .action(async (alias, type, opts) => {
+      printBanner();
+      const spinner = ora(`Locating project "${alias}"...`).start();
+      try {
+        const { ProjectContextEngine } = await import('../local-agent/project-context/ProjectContextEngine.js');
+        const contextEngine = new ProjectContextEngine();
+        const context = await contextEngine.buildContext(alias);
+        if (!context.found) {
+          spinner.fail(chalk.red(`Project "${alias}" not found.`));
+          return;
+        }
+        spinner.text = `Generating draft for "${type}"...`;
+        const { ContentGenerator } = await import('../local-agent/content-pipeline/ContentGenerator.js');
+        const generator = new ContentGenerator();
+        const draft = generator.generate(context, type, {
+          audience: opts.audience,
+          angle: opts.angle,
+        });
+
+        spinner.text = 'Refining content with Local LLM...';
+        
+        // Load default config
+        const { loadConfig } = await import('../local-agent/core/config.js');
+        const config = loadConfig(context.resolvedPath);
+        const { LocalLLMAdapter } = await import('../local-agent/llm/LocalLLMAdapter.js');
+        const adapter = new LocalLLMAdapter(config);
+        
+        spinner.stop();
+        console.log(chalk.bold.cyan('\nDrafting polished marketing copy:\n'));
+
+        const { runAutoContentPipeline } = await import('../local-agent/project-context/AutoContextPipeline.js');
+        await runAutoContentPipeline(type, alias, adapter, (token) => {
+          process.stdout.write(token);
+        }, config);
+        
+        console.log('\n');
+      } catch (err) {
+        spinner.stop();
+        console.error(chalk.red(`Generation failed: ${err.message}`));
+      }
+    });
+
+  program.addCommand(contentCmd);
 
   // ── security (Phase 7) ───────────────────────────────────────────────────
   const securityCmd = new Command('security').description('Security hardening and offline verification tools');

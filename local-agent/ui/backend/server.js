@@ -37,6 +37,11 @@ import runnerRouter       from './routes/runner.js';
 import chatSessionsRouter  from './routes/chat-sessions.js';
 import allowedPathsRouter  from './routes/allowed-paths.js';
 import digitalTwinRouter   from './routes/digital-twin.js';
+import indexerRouter       from './routes/indexer.js';
+import reasoningRouter     from './routes/reasoning.js';
+import agentsRouter        from './routes/agents.js';
+import commandcenterRouter from './routes/commandcenter.js';
+import projectHealthRouter from './routes/project-health.js';
 import { metricsMiddleware, snapshotMetrics } from './lib/runtime-metrics.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
@@ -137,6 +142,11 @@ const apiRouters = [
   chatSessionsRouter,
   allowedPathsRouter,
   digitalTwinRouter,
+  indexerRouter,
+  reasoningRouter,
+  agentsRouter,
+  commandcenterRouter,
+  projectHealthRouter,
 ];
 
 for (const router of apiRouters) {

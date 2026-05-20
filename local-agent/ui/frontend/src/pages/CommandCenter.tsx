@@ -19,6 +19,17 @@ const STATUS_COLORS = {
   stopped:   'var(--yellow)',
 };
 
+const SUGGESTIONS = [
+  { cmd: '/fix rawwebsite build', desc: 'Planning, Sandboxed execution & QA build check for rawwebsite' },
+  { cmd: '/fix dashboard build', desc: 'Planning, Sandboxed execution & QA build check for dashboard' },
+  { cmd: '/fix agent-coding build', desc: 'Planning, Sandboxed execution & QA build check for agent-coding' },
+  { cmd: '/test rawwebsite', desc: 'Run complete verification test suites for rawwebsite' },
+  { cmd: '/test dashboard', desc: 'Run complete verification test suites for dashboard' },
+  { cmd: '/post rawwebsite linkedin', desc: 'Generate marketing LinkedIn post for rawwebsite' },
+  { cmd: '/post rawwebsite facebook', desc: 'Generate marketing Facebook post for rawwebsite' },
+  { cmd: '/post dashboard linkedin', desc: 'Generate marketing LinkedIn post for dashboard' },
+];
+
 function lineColor(line) {
   if (!line) return 'var(--text-muted)';
   const l = line.toLowerCase();
@@ -29,6 +40,16 @@ function lineColor(line) {
 }
 
 export default function CommandCenter() {
+  // Autocomplete & Command palette state
+  const [commandInput, setCommandInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+
+  // Filter suggestions
+  const filteredSuggestions = SUGGESTIONS.filter(item => 
+    item.cmd.toLowerCase().includes(commandInput.toLowerCase())
+  );
+
   // Build grouped list from shared COMMAND_GROUPS, resolving i18n labels at render time
   const grouped = COMMAND_GROUPS.map((group) => ({
     key: group.id,
@@ -82,6 +103,53 @@ export default function CommandCenter() {
     const { scriptKey, meta } = inputModal;
     setInputModal(null);
     runScript(scriptKey, meta, inputValue.trim());
+  }
+
+  // Handle execute slash command
+  async function executeSlashCommand(cmdStr) {
+    if (jobStatus === 'running') return;
+    setLines([]);
+    setJobStatus('running');
+    setActiveScript(cmdStr);
+    setExitCode(null);
+
+    // Initial logs simulation
+    setLines([`[AOS Console] Initializing command dispatch for: "${cmdStr}"`]);
+
+    try {
+      const resp = await fetch('/api/commandcenter/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: cmdStr }),
+      });
+      const resData = await resp.json();
+      if (!resData.success) {
+        setJobStatus('failed');
+        setLines(prev => [...prev, `[error] Execution failed: ${resData.error || 'unknown error'}`]);
+        if (resData.logs) {
+          setLines(prev => [...prev, ...resData.logs]);
+        }
+        return;
+      }
+
+      // Simulate streaming log lines beautifully
+      const outputLogs = resData.logs || [];
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < outputLogs.length) {
+          setLines(prev => [...prev, outputLogs[i]]);
+          i++;
+        } else {
+          clearInterval(interval);
+          setJobStatus('completed');
+          setExitCode(0);
+        }
+      }, 200);
+
+    } catch (err) {
+      setJobStatus('failed');
+      setLines(prev => [...prev, `[error] Fetch fault: ${err.message}`]);
+    }
   }
 
   async function runScript(scriptKey, meta, taskInput) {
@@ -147,6 +215,30 @@ export default function CommandCenter() {
     setJobStatus('stopped');
   }
 
+  // Key navigation for suggestions
+  function handleKeyDown(e) {
+    if (showSuggestions && filteredSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIdx(prev => (prev + 1) % filteredSuggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIdx(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const selected = filteredSuggestions[suggestionIdx].cmd;
+        setCommandInput(selected);
+        setShowSuggestions(false);
+        executeSlashCommand(selected);
+      } else if (e.key === 'Escape') {
+        setShowSuggestions(false);
+      }
+    } else if (e.key === 'Enter' && commandInput.trim()) {
+      e.preventDefault();
+      executeSlashCommand(commandInput.trim());
+    }
+  }
+
   const statusLabel = {
     idle:      'IDLE',
     running:   t('common.running'),
@@ -156,11 +248,12 @@ export default function CommandCenter() {
   }[jobStatus] ?? jobStatus;
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="page-header flex justify-between items-center">
         <div>
-          <h1 className="page-title">{t('commandCenter.title')}</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>{t('commandCenter.subtitle')}</p>
+          <h1 className="page-title neon-text-cyan">{t('commandCenter.title')}</h1>
+          <p className="text-muted text-sm mt-1">{t('commandCenter.subtitle')}</p>
         </div>
         {/* Status badge */}
         <span style={{
@@ -175,21 +268,80 @@ export default function CommandCenter() {
           color: STATUS_COLORS[jobStatus],
           background: STATUS_COLORS[jobStatus] + '18',
         }}>
-          {jobStatus === 'running' && <span className="spinner" />}
+          {jobStatus === 'running' && <span className="spinner mr-1" />}
           {statusLabel}
         </span>
       </div>
 
+      {/* AOS Search Command Console Palette */}
+      <div className="neon-card p-4 relative">
+        <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded px-3 py-2">
+          <span className="text-base text-cyan-400">⚡</span>
+          <input
+            type="text"
+            className="bg-transparent border-0 outline-none text-xs text-slate-100 flex-1 font-mono placeholder-slate-500"
+            placeholder="Type a slash command (e.g., /fix rawwebsite build, /test dashboard, /post rawwebsite linkedin)..."
+            value={commandInput}
+            onChange={(e) => {
+              setCommandInput(e.target.value);
+              setShowSuggestions(e.target.value.startsWith('/'));
+              setSuggestionIdx(0);
+            }}
+            onFocus={() => {
+              if (commandInput.startsWith('/')) setShowSuggestions(true);
+            }}
+            onKeyDown={handleKeyDown}
+          />
+          {commandInput && (
+            <button 
+              className="text-slate-500 hover:text-slate-300 text-xs font-mono px-2"
+              onClick={() => { setCommandInput(''); setShowSuggestions(false); }}
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={() => executeSlashCommand(commandInput)}
+            disabled={!commandInput.trim() || jobStatus === 'running'}
+            className="btn btn-primary text-xs py-1 px-3"
+          >
+            Run
+          </button>
+        </div>
+
+        {/* Autocomplete Popup Suggestions */}
+        {showSuggestions && filteredSuggestions.length > 0 && (
+          <div className="absolute left-4 right-4 mt-1 bg-slate-900 border border-slate-800 rounded shadow-xl z-20 overflow-hidden font-mono text-[11px]">
+            {filteredSuggestions.map((item, idx) => (
+              <div
+                key={item.cmd}
+                onClick={() => {
+                  setCommandInput(item.cmd);
+                  setShowSuggestions(false);
+                  executeSlashCommand(item.cmd);
+                }}
+                className={`flex justify-between items-center px-4 py-2.5 cursor-pointer transition-colors ${
+                  idx === suggestionIdx ? 'bg-slate-800 text-cyan-400 border-l-2 border-cyan-400' : 'text-slate-300 hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="font-bold">{item.cmd}</span>
+                <span className="text-slate-500 text-[10px]">{item.desc}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Left: script groups */}
-        <div>
+        <div className="space-y-4">
           {grouped.map((group) => (
-            <div key={group.key} className="card" style={{ marginBottom: 16 }}>
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div key={group.key} className="neon-card p-4">
+              <div className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                 <span>{group.icon}</span>
                 <span>{group.label}</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {group.items.map((item) => {
                   const isActive = activeScript === item.scriptKey;
                   return (
@@ -233,18 +385,17 @@ export default function CommandCenter() {
 
         {/* Right: output panel */}
         <div style={{ position: 'sticky', top: 24, alignSelf: 'start' }}>
-          <div className="card" style={{ marginBottom: 0 }}>
-            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span>{t('commandCenter.outputTitle')}</span>
+          <div className="neon-card p-4">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm font-bold text-slate-300">{t('commandCenter.outputTitle')}</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 {jobStatus === 'running' && (
-                  <button className="btn btn-danger" style={{ fontSize: 12, padding: '3px 10px' }} onClick={handleStop}>
+                  <button className="btn btn-danger text-xs py-1 px-3" onClick={handleStop}>
                     {t('common.stop')}
                   </button>
                 )}
                 <button
-                  className="btn"
-                  style={{ fontSize: 12, padding: '3px 10px' }}
+                  className="btn text-xs py-1 px-3"
                   onClick={() => setLines([])}
                   disabled={jobStatus === 'running'}
                 >
@@ -254,8 +405,10 @@ export default function CommandCenter() {
             </div>
 
             {activeScript && (
-              <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-                <code style={{ color: 'var(--blue)' }}>npm run {activeScript}</code>
+              <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                <code style={{ color: 'var(--blue)' }}>
+                  {activeScript.startsWith('/') ? activeScript : `npm run ${activeScript}`}
+                </code>
                 {exitCode !== null && (
                   <span style={{ marginLeft: 8, color: exitCode === 0 ? 'var(--green)' : 'var(--red)' }}>
                     exit {exitCode}

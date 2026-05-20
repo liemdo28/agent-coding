@@ -1,74 +1,48 @@
-// routes/memory.js — memory file list and clear
+// routes/memory.js — Express Router for Global Memory API
 import { Router } from 'express';
-import { existsSync, readdirSync, statSync, rmSync } from 'fs';
-import { join, resolve } from 'path';
-import { PROJECT_ROOT } from '../server.js';
-import { logger } from '../../../core/logger.js';
+import { globalMemory } from '../../../memory/GlobalMemoryManager.js';
 
 const router = Router();
 
-function safeResolve(...parts) {
-  const abs = resolve(...parts);
-  if (!abs.startsWith(PROJECT_ROOT + '/') && abs !== PROJECT_ROOT) return null;
-  return abs;
-}
-
-const memoryDir = () => safeResolve(PROJECT_ROOT, '.local-agent', 'memory');
-
-// GET /memory
-router.get('/memory', (req, res) => {
-  try {
-    const dir = memoryDir();
-    if (!dir || !existsSync(dir)) {
-      return res.json({ success: true, data: [] });
-    }
-
-    const files = readdirSync(dir)
-      .filter((f) => !f.startsWith('.'))
-      .map((f) => {
-        const abs = join(dir, f);
-        const st = statSync(abs);
-        return {
-          filename:  f,
-          size:      st.size,
-          createdAt: st.mtime.toISOString(),
-        };
-      })
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    logger.fileOnly('info', 'ui: GET /memory', { count: files.length });
-    res.json({ success: true, data: files });
-  } catch (err) {
-    logger.fileOnly('error', 'ui: GET /memory failed', { error: err.message });
-    res.status(500).json({ success: false, error: err.message });
-  }
+// GET /memory/stats
+router.get('/memory/stats', (req, res) => {
+  res.json({ success: true, data: globalMemory.getStats() });
 });
 
-// DELETE /memory — clear all memory files
-router.delete('/memory', (req, res) => {
-  try {
-    const dir = memoryDir();
-    if (!dir || !existsSync(dir)) {
-      return res.json({ success: true, data: { cleared: 0 } });
-    }
+// GET /memory/semantic
+router.get('/memory/semantic', (req, res) => {
+  res.json({ success: true, data: globalMemory.memory.semantic });
+});
 
-    const files = readdirSync(dir).filter((f) => !f.startsWith('.'));
-    let cleared = 0;
-    for (const f of files) {
-      const abs = safeResolve(join(dir, f));
-      if (!abs) continue;
-      try {
-        rmSync(abs, { force: true });
-        cleared++;
-      } catch { /* skip files that fail */ }
-    }
-
-    logger.fileOnly('info', 'ui: DELETE /memory', { cleared });
-    res.json({ success: true, data: { cleared } });
-  } catch (err) {
-    logger.fileOnly('error', 'ui: DELETE /memory failed', { error: err.message });
-    res.status(500).json({ success: false, error: err.message });
+// POST /memory/semantic
+router.post('/memory/semantic', (req, res) => {
+  const { key, value } = req.body ?? {};
+  if (!key || !value) {
+    return res.status(400).json({ success: false, error: 'key and value are required' });
   }
+  globalMemory.storeSemantic(key, value);
+  res.json({ success: true, key, value });
+});
+
+// GET /memory/semantic/search
+router.get('/memory/semantic/search', (req, res) => {
+  const query = req.query.q || '';
+  res.json({ success: true, data: globalMemory.searchSemantic(query) });
+});
+
+// GET /memory/tasks
+router.get('/memory/tasks', (req, res) => {
+  res.json({ success: true, data: globalMemory.memory.tasks });
+});
+
+// GET /memory/prompts
+router.get('/memory/prompts', (req, res) => {
+  res.json({ success: true, data: globalMemory.memory.prompts });
+});
+
+// GET /memory/fixes
+router.get('/memory/fixes', (req, res) => {
+  res.json({ success: true, data: globalMemory.memory.fixes });
 });
 
 export default router;
