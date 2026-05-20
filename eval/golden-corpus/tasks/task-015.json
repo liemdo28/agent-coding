@@ -1,0 +1,33 @@
+{
+  "task_id": "task-015",
+  "title": "Tokenize Expression String",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "string",
+  "description": "Write a function that tokenizes a simple arithmetic expression string into an array of token objects. Each token has a `type` (one of: 'number', 'operator', 'lparen', 'rparen') and a `value` (the matched string). Operators are +, -, *, /. Whitespace between tokens is ignored. Numbers may be integers or decimals.",
+  "function_signature": "function tokenize(expr) {}",
+  "test_cases": [
+    {
+      "input": ["1 + 2"],
+      "expected": [{"type":"number","value":"1"},{"type":"operator","value":"+"},{"type":"number","value":"2"}]
+    },
+    {
+      "input": ["(3.14 * 2)"],
+      "expected": [{"type":"lparen","value":"("},{"type":"number","value":"3.14"},{"type":"operator","value":"*"},{"type":"number","value":"2"},{"type":"rparen","value":")"}]
+    },
+    {
+      "input": [""],
+      "expected": []
+    },
+    {
+      "input": ["10 / (2 + 3)"],
+      "expected": [{"type":"number","value":"10"},{"type":"operator","value":"/"},{"type":"lparen","value":"("},{"type":"number","value":"2"},{"type":"operator","value":"+"},{"type":"number","value":"3"},{"type":"rparen","value":")"}]
+    },
+    {
+      "input": ["42"],
+      "expected": [{"type":"number","value":"42"}]
+    }
+  ],
+  "reference_solution": "function tokenize(expr) {\n  const tokens = [];\n  let i = 0;\n  while (i < expr.length) {\n    if (expr[i] === ' ') { i++; continue; }\n    if (expr[i] === '(') { tokens.push({ type: 'lparen', value: '(' }); i++; continue; }\n    if (expr[i] === ')') { tokens.push({ type: 'rparen', value: ')' }); i++; continue; }\n    if ('+-*/'.includes(expr[i])) { tokens.push({ type: 'operator', value: expr[i] }); i++; continue; }\n    if (/[0-9]/.test(expr[i])) {\n      let num = '';\n      while (i < expr.length && /[0-9.]/.test(expr[i])) num += expr[i++];\n      tokens.push({ type: 'number', value: num });\n      continue;\n    }\n    i++;\n  }\n  return tokens;\n}",
+  "tags": ["string", "tokenize", "parsing", "lexer"]
+}

@@ -35,6 +35,8 @@
     "kb:stats":           "node bin/kb.js stats",
     "kb:seed":            "node bin/kb.js seed",
 
+    "metrics:collect":   "node scripts/collect-metrics.js",
+
     "eval:all":           "node eval/runner.js --all",
     "eval:humaneval":     "node eval/runner.js --benchmark humaneval",
     "eval:mbpp":          "node eval/runner.js --benchmark mbpp",

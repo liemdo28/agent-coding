@@ -1,0 +1,18 @@
+{
+  "task_id": "task-006",
+  "title": "Invert Object Map",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "object",
+  "description": "Write a function that takes an object and returns a new object where the keys and values are swapped. All values in the input object should be strings or numbers. If multiple keys map to the same value, the last key encountered wins in the inverted object.",
+  "function_signature": "function invertMap(obj) {}",
+  "test_cases": [
+    { "input": [{"a": "1", "b": "2", "c": "3"}], "expected": {"1": "a", "2": "b", "3": "c"} },
+    { "input": [{}], "expected": {} },
+    { "input": [{"x": "y"}], "expected": {"y": "x"} },
+    { "input": [{"a": "z", "b": "z"}], "expected": {"z": "b"} },
+    { "input": [{"foo": "bar", "baz": "qux"}], "expected": {"bar": "foo", "qux": "baz"} }
+  ],
+  "reference_solution": "function invertMap(obj) {\n  return Object.fromEntries(\n    Object.entries(obj).map(([k, v]) => [v, k])\n  );\n}",
+  "tags": ["object", "invert", "keys", "values"]
+}

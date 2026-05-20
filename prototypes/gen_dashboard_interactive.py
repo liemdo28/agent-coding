@@ -23,6 +23,7 @@ BASE_DIR      = ROOT / ".super-agent-fullauto-kpi"
 EXEC_SUM_PATH = BASE_DIR / "execution_summary.json"
 ANALYTICS_PATH = BASE_DIR / "analytics.json"
 SIM_REPORT_PATH = BASE_DIR / "simulation_report.json"
+SENSORS_PATH  = BASE_DIR / "sensors" / "metrics.json"
 OUTPUT_HTML   = BASE_DIR / "dashboard_interactive.html"
 
 N_COMPANIES = 100
@@ -119,6 +120,40 @@ def load_data():
         print(f"Saved {len(tasks)} tasks to {EXEC_SUM_PATH}")
         return tasks, companies, workers, analytics
 
+def load_sensor_data():
+    """Load Phase 101 sensor metrics, or return synthetic defaults."""
+    if SENSORS_PATH.exists():
+        try:
+            data = json.loads(SENSORS_PATH.read_text())
+            print(f"Loading sensor data from {SENSORS_PATH}")
+            return data
+        except Exception:
+            pass
+    # Synthetic defaults when metrics.json is absent
+    return {
+        "collected_at": datetime.now().isoformat(),
+        "version": "1.0",
+        "system": {
+            "cpu_load_1m": 0.5, "cpu_load_5m": 0.4, "cpu_count": 4,
+            "mem_used_mb": 512, "mem_total_mb": 16384, "mem_pct": 3.1,
+            "heap_used_mb": 48, "heap_total_mb": 64, "uptime_s": 0,
+        },
+        "kb": {
+            "kb_documents": 1265, "kb_chunks": 13461, "kb_words": 4056139,
+            "query_p50_ms": 106, "query_p99_ms": 373,
+            "db_size_mb": 87.3, "available": False,
+        },
+        "workers": {
+            "total_workers": 512, "active_workers": 445, "idle_workers": 67,
+            "queue_depth": 0, "throughput_per_min": 0,
+            "sla_breach_count": 557, "top_bottleneck": "—",
+        },
+        "scan": {
+            "last_scan_ms": 2400, "baseline_ms": 2400,
+            "target_ms": 5000, "status": "ok",
+        },
+    }
+
 # ── HTML builder ───────────────────────────────────────────────────────────────
 
 def _css():
@@ -198,6 +233,29 @@ table.tbl tbody tr:hover{background:#1e293b}
 #tooltip .tv{color:#e2e8f0;font-weight:600}
 .file-hint{font-size:11px;color:#475569;margin-top:8px;display:flex;align-items:center;gap:8px}
 .file-hint input[type=file]{font-size:11px;color:#64748b}
+/* Phase 101 sensors */
+.sensor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.sensor-card{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;position:relative}
+.sensor-card .s-title{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sensor-card .s-dot{width:6px;height:6px;border-radius:50%;background:#34d399;flex-shrink:0}
+.sensor-card .s-dot.warn{background:#fb923c}
+.sensor-card .s-dot.alert{background:#f87171}
+.sensor-card .s-dot.off{background:#475569}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge-val{font-size:28px;font-weight:800;color:#f1f5f9;line-height:1}
+.gauge-val.good{color:#34d399}
+.gauge-val.warn{color:#fb923c}
+.gauge-val.alert{color:#f87171}
+.gauge-sub{font-size:10px;color:#475569;text-align:center}
+.gauge-bar{width:100%;height:6px;background:#1e293b;border-radius:3px;overflow:hidden;margin-top:6px}
+.gauge-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.sensor-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;font-size:12px}
+.sensor-row .sr-lb{color:#475569;font-size:11px}
+.sensor-row .sr-val{color:#e2e8f0;font-weight:600}
+.sensor-row .sr-val.good{color:#34d399}
+.sensor-row .sr-val.warn{color:#fb923c}
+.sensor-row .sr-val.alert{color:#f87171}
+.arc-svg{display:block;margin:0 auto}
 """
 
 def _js(tasks_json, analytics_json, companies_json):
@@ -474,10 +532,83 @@ function init(){{
 document.addEventListener('DOMContentLoaded',init);
 """
 
-def build_html(tasks, companies, workers, analytics):
+def _arc_gauge(pct, color, r=38, cx=50, cy=50):
+    """SVG arc gauge. pct 0-100. Returns inline SVG string."""
+    stroke_w = 8
+    angle = pct / 100 * 270 - 135
+    rad = math.radians(angle)
+    ex = cx + r * math.cos(rad)
+    ey = cy + r * math.sin(rad)
+    large = 1 if pct > 50 else 0
+    # background arc (270 degrees)
+    bg_end_rad = math.radians(135)
+    bg_ex = cx + r * math.cos(bg_end_rad)
+    bg_ey = cy + r * math.sin(bg_end_rad)
+    # start point of arc (at -135 degrees from horizontal)
+    start_rad = math.radians(-135)
+    sx = cx + r * math.cos(start_rad)
+    sy = cy + r * math.sin(start_rad)
+    arc_pct = min(max(pct, 0), 99.9)
+    angle2 = arc_pct / 100 * 270 - 135
+    rad2 = math.radians(angle2)
+    ex2 = cx + r * math.cos(rad2)
+    ey2 = cy + r * math.sin(rad2)
+    large2 = 1 if arc_pct > 50 else 0
+    return (
+        f'<svg class="arc-svg" width="100" height="80" viewBox="0 0 100 90">'
+        f'<path d="M {sx:.1f} {sy:.1f} A {r} {r} 0 1 1 {bg_ex:.1f} {bg_ey:.1f}" '
+        f'fill="none" stroke="#1e293b" stroke-width="{stroke_w}" stroke-linecap="round"/>'
+        f'<path d="M {sx:.1f} {sy:.1f} A {r} {r} 0 {large2} 1 {ex2:.1f} {ey2:.1f}" '
+        f'fill="none" stroke="{color}" stroke-width="{stroke_w}" stroke-linecap="round"/>'
+        f'</svg>'
+    )
+
+def build_html(tasks, companies, workers, analytics, sensors=None):
     ts = json.dumps(tasks)
     an = json.dumps(analytics)
     co = json.dumps(companies)
+
+    sensors = sensors or {}
+    sys_s  = sensors.get("system", {})
+    kb_s   = sensors.get("kb", {})
+    wrk_s  = sensors.get("workers", {})
+    scn_s  = sensors.get("scan", {})
+    collected_at = sensors.get("collected_at", "")[:19].replace("T", " ") if sensors.get("collected_at") else ""
+
+    cpu_load   = sys_s.get("cpu_load_1m", 0)
+    cpu_count  = sys_s.get("cpu_count", 4)
+    cpu_pct    = min(round(cpu_load / max(cpu_count, 1) * 100), 100)
+    mem_pct    = round(sys_s.get("mem_pct", 0), 1)
+    mem_used   = round(sys_s.get("mem_used_mb", 0))
+    mem_total  = round(sys_s.get("mem_total_mb", 0))
+    heap_used  = round(sys_s.get("heap_used_mb", 0))
+    heap_total = round(sys_s.get("heap_total_mb", 0))
+
+    kb_docs    = kb_s.get("kb_documents", 0)
+    kb_chunks  = kb_s.get("kb_chunks", 0)
+    kb_p50     = kb_s.get("query_p50_ms", 0)
+    kb_p99     = kb_s.get("query_p99_ms", 0)
+    kb_db_mb   = round(kb_s.get("db_size_mb", 0), 1)
+    kb_avail   = kb_s.get("available", False)
+
+    wk_total   = wrk_s.get("total_workers", 0)
+    wk_active  = wrk_s.get("active_workers", 0)
+    wk_idle    = wrk_s.get("idle_workers", 0)
+    wk_breach  = wrk_s.get("sla_breach_count", 0)
+    wk_bottleneck = wrk_s.get("top_bottleneck", "—")
+    wk_pct     = round(wk_active / max(wk_total, 1) * 100)
+
+    scan_ms    = scn_s.get("last_scan_ms", 0)
+    scan_tgt   = scn_s.get("target_ms", 5000)
+    scan_ok    = scn_s.get("status", "ok") == "ok"
+    scan_pct   = min(round(scan_ms / max(scan_tgt, 1) * 100), 100)
+
+    cpu_col    = "#f87171" if cpu_pct > 80 else "#fb923c" if cpu_pct > 50 else "#34d399"
+    mem_col    = "#f87171" if mem_pct > 80 else "#fb923c" if mem_pct > 50 else "#34d399"
+    scan_col   = "#34d399" if scan_ok else "#f87171"
+    kb_dot     = "good" if kb_avail else "off"
+    kb_lat_col = "#f87171" if kb_p99 > 300 else "#fb923c" if kb_p99 > 100 else "#34d399"
+    wk_dot     = "warn" if wk_pct > 90 else "good"
 
     total  = len(tasks)
     done   = sum(1 for t in tasks if t["dev_status"] == "DEV_DONE")
@@ -528,6 +659,7 @@ def build_html(tasks, companies, workers, analytics):
   </div>
 
   <div class="nav-sec">Sections</div>
+  <a class="nav-item" href="#sec-sensors">⚡ Phase 101 Sensors</a>
   <a class="nav-item" href="#sec-kpi">📊 KPI Overview</a>
   <a class="nav-item" href="#sec-heatmap">🟥 Task Heatmap</a>
   <a class="nav-item" href="#sec-workers">👷 Worker Pool</a>
@@ -546,6 +678,124 @@ def build_html(tasks, companies, workers, analytics):
   <div class="page-header">
     <h1>Super Agent v2.0 – Digital Twin Dashboard</h1>
     <p>Generated {gen_at} · {total:,} tasks · {len(companies)} companies · {N_WORKERS} worker pool · 100% offline</p>
+  </div>
+
+  <!-- Phase 101 Sensors -->
+  <div class="section" id="sec-sensors">
+    <div class="sec-title">Phase 101 — System Sensors{f' · collected {collected_at}' if collected_at else ' · synthetic data'}</div>
+    <div class="sensor-grid">
+
+      <!-- CPU gauge -->
+      <div class="sensor-card">
+        <div class="s-title">
+          <span class="s-dot {'alert' if cpu_pct > 80 else 'warn' if cpu_pct > 50 else ''}"></span>
+          CPU Load
+        </div>
+        <div class="gauge-wrap">
+          {_arc_gauge(cpu_pct, cpu_col)}
+          <div class="gauge-val {'alert' if cpu_pct > 80 else 'warn' if cpu_pct > 50 else 'good'}">{cpu_pct}%</div>
+          <div class="gauge-sub">load avg 1m: {cpu_load:.2f} · {cpu_count} CPUs</div>
+        </div>
+        <div class="gauge-bar"><div class="gauge-bar-fill" style="width:{cpu_pct}%;background:{cpu_col}"></div></div>
+      </div>
+
+      <!-- Memory gauge -->
+      <div class="sensor-card">
+        <div class="s-title">
+          <span class="s-dot {'alert' if mem_pct > 80 else 'warn' if mem_pct > 50 else ''}"></span>
+          Memory
+        </div>
+        <div class="gauge-wrap">
+          {_arc_gauge(mem_pct, mem_col)}
+          <div class="gauge-val {'alert' if mem_pct > 80 else 'warn' if mem_pct > 50 else 'good'}">{mem_pct}%</div>
+          <div class="gauge-sub">{mem_used:,} MB / {mem_total:,} MB</div>
+        </div>
+        <div class="sensor-row" style="margin-top:8px">
+          <span class="sr-lb">Heap used</span>
+          <span class="sr-val">{heap_used} MB / {heap_total} MB</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-bar-fill" style="width:{mem_pct}%;background:{mem_col}"></div></div>
+      </div>
+
+      <!-- KB health -->
+      <div class="sensor-card">
+        <div class="s-title">
+          <span class="s-dot {kb_dot}"></span>
+          Knowledge Base
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">Documents</span>
+          <span class="sr-val good">{kb_docs:,}</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">Chunks</span>
+          <span class="sr-val">{kb_chunks:,}</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">DB size</span>
+          <span class="sr-val">{kb_db_mb} MB</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">FTS5 p50</span>
+          <span class="sr-val {'good' if kb_p50 < 100 else 'warn'}">{kb_p50:.1f} ms</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">FTS5 p99</span>
+          <span class="sr-val {('good' if kb_p99 < 100 else 'warn' if kb_p99 < 300 else 'alert')}">{kb_p99:.1f} ms</span>
+        </div>
+        <div style="font-size:9px;color:{'#34d399' if kb_avail else '#475569'};margin-top:6px">
+          {'● DB connected' if kb_avail else '○ DB unavailable (stats.json fallback)'}
+        </div>
+      </div>
+
+      <!-- Worker pool -->
+      <div class="sensor-card">
+        <div class="s-title">
+          <span class="s-dot {wk_dot}"></span>
+          Worker Pool
+        </div>
+        <div class="gauge-wrap">
+          {_arc_gauge(wk_pct, "#3b82f6" if wk_pct < 90 else "#f87171")}
+          <div class="gauge-val" style="color:{'#3b82f6' if wk_pct < 90 else '#f87171'}">{wk_pct}%</div>
+          <div class="gauge-sub">utilization</div>
+        </div>
+        <div class="sensor-row" style="margin-top:4px">
+          <span class="sr-lb">Active</span>
+          <span class="sr-val">{wk_active} / {wk_total}</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">Idle</span>
+          <span class="sr-val">{wk_idle}</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">SLA breaches</span>
+          <span class="sr-val {'alert' if wk_breach > 0 else 'good'}">{wk_breach:,}</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sr-lb">Top bottleneck</span>
+          <span class="sr-val warn" style="font-size:10px">{wk_bottleneck}</span>
+        </div>
+      </div>
+
+      <!-- Scan latency -->
+      <div class="sensor-card">
+        <div class="s-title">
+          <span class="s-dot {'off' if not scan_ms else ''}"></span>
+          Scan Latency (G1 Gate)
+        </div>
+        <div class="gauge-wrap">
+          {_arc_gauge(scan_pct, scan_col)}
+          <div class="gauge-val {'good' if scan_ok else 'alert'}">{scan_ms:,} ms</div>
+          <div class="gauge-sub">target: &lt;{scan_tgt:,} ms</div>
+        </div>
+        <div class="sensor-row" style="margin-top:8px">
+          <span class="sr-lb">Status</span>
+          <span class="sr-val {'good' if scan_ok else 'alert'}">{'✓ CLEARED' if scan_ok else '✗ OVER TARGET'}</span>
+        </div>
+        <div class="gauge-bar"><div class="gauge-bar-fill" style="width:{scan_pct}%;background:{scan_col}"></div></div>
+      </div>
+
+    </div>
   </div>
 
   <!-- KPI -->
@@ -680,12 +930,14 @@ def build_html(tasks, companies, workers, analytics):
 
 def main():
     tasks, companies, workers, analytics = load_data()
-    html = build_html(tasks, companies, workers, analytics)
+    sensors = load_sensor_data()
+    html = build_html(tasks, companies, workers, analytics, sensors)
     BASE_DIR.mkdir(exist_ok=True)
     OUTPUT_HTML.write_text(html, encoding="utf-8")
     size_kb = OUTPUT_HTML.stat().st_size // 1024
+    sensor_src = "live" if SENSORS_PATH.exists() else "synthetic"
     print(f"\n✓ Dashboard generated: {OUTPUT_HTML}")
-    print(f"  Size: {size_kb} KB  |  Tasks: {len(tasks):,}  |  Companies: {len(companies)}  |  Workers: {len(workers):,}")
+    print(f"  Size: {size_kb} KB  |  Tasks: {len(tasks):,}  |  Companies: {len(companies)}  |  Workers: {len(workers):,}  |  Sensors: {sensor_src}")
     print(f"\n  Open in browser:")
     print(f"  open {OUTPUT_HTML}")
 

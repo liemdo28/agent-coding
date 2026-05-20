@@ -1,0 +1,33 @@
+{
+  "task_id": "task-012",
+  "title": "Flatten Nested Object Keys",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "object",
+  "description": "Write a function that takes a deeply nested object and returns a new flat object where nested keys are joined with a dot separator. For example, {a: {b: {c: 1}}} becomes {'a.b.c': 1}. Array values should be treated as leaf values and not further flattened.",
+  "function_signature": "function flattenKeys(obj, prefix) {}",
+  "test_cases": [
+    {
+      "input": [{"a": {"b": {"c": 1}}}],
+      "expected": {"a.b.c": 1}
+    },
+    {
+      "input": [{}],
+      "expected": {}
+    },
+    {
+      "input": [{"x": 1, "y": 2}],
+      "expected": {"x": 1, "y": 2}
+    },
+    {
+      "input": [{"a": {"b": 1}, "c": 2}],
+      "expected": {"a.b": 1, "c": 2}
+    },
+    {
+      "input": [{"arr": [1,2,3], "nested": {"val": 42}}],
+      "expected": {"arr": [1,2,3], "nested.val": 42}
+    }
+  ],
+  "reference_solution": "function flattenKeys(obj, prefix) {\n  prefix = prefix || '';\n  const result = {};\n  for (const [key, val] of Object.entries(obj)) {\n    const fullKey = prefix ? prefix + '.' + key : key;\n    if (val !== null && typeof val === 'object' && !Array.isArray(val)) {\n      Object.assign(result, flattenKeys(val, fullKey));\n    } else {\n      result[fullKey] = val;\n    }\n  }\n  return result;\n}",
+  "tags": ["object", "flatten", "dot-notation", "recursion"]
+}

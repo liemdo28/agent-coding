@@ -1,0 +1,33 @@
+{
+  "task_id": "task-020",
+  "title": "Run-Length Encode and Decode",
+  "language": "javascript",
+  "difficulty": "hard",
+  "category": "transform",
+  "description": "Write two functions: `runLengthEncode(str)` that compresses a string using run-length encoding, returning an array of [count, char] pairs where consecutive identical characters are grouped; and `runLengthDecode(encoded)` that reconstructs the original string from such an array. Both functions must be correct inverses of each other.",
+  "function_signature": "function runLengthEncode(str) {} function runLengthDecode(encoded) {}",
+  "test_cases": [
+    {
+      "input": ["AABBBCCDDDDEE"],
+      "expected": [[2,"A"],[3,"B"],[2,"C"],[4,"D"],[2,"E"]]
+    },
+    {
+      "input": [""],
+      "expected": []
+    },
+    {
+      "input": ["ABCDE"],
+      "expected": [[1,"A"],[1,"B"],[1,"C"],[1,"D"],[1,"E"]]
+    },
+    {
+      "input": ["AAAAAAA"],
+      "expected": [[7,"A"]]
+    },
+    {
+      "input": ["aabbaab"],
+      "expected": [[2,"a"],[2,"b"],[2,"a"],[1,"b"]]
+    }
+  ],
+  "reference_solution": "function runLengthEncode(str) {\n  if (!str.length) return [];\n  const result = [];\n  let count = 1;\n  for (let i = 1; i <= str.length; i++) {\n    if (i < str.length && str[i] === str[i - 1]) {\n      count++;\n    } else {\n      result.push([count, str[i - 1]]);\n      count = 1;\n    }\n  }\n  return result;\n}\n\nfunction runLengthDecode(encoded) {\n  return encoded.map(([count, char]) => char.repeat(count)).join('');\n}",
+  "tags": ["transform", "run-length-encoding", "string", "compression"]
+}

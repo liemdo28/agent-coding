@@ -1,0 +1,33 @@
+{
+  "task_id": "task-018",
+  "title": "Topological Sort",
+  "language": "javascript",
+  "difficulty": "hard",
+  "category": "algorithm",
+  "description": "Write a function that performs a topological sort on a directed acyclic graph (DAG). The graph is given as an object where each key is a node name (string) and its value is an array of node names it depends on (i.e., its prerequisites). Return an array of node names in topological order (prerequisites before dependents). If the graph has a cycle, return null.",
+  "function_signature": "function topologicalSort(graph) {}",
+  "test_cases": [
+    {
+      "input": [{"a":[],"b":["a"],"c":["a","b"],"d":["c"]}],
+      "expected": ["a","b","c","d"]
+    },
+    {
+      "input": [{}],
+      "expected": []
+    },
+    {
+      "input": [{"x":[]}],
+      "expected": ["x"]
+    },
+    {
+      "input": [{"a":["b"],"b":["a"]}],
+      "expected": null
+    },
+    {
+      "input": [{"build":[],"test":["build"],"lint":[],"deploy":["test","lint"]}],
+      "expected": ["build","lint","test","deploy"]
+    }
+  ],
+  "reference_solution": "function topologicalSort(graph) {\n  const nodes = Object.keys(graph);\n  const inDegree = {};\n  for (const n of nodes) inDegree[n] = 0;\n  for (const n of nodes) {\n    for (const dep of graph[n]) {\n      if (!(dep in inDegree)) inDegree[dep] = 0;\n      inDegree[n]++;\n    }\n  }\n  // Rebuild with all nodes including implicit ones\n  const allNodes = Object.keys(inDegree);\n  const queue = allNodes.filter(n => inDegree[n] === 0).sort();\n  const result = [];\n  while (queue.length) {\n    queue.sort();\n    const n = queue.shift();\n    result.push(n);\n    for (const dependent of allNodes) {\n      if ((graph[dependent] || []).includes(n)) {\n        inDegree[dependent]--;\n        if (inDegree[dependent] === 0) queue.push(dependent);\n      }\n    }\n  }\n  return result.length === allNodes.length ? result : null;\n}",
+  "tags": ["algorithm", "graph", "topological-sort", "dag"]
+}

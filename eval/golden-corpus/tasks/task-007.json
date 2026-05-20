@@ -1,0 +1,29 @@
+{
+  "task_id": "task-007",
+  "title": "Group Array by Key",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "array",
+  "description": "Write a function that takes an array of objects and a key name, and returns an object where each property is a group of items sharing the same value for that key. The order of items within each group should match the original array order.",
+  "function_signature": "function groupBy(arr, key) {}",
+  "test_cases": [
+    {
+      "input": [[{"type":"fruit","name":"apple"},{"type":"veg","name":"carrot"},{"type":"fruit","name":"banana"}], "type"],
+      "expected": {"fruit":[{"type":"fruit","name":"apple"},{"type":"fruit","name":"banana"}],"veg":[{"type":"veg","name":"carrot"}]}
+    },
+    {
+      "input": [[], "type"],
+      "expected": {}
+    },
+    {
+      "input": [[{"x":1}], "x"],
+      "expected": {"1":[{"x":1}]}
+    },
+    {
+      "input": [[{"a":1,"b":2},{"a":1,"b":3},{"a":2,"b":4}], "a"],
+      "expected": {"1":[{"a":1,"b":2},{"a":1,"b":3}],"2":[{"a":2,"b":4}]}
+    }
+  ],
+  "reference_solution": "function groupBy(arr, key) {\n  return arr.reduce((acc, item) => {\n    const groupKey = String(item[key]);\n    if (!acc[groupKey]) acc[groupKey] = [];\n    acc[groupKey].push(item);\n    return acc;\n  }, {});\n}",
+  "tags": ["array", "group", "reduce", "objects"]
+}

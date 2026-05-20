@@ -1,0 +1,18 @@
+{
+  "task_id": "task-008",
+  "title": "Zip Arrays",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "array",
+  "description": "Write a function that takes multiple arrays as arguments and returns a new array of arrays, where each inner array contains the elements from each input array at that index. The resulting length equals the length of the shortest input array. If no arrays are provided, return an empty array.",
+  "function_signature": "function zip(...arrays) {}",
+  "test_cases": [
+    { "input": [[1,2,3], ["a","b","c"]], "expected": [[1,"a"],[2,"b"],[3,"c"]] },
+    { "input": [], "expected": [] },
+    { "input": [[1,2,3]], "expected": [[1],[2],[3]] },
+    { "input": [[1,2,3], ["a","b"], [true, false, null]], "expected": [[1,"a",true],[2,"b",false]] },
+    { "input": [[], [1,2,3]], "expected": [] }
+  ],
+  "reference_solution": "function zip(...arrays) {\n  if (!arrays.length) return [];\n  const minLen = Math.min(...arrays.map(a => a.length));\n  const result = [];\n  for (let i = 0; i < minLen; i++) {\n    result.push(arrays.map(a => a[i]));\n  }\n  return result;\n}",
+  "tags": ["array", "zip", "combine", "variadic"]
+}

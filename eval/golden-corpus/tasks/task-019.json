@@ -1,0 +1,37 @@
+{
+  "task_id": "task-019",
+  "title": "JSON Path Query",
+  "language": "javascript",
+  "difficulty": "hard",
+  "category": "transform",
+  "description": "Write a function that evaluates a simple JSON path expression against a JavaScript value and returns the matched value. Supported syntax: dot notation for object property access (e.g. 'a.b.c'), bracket notation for array index access (e.g. 'items[0]'), and combinations thereof (e.g. 'a.items[1].name'). The path starts from the root object. If any segment of the path does not exist, return undefined.",
+  "function_signature": "function jsonPath(obj, path) {}",
+  "test_cases": [
+    {
+      "input": [{"a":{"b":{"c":42}}}, "a.b.c"],
+      "expected": 42
+    },
+    {
+      "input": [{"items":[10,20,30]}, "items[1]"],
+      "expected": 20
+    },
+    {
+      "input": [{"a":{"list":[{"name":"foo"},{"name":"bar"}]}}, "a.list[0].name"],
+      "expected": "foo"
+    },
+    {
+      "input": [{"x":1}, "x.y.z"],
+      "expected": null
+    },
+    {
+      "input": [{"top":[{"val":99}]}, "top[0].val"],
+      "expected": 99
+    },
+    {
+      "input": [{"a":1}, "missing"],
+      "expected": null
+    }
+  ],
+  "reference_solution": "function jsonPath(obj, path) {\n  if (!path) return obj == null ? null : obj;\n  const segments = path.replace(/\\[(\\d+)\\]/g, '.$1').split('.').filter(Boolean);\n  let current = obj;\n  for (const seg of segments) {\n    if (current == null || typeof current !== 'object') return null;\n    current = current[seg];\n    if (current === undefined) return null;\n  }\n  return current === undefined ? null : current;\n}",
+  "tags": ["transform", "json", "path", "query", "nested"]
+}

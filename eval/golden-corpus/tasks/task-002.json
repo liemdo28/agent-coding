@@ -1,0 +1,29 @@
+{
+  "task_id": "task-002",
+  "title": "Unique Items by Key",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "array",
+  "description": "Write a function that takes an array of objects and a key name, and returns a new array containing only the first occurrence of each unique value for that key. Preserve the original order of first appearances.",
+  "function_signature": "function uniqueByKey(arr, key) {}",
+  "test_cases": [
+    {
+      "input": [[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"},{"id":1,"name":"Alice2"}], "id"],
+      "expected": [{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]
+    },
+    {
+      "input": [[], "id"],
+      "expected": []
+    },
+    {
+      "input": [[{"x":1}], "x"],
+      "expected": [{"x":1}]
+    },
+    {
+      "input": [[{"t":"a"},{"t":"b"},{"t":"a"},{"t":"c"},{"t":"b"}], "t"],
+      "expected": [{"t":"a"},{"t":"b"},{"t":"c"}]
+    }
+  ],
+  "reference_solution": "function uniqueByKey(arr, key) {\n  const seen = new Set();\n  return arr.filter(item => {\n    const val = item[key];\n    if (seen.has(val)) return false;\n    seen.add(val);\n    return true;\n  });\n}",
+  "tags": ["array", "filter", "deduplication", "objects"]
+}

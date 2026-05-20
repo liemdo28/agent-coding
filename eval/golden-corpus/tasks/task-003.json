@@ -1,0 +1,18 @@
+{
+  "task_id": "task-003",
+  "title": "Chunk Array",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "array",
+  "description": "Write a function that splits an array into chunks of the specified size. The last chunk may be smaller than the specified size if the array length is not evenly divisible. If size is less than 1 or the array is empty, return an empty array.",
+  "function_signature": "function chunkArray(arr, size) {}",
+  "test_cases": [
+    { "input": [[1,2,3,4,5], 2], "expected": [[1,2],[3,4],[5]] },
+    { "input": [[], 3], "expected": [] },
+    { "input": [[1,2,3], 3], "expected": [[1,2,3]] },
+    { "input": [[1,2,3,4,5,6], 2], "expected": [[1,2],[3,4],[5,6]] },
+    { "input": [[1,2,3], 0], "expected": [] }
+  ],
+  "reference_solution": "function chunkArray(arr, size) {\n  if (!arr.length || size < 1) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += size) {\n    result.push(arr.slice(i, i + size));\n  }\n  return result;\n}",
+  "tags": ["array", "chunk", "split"]
+}

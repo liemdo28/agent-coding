@@ -1,0 +1,18 @@
+{
+  "task_id": "task-004",
+  "title": "camelCase to snake_case",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "string",
+  "description": "Write a function that converts a camelCase string to snake_case. Each uppercase letter should be replaced with an underscore followed by the lowercase version of that letter. The function should handle leading uppercase letters, consecutive uppercase letters treated as acronyms, and empty strings.",
+  "function_signature": "function camelToSnake(str) {}",
+  "test_cases": [
+    { "input": ["camelCaseString"], "expected": "camel_case_string" },
+    { "input": [""], "expected": "" },
+    { "input": ["alreadylower"], "expected": "alreadylower" },
+    { "input": ["myHTTPSRequest"], "expected": "my_h_t_t_p_s_request" },
+    { "input": ["getPageURL"], "expected": "get_page_u_r_l" }
+  ],
+  "reference_solution": "function camelToSnake(str) {\n  return str.replace(/[A-Z]/g, letter => '_' + letter.toLowerCase()).replace(/^_/, '');\n}",
+  "tags": ["string", "regex", "case-conversion"]
+}

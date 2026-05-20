@@ -1,0 +1,74 @@
+{
+  "task_id": "task-009",
+  "title": "Parse CSV Line",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "string",
+  "description": "Write a function that parses a single CSV line string and returns an array of field values. Fields may be optionally quoted with double-quotes. Quoted fields may contain commas and escaped double-quotes (represented as \"\"\"). Unquoted fields are trimmed of leading and trailing whitespace.",
+  "function_signature": "function parseCSVLine(line) {}",
+  "test_cases": [
+    {
+      "input": [
+        "one,two,three"
+      ],
+      "expected": [
+        "one",
+        "two",
+        "three"
+      ]
+    },
+    {
+      "input": [
+        "\"hello, world\",foo,bar"
+      ],
+      "expected": [
+        "hello, world",
+        "foo",
+        "bar"
+      ]
+    },
+    {
+      "input": [
+        "\"she said \"\"hi\"\"\",ok"
+      ],
+      "expected": [
+        "she said \"hi\"",
+        "ok"
+      ]
+    },
+    {
+      "input": [
+        ""
+      ],
+      "expected": [
+        ""
+      ]
+    },
+    {
+      "input": [
+        " a , b , c "
+      ],
+      "expected": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    {
+      "input": [
+        "\"quoted\",unquoted,\"also quoted\""
+      ],
+      "expected": [
+        "quoted",
+        "unquoted",
+        "also quoted"
+      ]
+    }
+  ],
+  "reference_solution": "function parseCSVLine(line) {\n  if (line === '') return [''];\n  const fields = [];\n  let i = 0;\n  while (i < line.length) {\n    if (line[i] === '\"') {\n      let field = '';\n      i++;\n      while (i < line.length) {\n        if (line[i] === '\"' && line[i+1] === '\"') { field += '\"'; i += 2; }\n        else if (line[i] === '\"') { i++; break; }\n        else { field += line[i++]; }\n      }\n      fields.push(field);\n      if (i < line.length && line[i] === ',') i++;\n    } else {\n      let start = i;\n      while (i < line.length && line[i] !== ',') i++;\n      fields.push(line.slice(start, i).trim());\n      if (i < line.length) i++;\n    }\n  }\n  return fields;\n}",
+  "tags": [
+    "string",
+    "parsing",
+    "csv"
+  ]
+}

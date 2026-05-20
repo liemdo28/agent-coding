@@ -1,0 +1,18 @@
+{
+  "task_id": "task-005",
+  "title": "Template String Interpolation",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "string",
+  "description": "Write a function that takes a template string with placeholders in the format {{key}} and a data object, and returns the string with each placeholder replaced by the corresponding value from the data object. If a key is not found in the data object, leave the placeholder as-is.",
+  "function_signature": "function interpolate(template, data) {}",
+  "test_cases": [
+    { "input": ["Hello, {{name}}!", {"name": "World"}], "expected": "Hello, World!" },
+    { "input": ["{{a}} + {{b}} = {{c}}", {"a": "1", "b": "2", "c": "3"}], "expected": "1 + 2 = 3" },
+    { "input": ["No placeholders here.", {}], "expected": "No placeholders here." },
+    { "input": ["{{missing}} stays", {}], "expected": "{{missing}} stays" },
+    { "input": ["{{x}} and {{x}} again", {"x": "hi"}], "expected": "hi and hi again" }
+  ],
+  "reference_solution": "function interpolate(template, data) {\n  return template.replace(/\\{\\{(\\w+)\\}\\}/g, (match, key) => {\n    return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : match;\n  });\n}",
+  "tags": ["string", "regex", "template", "interpolation"]
+}

@@ -1,0 +1,33 @@
+{
+  "task_id": "task-010",
+  "title": "Deep Merge Objects",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "object",
+  "description": "Write a function that performs a deep merge of two plain objects. Properties from the second object override properties from the first. When both objects have the same key and both values are plain objects, merge them recursively. Arrays are treated as scalar values and are replaced, not merged.",
+  "function_signature": "function deepMerge(target, source) {}",
+  "test_cases": [
+    {
+      "input": [{"a": 1, "b": {"c": 2}}, {"b": {"d": 3}, "e": 4}],
+      "expected": {"a": 1, "b": {"c": 2, "d": 3}, "e": 4}
+    },
+    {
+      "input": [{}, {"a": 1}],
+      "expected": {"a": 1}
+    },
+    {
+      "input": [{"a": 1}, {}],
+      "expected": {"a": 1}
+    },
+    {
+      "input": [{"a": {"b": {"c": 1}}}, {"a": {"b": {"d": 2}}}],
+      "expected": {"a": {"b": {"c": 1, "d": 2}}}
+    },
+    {
+      "input": [{"arr": [1,2,3]}, {"arr": [4,5]}],
+      "expected": {"arr": [4,5]}
+    }
+  ],
+  "reference_solution": "function deepMerge(target, source) {\n  const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);\n  const result = Object.assign({}, target);\n  for (const key of Object.keys(source)) {\n    if (isPlainObject(source[key]) && isPlainObject(result[key])) {\n      result[key] = deepMerge(result[key], source[key]);\n    } else {\n      result[key] = source[key];\n    }\n  }\n  return result;\n}",
+  "tags": ["object", "merge", "recursion", "deep-clone"]
+}

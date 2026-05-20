@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-05-20T00:00:00Z",
+  "total": 20,
+  "tasks": [
+    "task-001", "task-002", "task-003", "task-004", "task-005",
+    "task-006", "task-007", "task-008", "task-009", "task-010",
+    "task-011", "task-012", "task-013", "task-014", "task-015",
+    "task-016", "task-017", "task-018", "task-019", "task-020"
+  ],
+  "by_difficulty": {
+    "easy": ["task-001", "task-002", "task-003", "task-004", "task-005", "task-006"],
+    "medium": ["task-007", "task-008", "task-009", "task-010", "task-011", "task-012", "task-013", "task-014", "task-015", "task-016"],
+    "hard": ["task-017", "task-018", "task-019", "task-020"]
+  },
+  "by_category": {
+    "array": ["task-001", "task-002", "task-003", "task-007", "task-008"],
+    "string": ["task-004", "task-005", "task-009", "task-015"],
+    "object": ["task-006", "task-010", "task-011", "task-012", "task-016"],
+    "algorithm": ["task-013", "task-014", "task-017", "task-018"],
+    "transform": ["task-019", "task-020"]
+  }
+}

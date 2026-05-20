@@ -1,0 +1,18 @@
+{
+  "task_id": "task-001",
+  "title": "Flatten Nested Array",
+  "language": "javascript",
+  "difficulty": "easy",
+  "category": "array",
+  "description": "Write a function that takes a deeply nested array and returns a new flat array containing all the values. The function should handle arbitrary nesting depth. Do not use Array.prototype.flat().",
+  "function_signature": "function flattenArray(arr) {}",
+  "test_cases": [
+    { "input": [[1, [2, [3, [4]], 5]]], "expected": [1, 2, 3, 4, 5] },
+    { "input": [[]], "expected": [] },
+    { "input": [[1, 2, 3]], "expected": [1, 2, 3] },
+    { "input": [[[[[42]]]]], "expected": [42] },
+    { "input": [[1, [2, 3], [4, [5, [6]]]]], "expected": [1, 2, 3, 4, 5, 6] }
+  ],
+  "reference_solution": "function flattenArray(arr) {\n  const result = [];\n  function recurse(val) {\n    if (Array.isArray(val)) {\n      for (const item of val) recurse(item);\n    } else {\n      result.push(val);\n    }\n  }\n  recurse(arr);\n  return result;\n}",
+  "tags": ["array", "recursion", "flatten"]
+}

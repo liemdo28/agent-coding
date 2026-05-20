@@ -1,0 +1,18 @@
+{
+  "task_id": "task-011",
+  "title": "Pick Keys from Object",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "object",
+  "description": "Write a function `pick(obj, keys)` that returns a new object containing only the properties whose names are listed in the keys array. Keys that do not exist in the object should be silently ignored. The original object must not be modified.",
+  "function_signature": "function pick(obj, keys) {}",
+  "test_cases": [
+    { "input": [{"a":1,"b":2,"c":3}, ["a","c"]], "expected": {"a":1,"c":3} },
+    { "input": [{}, ["a"]], "expected": {} },
+    { "input": [{"x":10,"y":20}, []], "expected": {} },
+    { "input": [{"name":"Alice","age":30,"role":"admin"}, ["name","role"]], "expected": {"name":"Alice","role":"admin"} },
+    { "input": [{"a":1}, ["a","b","c"]], "expected": {"a":1} }
+  ],
+  "reference_solution": "function pick(obj, keys) {\n  return keys.reduce((acc, key) => {\n    if (Object.prototype.hasOwnProperty.call(obj, key)) acc[key] = obj[key];\n    return acc;\n  }, {});\n}",
+  "tags": ["object", "pick", "keys", "filter"]
+}

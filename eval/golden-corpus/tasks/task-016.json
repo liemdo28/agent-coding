@@ -1,0 +1,18 @@
+{
+  "task_id": "task-016",
+  "title": "Omit Keys from Object",
+  "language": "javascript",
+  "difficulty": "medium",
+  "category": "object",
+  "description": "Write a function `omit(obj, keys)` that returns a new object with all properties of the input object except those whose names appear in the keys array. Keys in the exclusion list that do not exist in the object are silently ignored. The original object must not be modified.",
+  "function_signature": "function omit(obj, keys) {}",
+  "test_cases": [
+    { "input": [{"a":1,"b":2,"c":3}, ["b"]], "expected": {"a":1,"c":3} },
+    { "input": [{}, ["a"]], "expected": {} },
+    { "input": [{"x":10,"y":20}, []], "expected": {"x":10,"y":20} },
+    { "input": [{"name":"Alice","age":30,"role":"admin"}, ["age","role"]], "expected": {"name":"Alice"} },
+    { "input": [{"a":1,"b":2}, ["a","b","c"]], "expected": {} }
+  ],
+  "reference_solution": "function omit(obj, keys) {\n  const exclude = new Set(keys);\n  return Object.fromEntries(\n    Object.entries(obj).filter(([k]) => !exclude.has(k))\n  );\n}",
+  "tags": ["object", "omit", "keys", "filter"]
+}
