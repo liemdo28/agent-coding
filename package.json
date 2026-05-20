@@ -44,6 +44,9 @@
     "ecology:report":    "node bin/ecology.js report",
     "ecology:watch":     "node bin/ecology.js watch",
 
+    "species:classify":  "node bin/species.js classify",
+    "species:history":   "node bin/species.js history",
+
     "eval:all":           "node eval/runner.js --all",
     "eval:humaneval":     "node eval/runner.js --benchmark humaneval",
     "eval:mbpp":          "node eval/runner.js --benchmark mbpp",
