@@ -44,8 +44,22 @@
     "ecology:report":    "node bin/ecology.js report",
     "ecology:watch":     "node bin/ecology.js watch",
 
+    "experiment:suggest": "node bin/experiments.js suggest",
+    "experiment:list":    "node bin/experiments.js list",
+
     "species:classify":  "node bin/species.js classify",
     "species:history":   "node bin/species.js history",
+
+    "dna:stats":         "node bin/dna.js stats",
+    "dna:list":          "node bin/dna.js list",
+    "dna:ingest":        "node bin/dna.js ingest",
+
+    "weather:forecast":  "node bin/weather.js forecast",
+
+    "physics:compute":   "node bin/physics.js compute",
+    "physics:report":    "node bin/physics.js report",
+
+    "ui:generate":       "node bin/ui-generate.js",
 
     "eval:all":           "node eval/runner.js --all",
     "eval:humaneval":     "node eval/runner.js --benchmark humaneval",
