@@ -16,6 +16,7 @@ export class LiveAgentMonitor {
       { id: 'qa', name: 'QA_AI', icon: 'QA', color: '#3fb950', capabilities: ['testing', 'validation', 'qa automation', 'security scanning'] },
       { id: 'marketing', name: 'Marketing_AI', icon: 'MKT', color: '#bc8cff', capabilities: ['content generation', 'social posts', 'SEO', 'changelog'] },
       { id: 'security', name: 'Security_AI', icon: 'SEC', color: '#f85149', capabilities: ['vulnerability scanning', 'policy enforcement', 'sandbox management', 'access control'] },
+      { id: 'infra', name: 'Infra_AI', icon: 'INF', color: '#ffb454', capabilities: ['infrastructure orchestration', 'resource monitoring', 'alerts management', 'sandboxing'] },
     ];
     for (const def of agentDefs) {
       this.agents.set(def.id, {

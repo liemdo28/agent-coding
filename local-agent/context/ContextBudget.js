@@ -1,5 +1,5 @@
 // context/ContextBudget.js - Token budget management for context building
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, openSync, readSync, closeSync } from 'fs';
 import { relative } from 'path';
 
 export const DEFAULT_BUDGET = {
@@ -24,9 +24,9 @@ function isBinary(filePath) {
   // unknown extension: check first 512 bytes for null bytes
   try {
     const buf = Buffer.alloc(512);
-    const fd  = require('fs').openSync(filePath, 'r');
-    const bytesRead = require('fs').readSync(fd, buf, 0, 512, 0);
-    require('fs').closeSync(fd);
+    const fd  = openSync(filePath, 'r');
+    const bytesRead = readSync(fd, buf, 0, 512, 0);
+    closeSync(fd);
     return buf.slice(0, bytesRead).includes(0);
   } catch { return false; }
 }

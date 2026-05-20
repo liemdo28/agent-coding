@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/reasoning',      label: 'AI Reasoning',               icon: '⚡' },
   { path: '/agents',         label: 'Live Agents',                icon: '🤖' },
   { path: '/workspace-graph',label: 'Workspace Graph',            icon: '◎' },
+  { path: '/autonomous-queue',label: 'Task Queue',                icon: '⏳' },
   { path: '/knowledge-base', label: 'Knowledge Base',             icon: '📚' },
   { path: '/runtime-monitor',label: 'Runtime Monitor',            icon: '🖥' },
   { path: '/timeline',       label: 'Timeline',                   icon: '📅' },

@@ -142,8 +142,12 @@ export class GlobalFileIndexer {
       hasLockFile: false,
       isDuplicate: false,
       duplicateOf: null,
+      activityStatus: 'dead',
       scannedAt: new Date().toISOString(),
     };
+
+    let isRecent = false;
+    const ninetyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
 
     // Git Info
     if (isGit) {
@@ -154,19 +158,32 @@ export class GlobalFileIndexer {
         proj.defaultBranch = execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null', { cwd: projPath, encoding: 'utf8' }).trim();
       } catch {}
       try {
-        const commitInfo = execSync('git log -1 --format="%H|%an|%ae|%s" 2>/dev/null', { cwd: projPath, encoding: 'utf8' }).trim();
+        const commitInfo = execSync('git log -1 --format="%H|%an|%ae|%s|%ci" 2>/dev/null', { cwd: projPath, encoding: 'utf8' }).trim();
         if (commitInfo) {
           const parts = commitInfo.split('|');
           proj.lastCommit = parts[0] || '';
           proj.lastCommitAuthor = parts[1] || '';
           proj.lastCommitEmail = parts[2] || '';
           proj.lastCommitMsg = parts[3] || '';
+          if (parts[4]) {
+            const commitTime = new Date(parts[4]).getTime();
+            if (commitTime > ninetyDaysAgo) isRecent = true;
+          }
         }
       } catch {}
       try {
         proj.commitCount = parseInt(execSync('git rev-list --count HEAD 2>/dev/null', { cwd: projPath, encoding: 'utf8' }).trim()) || 0;
       } catch {}
     }
+
+    // Fallback: check file system modification time
+    try {
+      const statTarget = existsSync(join(projPath, 'package.json')) ? join(projPath, 'package.json') : projPath;
+      const mtime = statSync(statTarget).mtime.getTime();
+      if (mtime > ninetyDaysAgo) isRecent = true;
+    } catch {}
+
+    proj.activityStatus = isRecent ? 'active' : 'dead';
 
     // Package.json Info
     if (isNode) {

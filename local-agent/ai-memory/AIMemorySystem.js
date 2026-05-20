@@ -3,7 +3,7 @@
  * Semantic memory, project history, task memory, previous prompts, previous fixes
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
 import { join, basename } from 'path';
 
 const MEMORY_DIR = '/Users/liemdo/.super-agent-ai/memory';
@@ -204,7 +204,6 @@ export class AIMemorySystem {
   // ── Persistence ─────────────────────────────────────────────────────────────
   _ensureDir() {
     try {
-      const { mkdirSync } = require('fs');
       mkdirSync(MEMORY_DIR, { recursive: true });
     } catch {}
   }
@@ -307,4 +306,5 @@ export class AIMemorySystem {
   }
 }
 
+export const aiMemorySystem = new AIMemorySystem();
 export default AIMemorySystem;

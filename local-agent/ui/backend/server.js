@@ -42,6 +42,8 @@ import reasoningRouter     from './routes/reasoning.js';
 import agentsRouter        from './routes/agents.js';
 import commandcenterRouter from './routes/commandcenter.js';
 import projectHealthRouter from './routes/project-health.js';
+import queueRouter         from './routes/queue.js';
+import cognitionRouter     from './routes/cognition.js';
 import { metricsMiddleware, snapshotMetrics } from './lib/runtime-metrics.js';
 
 // ── App setup ─────────────────────────────────────────────────────────────────
@@ -147,6 +149,8 @@ const apiRouters = [
   agentsRouter,
   commandcenterRouter,
   projectHealthRouter,
+  queueRouter,
+  cognitionRouter,
 ];
 
 for (const router of apiRouters) {

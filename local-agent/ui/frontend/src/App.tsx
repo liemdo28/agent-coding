@@ -22,6 +22,7 @@ import DigitalTwin        from './pages/DigitalTwin.tsx';
 import Reasoning          from './pages/Reasoning.tsx';
 import Agents             from './pages/Agents.tsx';
 import WorkspaceGraph     from './pages/WorkspaceGraph.tsx';
+import AutonomousQueue   from './pages/AutonomousQueue.tsx';
 import KnowledgeBase      from './pages/KnowledgeBase.tsx';
 import RuntimeMonitor     from './pages/RuntimeMonitor.tsx';
 import Timeline          from './pages/Timeline.tsx';import ProjectHealth      from './pages/ProjectHealth.tsx';
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="reasoning"        element={<Reasoning />} />
           <Route path="agents"           element={<Agents />} />
           <Route path="workspace-graph"  element={<WorkspaceGraph />} />
+          <Route path="autonomous-queue" element={<AutonomousQueue />} />
           <Route path="knowledge-base"   element={<KnowledgeBase />} />
           <Route path="runtime-monitor"  element={<RuntimeMonitor />} />
           <Route path="timeline"         element={<Timeline />} />

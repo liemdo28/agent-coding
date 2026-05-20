@@ -1,6 +1,7 @@
 // context/AdvancedContextEngine.js - Orchestrates smart context selection for LLM prompts
 import { existsSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
+import { globSync } from 'fast-glob';
 import { detectEntrypoints, detectConfigFiles } from './EntrypointDetector.js';
 import { traceImports }                         from './ImportTracer.js';
 import { rankFiles, extractKeywords, detectErrorFiles } from './FileRanker.js';
@@ -16,7 +17,6 @@ function getAllProjectFiles(workspaceRoot, projectMap) {
   if (projectMap?.files?.length) return projectMap.files.map((f) => join(workspaceRoot, f.path));
   // fallback: glob
   try {
-    const { globSync } = require('fast-glob');
     return globSync(['**/*.{js,ts,jsx,tsx,py,json,md}'], {
       cwd: workspaceRoot, absolute: true,
       ignore: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '.local-agent/**'],

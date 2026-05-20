@@ -195,6 +195,7 @@ export default function Agents() {
               <option value="qa">QA_AI</option>
               <option value="marketing">Marketing_AI</option>
               <option value="security">Security_AI</option>
+              <option value="infra">Infra_AI</option>
             </select>
           </div>
 

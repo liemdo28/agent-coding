@@ -13,6 +13,8 @@ import { LocalLLMAdapter }                      from '../../../llm/LocalLLMAdapt
 import { buildContext, renderContextPrompt }    from '../../../llm/context.js';
 import { buildPersonaPrompt }                   from '../../../llm/persona/index.js';
 import { parseContentRequest, runAutoContentPipeline } from '../../project-context/AutoContextPipeline.js';
+import { ProjectContextEngine } from '../../project-context/ProjectContextEngine.js';
+import { aiMemorySystem } from '../../../ai-memory/AIMemorySystem.js';
 
 const router = Router();
 
@@ -158,7 +160,80 @@ router.post('/agent/ask', async (req, res) => {
     const context = buildContext(question.trim(), PROJECT_ROOT, config);
     send('context', { files: context.relevantFiles ?? [], warning: context.warning ?? null });
 
-    const userPrompt = renderContextPrompt(context);
+    // Retrieve historical memory and fixes
+    const memoryContext = aiMemorySystem.buildContext(question.trim(), PROJECT_ROOT);
+    let memoryPromptSection = '';
+    
+    if ((memoryContext.relevantPrompts && memoryContext.relevantPrompts.length > 0) || 
+        (memoryContext.similarFixes && memoryContext.similarFixes.length > 0) || 
+        (memoryContext.semanticMatches && memoryContext.semanticMatches.length > 0)) {
+      
+      memoryPromptSection = '\n## Historical Memory & Fixes Context\n';
+      if (memoryContext.relevantPrompts && memoryContext.relevantPrompts.length > 0) {
+        memoryPromptSection += '\n### Relevant Previous Prompts:\n';
+        for (const p of memoryContext.relevantPrompts) {
+          memoryPromptSection += `- Prompt: "${p.prompt}"\n`;
+        }
+      }
+      if (memoryContext.similarFixes && memoryContext.similarFixes.length > 0) {
+        memoryPromptSection += '\n### Similar Successful Fixes:\n';
+        for (const f of memoryContext.similarFixes) {
+          memoryPromptSection += `- Issue: "${f.issue}"\n  Fix: \`\`\`\n${f.fix}\n\`\`\`\n`;
+        }
+      }
+      if (memoryContext.semanticMatches && memoryContext.semanticMatches.length > 0) {
+        memoryPromptSection += '\n### Semantic Memory Matches:\n';
+        for (const m of memoryContext.semanticMatches) {
+          memoryPromptSection += `- Key: ${m.key} -> Value: ${m.value}\n`;
+        }
+      }
+      memoryPromptSection += '\n';
+    }
+
+    let userPrompt = memoryPromptSection + renderContextPrompt(context);
+
+    // Contextual project awareness check
+    const lowerQuestion = question.toLowerCase();
+    const keywords = {
+      'rawwwebsite': ['rawwwebsite', 'raw-website', 'raw_website', 'rawwebsite'],
+      'dashboard': ['dashboard', 'dash', 'dash-bakudanramen', 'bakudanramen'],
+      'ai': ['ai-project', 'agent-coding', 'local-agent', 'ai project']
+    };
+
+    let referencedAlias = null;
+    for (const [alias, synonyms] of Object.entries(keywords)) {
+      if (synonyms.some(syn => lowerQuestion.includes(syn))) {
+        referencedAlias = alias;
+        break;
+      }
+    }
+
+    if (referencedAlias) {
+      try {
+        const engine = new ProjectContextEngine();
+        const projContext = await engine.buildContext(referencedAlias);
+        if (projContext && projContext.found) {
+          const projectInfoPrompt = [
+            '',
+            '## Referenced Project Context Details',
+            `- Name/Alias: ${projContext.alias}`,
+            `- Absolute Path: ${projContext.resolvedPath}`,
+            `- Primary Language: ${projContext.language}`,
+            `- Tech Stack: ${(projContext.techStack || []).join(', ')}`,
+            `- Dependencies: ${(projContext.dependencies || []).join(', ')}`,
+            `- Key Features: ${(projContext.features || []).join(', ')}`,
+            '- README Content Preview:',
+            projContext.readme ? projContext.readme.slice(0, 3000) : '_No README content available._',
+            ''
+          ].join('\n');
+          userPrompt = projectInfoPrompt + '\n' + userPrompt;
+          logger.fileOnly('info', 'ui: injected project context for alias', { alias: referencedAlias });
+        }
+      } catch (err) {
+        logger.fileOnly('warn', 'ui: failed to inject project context', { error: err.message });
+      }
+    }
+
     logger.fileOnly('info', 'ui: /agent/ask started', { question: question.slice(0, 80) });
 
     // Stream LLM response
@@ -170,6 +245,9 @@ router.post('/agent/ask', async (req, res) => {
 
     send('done', { complete: true });
     logger.fileOnly('info', 'ui: /agent/ask done', { chars: fullResponse.length });
+
+    // Store in AI memory system
+    aiMemorySystem.storePrompt(question.trim(), fullResponse);
 
     // Persist exchange to session file (non-blocking, non-fatal)
     persistToSession(sessionId, question.trim(), fullResponse);
