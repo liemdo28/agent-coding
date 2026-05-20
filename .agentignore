@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+coverage
+benchmark
+sample-project
+files-extracted
+reports
+logs
+marketing-db
+eval
+data
+tmp
+.cache
+.next
+

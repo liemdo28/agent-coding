@@ -1,5 +1,15 @@
 node_modules/
 dist/
+
+# Local secrets / API proxy config. Keep these outside the repo.
+.env
+.env.*
+!.env.example
+APIKey/
+keys.env
+keys.json
+*.pem
+*.key
 # Agent workspace dirs — generated at runtime, not committed
 /.local-agent/
 **/.local-agent/logs/
