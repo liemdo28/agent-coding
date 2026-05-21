@@ -78,3 +78,17 @@ export {
     SelfReflectionEngine,
     CivilizationPhilosophyEngine,
 } from './consciousness/index.js';
+
+// Reality Synthesis Fabric — Unified Civilization-Scale Intelligence
+export {
+    UnifiedRealityEngine,
+    CivilizationTrajectoryEngine,
+    RealityPressureField,
+    OperationalCoherenceEngine,
+    FutureStateEngine,
+    MissionAlignmentEngine,
+    CivilizationEnergyEngine,
+    MemoryCosmosEngine,
+    SynthesisReasoningEngine,
+    RealityImmuneSystem,
+} from './reality-synthesis/index.js';
