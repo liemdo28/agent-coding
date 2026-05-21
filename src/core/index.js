@@ -92,3 +92,18 @@ export {
     SynthesisReasoningEngine,
     RealityImmuneSystem,
 } from './reality-synthesis/index.js';
+
+// Meta-Civilization Fabric — Autonomous Engineering Civilization Infrastructure
+export {
+    CivilizationEconomyEngine,
+    IntelligenceEcologyEngine,
+    AutonomousExpansionEngine,
+    RealityOrchestrationEngine,
+    MetaGovernanceEngine,
+    CivilizationPhysicsEngine,
+    MultiRealitySimulationEngine,
+    CivilizationDNAEngine,
+    AutonomousScienceEngine,
+    UnifiedCivilizationField,
+    MetaIntelligenceEngine,
+} from './meta-civilization/index.js';
