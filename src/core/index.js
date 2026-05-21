@@ -107,3 +107,18 @@ export {
     UnifiedCivilizationField,
     MetaIntelligenceEngine,
 } from './meta-civilization/index.js';
+
+// Omniversal Intelligence Fabric — Self-Evolving Autonomous Intelligence Substrate
+export {
+    UnifiedIntelligenceField,
+    RealityComputationEngine,
+    AdaptiveOperationalPhysics,
+    SelfGeneratingInfrastructure,
+    AutonomousRealityExpansion,
+    IntelligenceEntropyEngine,
+    OmniversalMemoryFabric,
+    MultiCivilizationOrchestrator,
+    AutonomousIntelligenceEvolution,
+    RealityStabilityField,
+    OperationalSingularityEngine,
+} from './omniversal/index.js';
