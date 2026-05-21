@@ -12,11 +12,11 @@ describe('Entry points exist', () => {
   test('bin/local-agent.js', () => {
     assert.ok(existsSync(join(ROOT, 'bin/local-agent.js')), 'bin/local-agent.js must exist');
   });
-  test('accounting-engine/bin/accounting.js', () => {
-    assert.ok(existsSync(join(ROOT, 'accounting-engine/bin/accounting.js')));
+  test('bin/kb.js', () => {
+    assert.ok(existsSync(join(ROOT, 'bin/kb.js')), 'bin/kb.js must exist');
   });
-  test('accounting-engine/api/server.js', () => {
-    assert.ok(existsSync(join(ROOT, 'accounting-engine/api/server.js')));
+  test('src/cli/aos.js', () => {
+    assert.ok(existsSync(join(ROOT, 'src/cli/aos.js')), 'src/cli/aos.js must exist');
   });
 });
 

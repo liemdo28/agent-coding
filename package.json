@@ -1,18 +1,22 @@
 {
-  "name": "local-agent",
-  "version": "1.0.0",
-  "description": "Fully local/offline AI Coding Agent",
+  "name": "agent-coding",
+  "version": "2.0.0",
+  "description": "Persistent Autonomous Engineering Civilization Infrastructure",
   "type": "module",
   "bin": {
     "aos": "./src/cli/aos.js",
     "local-agent": "./bin/local-agent.js",
-    "accounting": "./accounting-engine/bin/accounting.js",
     "kb": "./bin/kb.js"
   },
   "scripts": {
     "start": "node bin/local-agent.js",
     "dev": "node bin/local-agent.js",
     "build": "node scripts/build-check.js",
+    "kernel:start": "npx tsx apps/api/src/index.ts",
+    "kernel:dev": "npx tsx watch apps/api/src/index.ts",
+    "telegram:start": "npx tsx apps/telegram-gateway/src/index.ts",
+    "docker:up": "docker-compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infrastructure/docker/docker-compose.yml down",
     "bootstrap:v2": "bash scripts/bootstrap-v2.sh",
     "corp:simulate": "node bin/super-agent-corp.js",
     "lint": "node scripts/lint-check.js",
@@ -25,10 +29,6 @@
     "ui:server": "node local-agent/ui/backend/server.js",
     "ui": "npm run ui:build && npm run ui:server",
     "ui:dev:frontend": "npm --prefix local-agent/ui/frontend run dev",
-    "accounting:api": "node accounting-engine/api/server.js",
-    "accounting:stress": "cd accounting-engine && node --experimental-vm-modules node_modules/.bin/jest tests/stress --runInBand",
-    "accounting:verify": "node accounting-engine/bin/accounting.js verify-ledger",
-    "accounting:cert": "node accounting-engine/tests/stress/live-24h-certification.js --duration=2m",
     "kb:ingest": "node scripts/kb-ingest.js",
     "kb:ingest:mdn": "node kb/ingest-mdn.js",
     "kb:generate-stats": "node kb/generate-stats.js",
@@ -59,9 +59,28 @@
     "express": "^4.22.2",
     "fast-glob": "^3.3.2",
     "ignore": "^5.3.1",
-    "ora": "^8.0.1"
+    "ora": "^8.0.1",
+    "bullmq": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "fastify": "^4.26.0",
+    "ioredis": "^5.3.0",
+    "nanoid": "^5.0.0",
+    "pg": "^8.11.0",
+    "pino": "^8.19.0",
+    "socket.io": "^4.7.0",
+    "zod": "^3.22.0",
+    "@qdrant/js-client-rest": "^1.8.0",
+    "openai": "^4.28.0",
+    "telegraf": "^4.16.0",
+    "eventemitter3": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }
