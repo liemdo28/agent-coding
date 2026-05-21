@@ -330,6 +330,288 @@
             "promptFile": "30-final-prime-directive.md",
             "role": "ultimate-identity",
             "phase": 30
+        },
+        {
+            "id": "civilization-scale",
+            "name": "Civilization Scale Architecture",
+            "systemId": "CIVILIZATION-SCALE-ARCHITECTURE",
+            "promptFile": "31-civilization-scale.md",
+            "role": "civilization-substrate",
+            "phase": 31
+        },
+        {
+            "id": "cognitive-state",
+            "name": "Cognitive State Engine",
+            "systemId": "COGNITIVE-STATE-ENGINE",
+            "promptFile": "32-cognitive-state.md",
+            "role": "persistent-state",
+            "phase": 32,
+            "paths": [
+                "src/core/cognitive-state/"
+            ]
+        },
+        {
+            "id": "consensus",
+            "name": "Collective Intelligence Consensus",
+            "systemId": "COLLECTIVE-INTELLIGENCE-CONSENSUS",
+            "promptFile": "33-consensus.md",
+            "role": "multi-agent-consensus",
+            "phase": 33,
+            "paths": [
+                "src/core/consensus/"
+            ]
+        },
+        {
+            "id": "execution-dna",
+            "name": "Realtime Execution DNA",
+            "systemId": "REALTIME-EXECUTION-DNA",
+            "promptFile": "34-execution-dna.md",
+            "role": "immutable-identity",
+            "phase": 34,
+            "paths": [
+                "src/core/dna/"
+            ]
+        },
+        {
+            "id": "hierarchy",
+            "name": "Organizational Hierarchy",
+            "systemId": "ORGANIZATIONAL-HIERARCHY",
+            "promptFile": "35-hierarchy.md",
+            "role": "authority-structure",
+            "phase": 35,
+            "paths": [
+                "src/core/hierarchy/"
+            ]
+        },
+        {
+            "id": "research-division",
+            "name": "Autonomous Research Division",
+            "systemId": "AUTONOMOUS-RESEARCH-DIVISION",
+            "promptFile": "36-research-division.md",
+            "role": "continuous-research",
+            "phase": 36,
+            "paths": [
+                "src/core/research/"
+            ]
+        },
+        {
+            "id": "context-fusion",
+            "name": "Context Fusion Engine",
+            "systemId": "CONTEXT-FUSION-ENGINE",
+            "promptFile": "37-context-fusion.md",
+            "role": "unified-context",
+            "phase": 37,
+            "paths": [
+                "src/core/context-fusion/"
+            ]
+        },
+        {
+            "id": "execution-physics",
+            "name": "Execution Physics",
+            "systemId": "EXECUTION-PHYSICS",
+            "promptFile": "38-execution-physics.md",
+            "role": "cost-optimization",
+            "phase": 38,
+            "paths": [
+                "src/core/physics/"
+            ]
+        },
+        {
+            "id": "ethics",
+            "name": "AI Ethics & Strategic Governance",
+            "systemId": "AI-ETHICS-STRATEGIC-GOVERNANCE",
+            "promptFile": "39-ethics.md",
+            "role": "ethical-constraints",
+            "phase": 39,
+            "paths": [
+                "src/core/ethics/"
+            ]
+        },
+        {
+            "id": "time-machine",
+            "name": "Organizational Time Machine",
+            "systemId": "ORGANIZATIONAL-TIME-MACHINE",
+            "promptFile": "40-time-machine.md",
+            "role": "replay-debugging",
+            "phase": 40,
+            "paths": [
+                "src/core/time-machine/"
+            ]
+        },
+        {
+            "id": "self-healing",
+            "name": "Self-Healing Organization",
+            "systemId": "SELF-HEALING-ORGANIZATION",
+            "promptFile": "41-self-healing.md",
+            "role": "autonomous-repair",
+            "phase": 41,
+            "paths": [
+                "src/core/self-healing/"
+            ]
+        },
+        {
+            "id": "consciousness",
+            "name": "Organizational Consciousness",
+            "systemId": "ORGANIZATIONAL-CONSCIOUSNESS",
+            "promptFile": "42-consciousness.md",
+            "role": "self-awareness",
+            "phase": 42,
+            "paths": [
+                "src/core/consciousness/"
+            ]
+        },
+        {
+            "id": "foresight",
+            "name": "Strategic Foresight Engine",
+            "systemId": "STRATEGIC-FORESIGHT-ENGINE",
+            "promptFile": "43-foresight.md",
+            "role": "predictive-intelligence",
+            "phase": 43,
+            "paths": [
+                "src/core/foresight/"
+            ]
+        },
+        {
+            "id": "economy",
+            "name": "Digital Civilization Economy",
+            "systemId": "DIGITAL-CIVILIZATION-ECONOMY",
+            "promptFile": "44-economy.md",
+            "role": "resource-management",
+            "phase": 44,
+            "paths": [
+                "src/core/economy/"
+            ]
+        },
+        {
+            "id": "god-kernel",
+            "name": "The God Kernel",
+            "systemId": "GOD-KERNEL",
+            "promptFile": "45-god-kernel.md",
+            "role": "ultimate-orchestration",
+            "phase": 45,
+            "paths": [
+                "src/core/kernel/"
+            ]
+        },
+        {
+            "id": "final-absolute-directive",
+            "name": "Final Absolute Directive — Civilization Infrastructure",
+            "systemId": "FINAL-ABSOLUTE-DIRECTIVE",
+            "promptFile": "46-final-absolute-directive.md",
+            "role": "civilization-identity",
+            "phase": 46
+        },
+        {
+            "id": "meta-intelligence",
+            "name": "Meta-Intelligence Layer",
+            "systemId": "META-INTELLIGENCE-LAYER",
+            "promptFile": "47-meta-intelligence.md",
+            "role": "self-understanding",
+            "phase": 47
+        },
+        {
+            "id": "memory-fabric",
+            "name": "Global Memory Fabric",
+            "systemId": "GLOBAL-MEMORY-FABRIC",
+            "promptFile": "48-memory-fabric.md",
+            "role": "living-memory",
+            "phase": 48
+        },
+        {
+            "id": "swarm-execution",
+            "name": "Swarm Execution Engine",
+            "systemId": "SWARM-EXECUTION-ENGINE",
+            "promptFile": "49-swarm-execution.md",
+            "role": "swarm-intelligence",
+            "phase": 49
+        },
+        {
+            "id": "digital-twin",
+            "name": "Realtime Digital Twin",
+            "systemId": "REALTIME-DIGITAL-TWIN",
+            "promptFile": "50-digital-twin.md",
+            "role": "simulation-mirror",
+            "phase": 50
+        },
+        {
+            "id": "marketplace",
+            "name": "Execution Marketplace",
+            "systemId": "EXECUTION-MARKETPLACE",
+            "promptFile": "51-marketplace.md",
+            "role": "resource-competition",
+            "phase": 51
+        },
+        {
+            "id": "constitution",
+            "name": "AI Constitution",
+            "systemId": "AI-CONSTITUTION",
+            "promptFile": "52-constitution.md",
+            "role": "immutable-laws",
+            "phase": 52
+        },
+        {
+            "id": "observability",
+            "name": "Civilization Observability",
+            "systemId": "CIVILIZATION-OBSERVABILITY",
+            "promptFile": "53-observability.md",
+            "role": "total-observability",
+            "phase": 53
+        },
+        {
+            "id": "infrastructure",
+            "name": "Autonomous Infrastructure Engineering",
+            "systemId": "AUTONOMOUS-INFRASTRUCTURE-ENGINEERING",
+            "promptFile": "54-infrastructure.md",
+            "role": "infra-autonomy",
+            "phase": 54
+        },
+        {
+            "id": "cognitive-load-balancer",
+            "name": "Cognitive Load Balancer",
+            "systemId": "COGNITIVE-LOAD-BALANCER",
+            "promptFile": "55-cognitive-load-balancer.md",
+            "role": "reasoning-balance",
+            "phase": 55
+        },
+        {
+            "id": "org-psychology",
+            "name": "Organizational Psychology Engine",
+            "systemId": "ORGANIZATIONAL-PSYCHOLOGY-ENGINE",
+            "promptFile": "56-org-psychology.md",
+            "role": "owner-understanding",
+            "phase": 56
+        },
+        {
+            "id": "war-room",
+            "name": "Strategic War Room",
+            "systemId": "STRATEGIC-WAR-ROOM",
+            "promptFile": "57-war-room.md",
+            "role": "crisis-coordination",
+            "phase": 57
+        },
+        {
+            "id": "dreaming",
+            "name": "Organizational Dreaming",
+            "systemId": "ORGANIZATIONAL-DREAMING",
+            "promptFile": "58-dreaming.md",
+            "role": "idle-optimization",
+            "phase": 58
+        },
+        {
+            "id": "continuity",
+            "name": "Continuity Engine",
+            "systemId": "CONTINUITY-ENGINE",
+            "promptFile": "59-continuity.md",
+            "role": "persistence-guarantee",
+            "phase": 59
+        },
+        {
+            "id": "transcendent-form",
+            "name": "Final Transcendent Directive",
+            "systemId": "FINAL-TRANSCENDENT-DIRECTIVE",
+            "promptFile": "60-transcendent-form.md",
+            "role": "transcendent-identity",
+            "phase": 60
         }
     ],
     "taskLifecycle": [

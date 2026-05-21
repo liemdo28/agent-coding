@@ -122,3 +122,17 @@ export {
     RealityStabilityField,
     OperationalSingularityEngine,
 } from './omniversal/index.js';
+
+// Transcendent Reality Fabric — Living Autonomous Operational Reality
+export {
+    OperationalContinuumEngine,
+    RealityEvolutionEngine,
+    AutonomousOperationalPhysics,
+    RealitySelfGenerationEngine,
+    InfiniteEvolutionEngine,
+    TranscendentMemoryField,
+    RealityResonanceEngine,
+    SelfStabilizingReality,
+    UnifiedRealityCore,
+    TranscendentStabilityEngine,
+} from './transcendent/index.js';
