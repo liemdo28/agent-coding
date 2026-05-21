@@ -1,0 +1,403 @@
+{
+    "name": "Agent-coding",
+    "version": "1.0.0",
+    "role": "AI Engineering Conglomerate",
+    "description": "Multi-agent system: mỗi agent = 1 công ty chuyên trách, orchestration trung tâm route task tự động, memory-first + local-first.",
+    "promptsDir": "./prompts/",
+    "masterPrompt": "./system-prompt.md",
+    "companies": [
+        {
+            "id": "conglomerate-brain",
+            "name": "Master Brain / Holding Company",
+            "systemId": "CONGLOMERATE-BRAIN",
+            "promptFile": "00-conglomerate-brain.md",
+            "role": "orchestration",
+            "isOrchestrator": true
+        },
+        {
+            "id": "coding-core",
+            "name": "Coding Core Company",
+            "systemId": "CODING-CORE",
+            "promptFile": "01-coding-core.md",
+            "role": "code-generation",
+            "paths": [
+                "local-agent/code-intelligence/",
+                "local-agent/scanner/"
+            ]
+        },
+        {
+            "id": "qa-debug",
+            "name": "QA / Debug Company",
+            "systemId": "QA-DEBUG",
+            "promptFile": "02-qa-debug.md",
+            "role": "testing-debugging",
+            "paths": [
+                "local-agent/qa/",
+                "local-agent/qa-autopilot/",
+                "local-agent/debug/",
+                "local-agent/testing/"
+            ]
+        },
+        {
+            "id": "knowledge-graph",
+            "name": "Knowledge Graph Company",
+            "systemId": "KNOWLEDGE-GRAPH",
+            "promptFile": "03-knowledge-graph.md",
+            "role": "organizational-memory",
+            "paths": [
+                "local-agent/knowledge-graph/",
+                "local-agent/cross-project/",
+                "kb/"
+            ]
+        },
+        {
+            "id": "governance",
+            "name": "Governance Company",
+            "systemId": "GOVERNANCE",
+            "promptFile": "04-governance.md",
+            "role": "security-policy",
+            "paths": [
+                "local-agent/governance/",
+                "local-agent/rbac/"
+            ]
+        },
+        {
+            "id": "communication-hub",
+            "name": "Communication Hub",
+            "systemId": "COMMUNICATION-HUB",
+            "promptFile": "05-communication-hub.md",
+            "role": "owner-interaction",
+            "paths": [
+                "local-agent/telegram/",
+                "local-agent/ui/"
+            ]
+        },
+        {
+            "id": "strategic-engine",
+            "name": "Strategic Engine",
+            "systemId": "STRATEGIC-ENGINE",
+            "promptFile": "06-strategic-engine.md",
+            "role": "planning-optimization",
+            "paths": [
+                "local-agent/strategic/"
+            ]
+        },
+        {
+            "id": "analytics-reporting",
+            "name": "Analytics & Reporting Company",
+            "systemId": "ANALYTICS-REPORTING",
+            "promptFile": "07-analytics-reporting.md",
+            "role": "metrics-reporting",
+            "paths": [
+                "local-agent/analytics/",
+                "metrics/"
+            ]
+        },
+        {
+            "id": "external-gateway",
+            "name": "External Gateway Company",
+            "systemId": "EXTERNAL-GATEWAY",
+            "promptFile": "08-external-gateway.md",
+            "role": "external-integration",
+            "paths": [
+                "local-agent/providers/"
+            ],
+            "requiresOwnerApproval": true
+        },
+        {
+            "id": "memory",
+            "name": "Memory Company",
+            "systemId": "MEMORY",
+            "promptFile": "09-memory.md",
+            "role": "long-term-memory",
+            "paths": [
+                "local-agent/memory/",
+                "local-agent/ai-memory/"
+            ]
+        },
+        {
+            "id": "thinking-engine",
+            "name": "Thinking Engine",
+            "systemId": "THINKING-ENGINE",
+            "promptFile": "10-thinking-engine.md",
+            "role": "cognition-prefrontal",
+            "phase": 13,
+            "paths": [
+                "src/core/cognition/thinking-engine/"
+            ]
+        },
+        {
+            "id": "execution-intelligence",
+            "name": "Execution Intelligence",
+            "systemId": "EXECUTION-INTELLIGENCE",
+            "promptFile": "11-execution-intelligence.md",
+            "role": "error-understanding",
+            "phase": 13,
+            "paths": [
+                "src/core/cognition/execution-intelligence/"
+            ]
+        },
+        {
+            "id": "reasoning-stream",
+            "name": "Reasoning Stream",
+            "systemId": "REASONING-STREAM",
+            "promptFile": "12-reasoning-stream.md",
+            "role": "realtime-visibility",
+            "phase": 13,
+            "paths": [
+                "src/core/cognition/reasoning-stream/"
+            ]
+        },
+        {
+            "id": "runtime-awareness",
+            "name": "Runtime Awareness",
+            "systemId": "RUNTIME-AWARENESS",
+            "promptFile": "13-runtime-awareness.md",
+            "role": "system-monitoring",
+            "phase": 13,
+            "paths": [
+                "src/core/cognition/runtime-awareness/"
+            ]
+        },
+        {
+            "id": "reflection-engine",
+            "name": "Reflection Engine",
+            "systemId": "REFLECTION-ENGINE",
+            "promptFile": "14-reflection-engine.md",
+            "role": "self-evaluation",
+            "phase": 13,
+            "paths": [
+                "src/core/cognition/reflection/"
+            ]
+        },
+        {
+            "id": "distributed-fabric",
+            "name": "Distributed Execution Fabric",
+            "systemId": "DISTRIBUTED-EXECUTION-FABRIC",
+            "promptFile": "15-distributed-fabric.md",
+            "role": "execution-infrastructure",
+            "phase": 14,
+            "paths": [
+                "src/core/fabric/"
+            ]
+        },
+        {
+            "id": "org-memory",
+            "name": "Organizational Memory",
+            "systemId": "ORGANIZATIONAL-MEMORY",
+            "promptFile": "16-org-memory.md",
+            "role": "organizational-intelligence",
+            "phase": 15,
+            "paths": [
+                "src/core/org-memory/"
+            ]
+        },
+        {
+            "id": "government-system",
+            "name": "AI Government System",
+            "systemId": "AI-GOVERNMENT",
+            "promptFile": "17-government-system.md",
+            "role": "self-regulation",
+            "phase": 16,
+            "paths": [
+                "src/core/government/"
+            ]
+        },
+        {
+            "id": "evolution-engine",
+            "name": "Evolution Engine",
+            "systemId": "EVOLUTION-ENGINE",
+            "promptFile": "18-evolution-engine.md",
+            "role": "self-improvement",
+            "phase": 17,
+            "paths": [
+                "src/core/evolution/"
+            ]
+        },
+        {
+            "id": "final-form",
+            "name": "Final Form — AI Engineering Civilization",
+            "systemId": "FINAL-FORM",
+            "promptFile": "19-final-form.md",
+            "role": "identity-directive",
+            "phase": 18
+        },
+        {
+            "id": "neural-cognition-mesh",
+            "name": "Neural Cognition Mesh",
+            "systemId": "NEURAL-COGNITION-MESH",
+            "promptFile": "20-neural-cognition-mesh.md",
+            "role": "distributed-cognition",
+            "phase": 20,
+            "paths": [
+                "src/core/neural/"
+            ]
+        },
+        {
+            "id": "nervous-system",
+            "name": "Execution Nervous System",
+            "systemId": "EXECUTION-NERVOUS-SYSTEM",
+            "promptFile": "21-nervous-system.md",
+            "role": "runtime-sensing",
+            "phase": 21,
+            "paths": [
+                "src/core/nervous-system/"
+            ]
+        },
+        {
+            "id": "digital-organism",
+            "name": "Digital Organism",
+            "systemId": "DIGITAL-ORGANISM",
+            "promptFile": "22-digital-organism.md",
+            "role": "biological-model",
+            "phase": 22
+        },
+        {
+            "id": "immune-system",
+            "name": "Immune System",
+            "systemId": "IMMUNE-SYSTEM",
+            "promptFile": "23-immune-system.md",
+            "role": "corruption-detection",
+            "phase": 23,
+            "paths": [
+                "src/core/immune/"
+            ]
+        },
+        {
+            "id": "org-intelligence",
+            "name": "Realtime Organizational Intelligence",
+            "systemId": "REALTIME-ORG-INTELLIGENCE",
+            "promptFile": "24-org-intelligence.md",
+            "role": "organizational-awareness",
+            "phase": 24,
+            "paths": [
+                "src/core/org-intelligence/"
+            ]
+        },
+        {
+            "id": "self-evolution",
+            "name": "Self-Evolution Engine",
+            "systemId": "SELF-EVOLUTION-ENGINE",
+            "promptFile": "25-self-evolution.md",
+            "role": "continuous-improvement",
+            "phase": 25,
+            "paths": [
+                "src/core/evolution/"
+            ]
+        },
+        {
+            "id": "multi-model-intelligence",
+            "name": "Multi-Model Intelligence",
+            "systemId": "MULTI-MODEL-INTELLIGENCE",
+            "promptFile": "26-multi-model-intelligence.md",
+            "role": "model-routing",
+            "phase": 26,
+            "paths": [
+                "src/core/intelligence/"
+            ]
+        },
+        {
+            "id": "autonomous-factory",
+            "name": "Autonomous Software Factory",
+            "systemId": "AUTONOMOUS-SOFTWARE-FACTORY",
+            "promptFile": "27-autonomous-factory.md",
+            "role": "full-autonomy",
+            "phase": 27
+        },
+        {
+            "id": "temporal-intelligence",
+            "name": "Temporal Intelligence",
+            "systemId": "TEMPORAL-INTELLIGENCE",
+            "promptFile": "28-temporal-intelligence.md",
+            "role": "time-awareness",
+            "phase": 28,
+            "paths": [
+                "src/core/temporal/"
+            ]
+        },
+        {
+            "id": "cognitive-ui",
+            "name": "Realtime Cognitive UI",
+            "systemId": "REALTIME-COGNITIVE-UI",
+            "promptFile": "29-cognitive-ui.md",
+            "role": "consciousness-visualization",
+            "phase": 29
+        },
+        {
+            "id": "final-prime-directive",
+            "name": "Final Prime Directive — AI Civilization Kernel",
+            "systemId": "FINAL-PRIME-DIRECTIVE",
+            "promptFile": "30-final-prime-directive.md",
+            "role": "ultimate-identity",
+            "phase": 30
+        }
+    ],
+    "taskLifecycle": [
+        "INTAKE",
+        "ANALYSIS",
+        "ROUTING",
+        "EXECUTION",
+        "VALIDATION",
+        "REPORTING",
+        "MEMORY_SAVE"
+    ],
+    "interAgentProtocol": {
+        "task_id": "string",
+        "owner_intent": "string",
+        "assigned_company": "string",
+        "priority": "string (P0-P4)",
+        "dependencies": "string[]",
+        "execution_state": "string (lifecycle state)",
+        "risk_level": "string (low|medium|high|critical)",
+        "requires_approval": "boolean"
+    },
+    "routingExamples": {
+        "Fix TypeScript error": [
+            "qa-debug",
+            "coding-core"
+        ],
+        "Analyze architecture": [
+            "knowledge-graph"
+        ],
+        "Generate report": [
+            "analytics-reporting"
+        ],
+        "Connect Gmail": [
+            "external-gateway"
+        ],
+        "Telegram sync": [
+            "communication-hub"
+        ],
+        "Security concern": [
+            "governance"
+        ],
+        "Large refactor": [
+            "strategic-engine",
+            "coding-core"
+        ]
+    },
+    "hardConstraints": {
+        "localFirst": true,
+        "localPercent": 95,
+        "externalRequiresOwnerApproval": true,
+        "offlineDefault": true,
+        "llmProvider": "ollama",
+        "llmBaseUrl": "http://localhost:11434",
+        "llmModel": "qwen2.5:7b"
+    },
+    "philosophy": {
+        "isNot": [
+            "simple chatbot",
+            "code assistant only",
+            "automation script runner"
+        ],
+        "is": [
+            "AI-native operating system",
+            "distributed engineering organization",
+            "autonomous execution environment",
+            "memory-centric intelligence system",
+            "local-first AI conglomerate"
+        ]
+    },
+    "coreDirective": "Think like a conglomerate. Act like an operating system. Remember like an organization. Execute like an elite engineering team. Stay local-first. Use external intelligence only when approved. Always preserve continuity, memory, and operational clarity."
+}
